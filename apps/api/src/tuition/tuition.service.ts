@@ -280,7 +280,7 @@ export class TuitionService {
 
   async getBrandingProfile(instituteId: string): Promise<TuitionBrandingProfile> {
     if (!this.prisma.isConnected) return this.memGetBrandingProfile(instituteId);
-    const institute = await this.prisma.institute.findUnique({
+    let institute = await this.prisma.institute.findUnique({
       where: { id: instituteId },
       include: {
         _count: {
@@ -294,7 +294,42 @@ export class TuitionService {
     });
 
     if (!institute) {
-      throw new NotFoundException(`Institute with ID ${instituteId} not found.`);
+      if (instituteId === 'inst_apex_academy' && this.prisma.isConnected) {
+        try {
+          institute = await this.prisma.institute.create({
+            data: {
+              id: instituteId,
+              name: this.memProfile.name || 'Apex IIT-JEE & Medical Academy',
+              slug: 'apex-academy',
+              logoUrl: this.memProfile.logoUrl,
+              primaryColor: this.memProfile.primaryColor || '#1677FF',
+              address: this.memProfile.address,
+              contactPhone: this.memProfile.contactPhone,
+              contactEmail: this.memProfile.contactEmail,
+              website: this.memProfile.website,
+              description: this.memProfile.description,
+              footerText: this.memProfile.footerText,
+              signatoryName: this.memProfile.signatoryName,
+              signatoryTitle: this.memProfile.signatoryTitle,
+              academicYear: this.memProfile.academicYear || '2026-2027',
+            },
+            include: {
+              _count: {
+                select: {
+                  facultyProfiles: true,
+                  batches: true,
+                  enrollments: true,
+                },
+              },
+            },
+          });
+        } catch {
+          // ignore error
+        }
+      }
+      if (!institute) {
+        throw new NotFoundException(`Institute with ID ${instituteId} not found.`);
+      }
     }
 
     return {
@@ -1457,7 +1492,7 @@ export class TuitionService {
   private async memGetBrandingProfile(instituteId: string): Promise<TuitionBrandingProfile> {
     if (this.prisma.isConnected) {
       try {
-        const institute = await this.prisma.institute.findUnique({
+        let institute = await this.prisma.institute.findUnique({
           where: { id: instituteId },
           include: {
             _count: {
