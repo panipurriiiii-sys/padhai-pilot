@@ -32,7 +32,7 @@ interface FacultySalaryViewProps {
 }
 
 export function FacultySalaryView({
-  instituteName = 'Apex IIT-JEE & Medical Academy',
+  instituteName = 'PadhaiPilot Academy',
 }: FacultySalaryViewProps) {
   const [salaries, setSalaries] = useState<SalaryStatementItem[]>([]);
   const [faculties, setFaculties] = useState<FacultyMember[]>([]);
@@ -260,7 +260,14 @@ export function FacultySalaryView({
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border-paper)] font-['Inter']">
-                {salaries.map((record) => (
+                {salaries.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-12 text-center text-xs font-['Raleway'] text-[var(--ink-muted)]">
+                      No salary records generated for period {selectedPeriod}. Click &quot;Generate Statement&quot; to calculate faculty payroll.
+                    </td>
+                  </tr>
+                ) : (
+                  salaries.map((record) => (
                   <tr key={record.id} className="hover:bg-[var(--bg-paper-warm)] transition-colors">
                     {/* Faculty */}
                     <td className="py-3 px-4">
@@ -349,7 +356,7 @@ export function FacultySalaryView({
                       </div>
                     </td>
                   </tr>
-                ))}
+                )))}
               </tbody>
             </table>
           </div>
@@ -369,10 +376,10 @@ export function FacultySalaryView({
                   {profile.name}
                 </h2>
                 <p className="font-['Raleway'] text-xs text-[var(--ink-secondary)] max-w-md leading-relaxed">
-                  {profile.address || 'Knowledge Park, Silicon Corridor'}
+                  {profile.address || ''}
                 </p>
                 <div className="font-['Inter'] text-[10px] text-[var(--ink-muted)]">
-                  Phone: {profile.contactPhone || '+91 98230 45678'} • Email: {profile.contactEmail || 'office@apexacademy.edu.in'}
+                  Phone: {profile.contactPhone || 'N/A'} • Email: {profile.contactEmail || 'N/A'}
                 </div>
               </div>
 

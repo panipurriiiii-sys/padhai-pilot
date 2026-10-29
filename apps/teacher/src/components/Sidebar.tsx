@@ -59,8 +59,8 @@ interface SidebarProps {
 export function Sidebar({
   currentTab,
   onSelectTab,
-  teacherName = 'Prof. Rajesh Sharma',
-  instituteName = 'Apex IIT & Medical Academy',
+  teacherName = 'Faculty Member',
+  instituteName = 'PadhaiPilot Academy',
   userRole = 'TEACHER',
   onOpenAuthModal,
 }: SidebarProps) {

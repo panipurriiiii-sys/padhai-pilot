@@ -280,7 +280,7 @@ export function PlatformSuperAdminFeatureView() {
             </div>
           </div>
           <div className="font-['Raleway'] text-base font-extrabold text-[var(--ink-primary)] truncate">
-            {effectiveFeatures?.instituteName || 'Apex Academy'}
+            {effectiveFeatures?.instituteName || 'Institutional Tenant'}
           </div>
           <span className="badge-code mt-1 inline-block">
             Plan: {effectiveFeatures?.plan || 'GROWTH'}

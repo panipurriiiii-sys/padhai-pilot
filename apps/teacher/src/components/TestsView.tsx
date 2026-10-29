@@ -120,48 +120,60 @@ export function TestsView({
       </div>
 
       {/* Tests Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {tests.map((t) => (
-          <div
-            key={t.id}
-            className="p-5 rounded-xl bg-white border border-[#E3DFD9] flex flex-col justify-between"
-          >
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-[#F3EFE9] text-[#1677FF] border border-[#1677FF]/20">
-                  {t.subject}
-                </span>
-                <span className="text-xs text-stone-500 flex items-center gap-1 font-['Inter']">
-                  <Clock className="w-3.5 h-3.5 text-[#1677FF]" />
-                  {t.durationMinutes} mins
-                </span>
+      {tests.length === 0 ? (
+        <div className="paper-card p-12 text-center space-y-3">
+          <Award className="w-10 h-10 text-[var(--ink-muted)] mx-auto opacity-50" />
+          <h3 className="font-['Playfair_Display'] font-bold text-lg text-[var(--ink-primary)]">
+            No Quizzes or Tests Configured
+          </h3>
+          <p className="font-['Raleway'] text-xs text-[var(--ink-muted)] max-w-md mx-auto">
+            Click &quot;Create Assessment&quot; above to create timed objective quizzes and evaluate student learning.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {tests.map((t) => (
+            <div
+              key={t.id}
+              className="p-5 rounded-xl bg-white border border-[#E3DFD9] flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-[#F3EFE9] text-[#1677FF] border border-[#1677FF]/20">
+                    {t.subject}
+                  </span>
+                  <span className="text-xs text-stone-500 flex items-center gap-1 font-['Inter']">
+                    <Clock className="w-3.5 h-3.5 text-[#1677FF]" />
+                    {t.durationMinutes} mins
+                  </span>
+                </div>
+
+                <h3 className="font-semibold text-base text-stone-900 leading-snug">{t.title}</h3>
+                <p className="text-xs text-stone-500 mt-1">Batch: {t.batchName}</p>
               </div>
 
-              <h3 className="font-semibold text-base text-stone-900 leading-snug">{t.title}</h3>
-              <p className="text-xs text-stone-500 mt-1">Batch: {t.batchName}</p>
-            </div>
+              <div className="mt-5 pt-3 border-t border-[#E3DFD9] flex items-center justify-between text-xs">
+                <div className="font-['Inter']">
+                  <span className="font-bold text-stone-900">{t.questions.length} questions</span>
+                  <span className="text-stone-500"> • Total {t.totalMarks} pts</span>
+                </div>
 
-            <div className="mt-5 pt-3 border-t border-[#E3DFD9] flex items-center justify-between text-xs">
-              <div className="font-['Inter']">
-                <span className="font-bold text-stone-900">{t.questions.length} questions</span>
-                <span className="text-stone-500"> • Total {t.totalMarks} pts</span>
+                <button
+                  onClick={() => onToggleResults(t.id)}
+                  className={`px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition ${
+                    t.resultsReleased
+                      ? 'bg-[#10B981]/15 text-[#10B981] border-[#10B981]/30 hover:bg-[#10B981]/25'
+                      : 'bg-[#F3EFE9] text-stone-500 border-[#E3DFD9] hover:text-white'
+                  }`}
+                >
+                  {t.resultsReleased ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                  <span>{t.resultsReleased ? 'Results Released' : 'Release Results'}</span>
+                </button>
               </div>
-
-              <button
-                onClick={() => onToggleResults(t.id)}
-                className={`px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition ${
-                  t.resultsReleased
-                    ? 'bg-[#10B981]/15 text-[#10B981] border-[#10B981]/30 hover:bg-[#10B981]/25'
-                    : 'bg-[#F3EFE9] text-stone-500 border-[#E3DFD9] hover:text-white'
-                }`}
-              >
-                {t.resultsReleased ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-                <span>{t.resultsReleased ? 'Results Released' : 'Release Results'}</span>
-              </button>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Create Test Modal */}
       {showCreateModal && (

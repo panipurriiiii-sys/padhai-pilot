@@ -43,7 +43,7 @@ const ALL_PERMISSIONS: { key: DelegatedPermission; label: string; desc: string }
 
 export function FacultyManagementView({
   batches,
-  instituteName = 'Apex IIT-JEE & Medical Academy',
+  instituteName = 'PadhaiPilot Academy',
 }: FacultyManagementViewProps) {
   const [faculties, setFaculties] = useState<FacultyMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -187,6 +187,23 @@ export function FacultyManagementView({
           {isLoading ? (
             <div className="paper-card p-12 text-center text-xs font-['Raleway'] text-[var(--ink-muted)]">
               Loading faculty members...
+            </div>
+          ) : filteredFaculties.length === 0 ? (
+            <div className="paper-card p-12 text-center space-y-3">
+              <Users className="w-10 h-10 text-[var(--ink-muted)] mx-auto opacity-50" />
+              <h3 className="font-['Playfair_Display'] font-bold text-base text-[var(--ink-primary)]">
+                No Faculty Members Found
+              </h3>
+              <p className="font-['Raleway'] text-xs text-[var(--ink-muted)] max-w-sm mx-auto">
+                Invite teachers and instructors to manage classes and conduct sessions.
+              </p>
+              <button
+                onClick={() => setShowInviteModal(true)}
+                className="btn-primary text-xs mx-auto mt-2"
+              >
+                <UserPlus className="w-3.5 h-3.5 mr-1.5" />
+                Invite First Faculty
+              </button>
             </div>
           ) : (
             <div className="space-y-3">

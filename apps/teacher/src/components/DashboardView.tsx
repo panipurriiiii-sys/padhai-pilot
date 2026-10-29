@@ -237,27 +237,33 @@ export function DashboardView({ metrics, onNavigate, onQuickAttendance }: Dashbo
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {metrics.activeBatches.map((batch) => (
-                <div
-                  key={batch.id}
-                  className="paper-card p-4 hover:shadow-md transition-all"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="badge-code">
-                      {batch.code}
-                    </span>
-                    <span className="font-['Inter'] text-xs font-semibold text-[var(--ink-secondary)]">
-                      {batch.studentCount} Students
-                    </span>
+            {metrics.activeBatches.length === 0 ? (
+              <div className="paper-card p-6 text-center text-[var(--ink-muted)] font-['Raleway'] text-xs">
+                No active batches assigned. Create your first batch to start teaching.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {metrics.activeBatches.map((batch) => (
+                  <div
+                    key={batch.id}
+                    className="paper-card p-4 hover:shadow-md transition-all"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="badge-code">
+                        {batch.code}
+                      </span>
+                      <span className="font-['Inter'] text-xs font-semibold text-[var(--ink-secondary)]">
+                        {batch.studentCount} Students
+                      </span>
+                    </div>
+                    <h4 className="text-sm font-bold text-[var(--ink-primary)] truncate font-['Raleway']">
+                      {batch.name}
+                    </h4>
+                    <p className="text-xs text-[var(--ink-muted)] mt-1 font-['Raleway']">{batch.subject}</p>
                   </div>
-                  <h4 className="text-sm font-bold text-[var(--ink-primary)] truncate font-['Raleway']">
-                    {batch.name}
-                  </h4>
-                  <p className="text-xs text-[var(--ink-muted)] mt-1 font-['Raleway']">{batch.subject}</p>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -277,36 +283,42 @@ export function DashboardView({ metrics, onNavigate, onQuickAttendance }: Dashbo
           </div>
 
           <div className="space-y-3">
-            {metrics.recentAnnouncements.map((ann) => (
-              <div
-                key={ann.id}
-                className="paper-card-interactive p-4 space-y-2"
-              >
-                <div className="flex items-center justify-between">
-                  <span
-                    className={
-                      ann.priority === 'URGENT'
-                        ? 'badge-urgent'
-                        : 'badge-code'
-                    }
-                  >
-                    {ann.priority}
-                  </span>
-                  <span className="text-[11px] text-[var(--ink-muted)] font-mono">
-                    {new Date(ann.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
-                <h4 className="text-sm font-bold text-[var(--ink-primary)] leading-snug font-['Raleway']">
-                  {ann.title}
-                </h4>
-                <p className="text-xs text-[var(--ink-secondary)] leading-relaxed line-clamp-3 font-['Raleway']">
-                  {ann.content}
-                </p>
-                <div className="pt-1 text-[11px] text-[var(--ink-muted)] font-['Raleway']">
-                  By <strong className="text-[var(--ink-secondary)]">{ann.authorName}</strong>
-                </div>
+            {metrics.recentAnnouncements.length === 0 ? (
+              <div className="paper-card p-6 text-center text-[var(--ink-muted)] font-['Raleway'] text-xs">
+                No announcements published yet.
               </div>
-            ))}
+            ) : (
+              metrics.recentAnnouncements.map((ann) => (
+                <div
+                  key={ann.id}
+                  className="paper-card-interactive p-4 space-y-2"
+                >
+                  <div className="flex items-center justify-between">
+                    <span
+                      className={
+                        ann.priority === 'URGENT'
+                          ? 'badge-urgent'
+                          : 'badge-code'
+                      }
+                    >
+                      {ann.priority}
+                    </span>
+                    <span className="text-[11px] text-[var(--ink-muted)] font-mono">
+                      {new Date(ann.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <h4 className="text-sm font-bold text-[var(--ink-primary)] leading-snug font-['Raleway']">
+                    {ann.title}
+                  </h4>
+                  <p className="text-xs text-[var(--ink-secondary)] leading-relaxed line-clamp-3 font-['Raleway']">
+                    {ann.content}
+                  </p>
+                  <div className="pt-1 text-[11px] text-[var(--ink-muted)] font-['Raleway']">
+                    By <strong className="text-[var(--ink-secondary)]">{ann.authorName}</strong>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

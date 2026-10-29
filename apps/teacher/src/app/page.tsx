@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Sidebar, NavTab } from '../components/Sidebar';
 import { DashboardView } from '../components/DashboardView';
 import { BulkMarksEntryView } from '../components/BulkMarksEntryView';
@@ -24,7 +24,7 @@ import { StudentFeeAlertView } from '../components/StudentFeeAlertView';
 import { TuitionBrandingView } from '../components/TuitionBrandingView';
 import { AuthModal } from '../components/AuthModal';
 import { DeskPetPill } from '../components/ui';
-import { teacherApi } from '../lib/api';
+import { teacherApi, getAuthToken, clearAuthToken } from '../lib/api';
 import type {
   TeacherDashboardMetrics,
   BatchSummary,
@@ -58,51 +58,79 @@ export default function TeacherApp() {
   const [isLoading, setIsLoading] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
 
+  const loadUserData = useCallback(async () => {
+    try {
+      const [dashData, batchList, invList, asgList, testList, lpList, ttList, annList, repData] =
+        await Promise.all([
+          teacherApi.getDashboard(),
+          teacherApi.getBatches(),
+          teacherApi.getInvitations(),
+          teacherApi.getAssignments(),
+          teacherApi.getTests(),
+          teacherApi.getLessonPlans(),
+          teacherApi.getTimetable(),
+          teacherApi.getAnnouncements(),
+          teacherApi.getReports(),
+        ]);
+
+      setMetrics(dashData);
+      setBatches(batchList);
+      setInvitations(invList);
+      setAssignments(asgList);
+      setTests(testList);
+      setLessonPlans(lpList);
+      setTimetable(ttList);
+      setAnnouncements(annList);
+      setReports(repData);
+
+      if (batchList.length > 0) {
+        const initialBatch = batchList[0];
+        setSelectedBatchId(initialBatch.id);
+        const rosterRes = await teacherApi.getBatchRoster(initialBatch.id);
+        setStudents(rosterRes.students);
+      } else {
+        setSelectedBatchId('');
+        setStudents([]);
+      }
+    } catch (err) {
+      console.error('Failed to load user portal data:', err);
+    }
+  }, []);
+
   // Initialize teacher authentication and load core data
   useEffect(() => {
     async function init() {
+      setIsLoading(true);
+      const token = getAuthToken();
+      if (!token) {
+        setUser(null);
+        setIsLoading(false);
+        setShowAuthModal(true);
+        return;
+      }
+
       try {
-        const auth = await teacherApi.loginDemoTeacher();
-        setUser(auth.user);
-
-        const [dashData, batchList, invList, asgList, testList, lpList, ttList, annList, repData] =
-          await Promise.all([
-            teacherApi.getDashboard(),
-            teacherApi.getBatches(),
-            teacherApi.getInvitations(),
-            teacherApi.getAssignments(),
-            teacherApi.getTests(),
-            teacherApi.getLessonPlans(),
-            teacherApi.getTimetable(),
-            teacherApi.getAnnouncements(),
-            teacherApi.getReports(),
-          ]);
-
-        setMetrics(dashData);
-        setBatches(batchList);
-        setInvitations(invList);
-        setAssignments(asgList);
-        setTests(testList);
-        setLessonPlans(lpList);
-        setTimetable(ttList);
-        setAnnouncements(annList);
-        setReports(repData);
-
-        if (batchList.length > 0) {
-          const initialBatch = batchList[0];
-          setSelectedBatchId(initialBatch.id);
-          const rosterRes = await teacherApi.getBatchRoster(initialBatch.id);
-          setStudents(rosterRes.students);
+        const auth = await teacherApi.getCurrentUser();
+        if (auth && auth.user) {
+          setUser(auth.user);
+          await loadUserData();
+        } else {
+          clearAuthToken();
+          setUser(null);
+          setShowAuthModal(true);
         }
       } catch (err) {
-        console.error('Initialization error:', err);
+        console.warn('Session verification failed, prompting login:', err);
+        clearAuthToken();
+        setUser(null);
+        setShowAuthModal(true);
       } finally {
         setIsLoading(false);
       }
     }
 
     init();
-  }, []);
+  }, [loadUserData]);
 
   const handleSelectBatch = async (batchId: string) => {
     setSelectedBatchId(batchId);
@@ -205,7 +233,22 @@ export default function TeacherApp() {
   };
 
   const handleLogout = async () => {
-    await teacherApi.logout();
+    try {
+      await teacherApi.logout();
+    } catch {
+      clearAuthToken();
+    }
+    setUser(null);
+    setMetrics(null);
+    setBatches([]);
+    setStudents([]);
+    setInvitations([]);
+    setAssignments([]);
+    setTests([]);
+    setLessonPlans([]);
+    setTimetable([]);
+    setAnnouncements([]);
+    setReports(null);
     setShowAuthModal(true);
   };
 
@@ -385,7 +428,7 @@ export default function TeacherApp() {
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
-        onAuthSuccess={(u) => {
+        onAuthSuccess={async (u) => {
           setUser(u);
           setShowAuthModal(false);
           if (u.role === 'TUITION_OWNER') {
@@ -395,6 +438,7 @@ export default function TeacherApp() {
           } else {
             setCurrentTab('dashboard');
           }
+          await loadUserData();
         }}
       />
     </div>

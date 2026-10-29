@@ -36,8 +36,8 @@ interface DailyTeachingDiaryViewProps {
 
 export function DailyTeachingDiaryView({
   batches,
-  teacherName = 'Prof. Rajesh Sharma',
-  instituteName = 'Apex IIT-JEE & Medical Academy',
+  teacherName = 'Faculty Member',
+  instituteName = 'PadhaiPilot Academy',
 }: DailyTeachingDiaryViewProps) {
   const [diaries, setDiaries] = useState<DailyTeachingDiaryEntry[]>([]);
   const [overview, setOverview] = useState<TeachingDiaryOverview | null>(null);
@@ -49,10 +49,10 @@ export function DailyTeachingDiaryView({
 
   // New Entry Form State
   const [formData, setFormData] = useState<CreateTeachingDiaryDto>({
-    batchId: batches[0]?.id || 'btc_jee_math_adv',
+    batchId: batches[0]?.id || '',
     lessonDate: new Date().toISOString().split('T')[0],
-    sessionTime: '09:00 - 10:30',
-    subject: batches[0]?.subject || 'Higher Calculus & Vectors',
+    sessionTime: '09:00 - 10:00',
+    subject: batches[0]?.subject || '',
     chapterTitle: '',
     conceptsTaught: '',
     learningObjectives: '',

@@ -115,7 +115,14 @@ export function ReportsView({ reports }: ReportsViewProps) {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#ffffff08] font-['Raleway']">
-              {reports.batchPerformance.map((b, i) => (
+              {reports.batchPerformance.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-stone-500 font-['Raleway']">
+                    No batch analytics recorded yet.
+                  </td>
+                </tr>
+              ) : (
+                reports.batchPerformance.map((b, i) => (
                 <tr key={i} className="hover:bg-[#F3EFE9]/60 transition">
                   <td className="py-3 px-4 font-semibold text-stone-900">{b.batchName}</td>
                   <td className="py-3 px-4 font-['Inter'] font-mono text-[#1677FF]">{b.code}</td>
@@ -127,7 +134,7 @@ export function ReportsView({ reports }: ReportsViewProps) {
                     {b.assignmentTurnaround}
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>

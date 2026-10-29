@@ -267,10 +267,10 @@ export function TuitionBrandingView() {
                       {formData.name || 'Your Coaching Academy'}
                     </h4>
                     <p className="font-['Raleway'] text-[10px] text-[var(--ink-secondary)] mt-0.5 leading-relaxed">
-                      {formData.address || 'Plot 42, Knowledge Park, Silicon Corridor'}
+                      {formData.address || 'Institute Address'}
                     </p>
                     <p className="font-['Inter'] text-[9px] text-[var(--ink-muted)] mt-0.5">
-                      Phone: {formData.contactPhone || '+91 98230 45678'} • Email: {formData.contactEmail || 'office@apex.edu.in'}
+                      Phone: {formData.contactPhone || 'N/A'} • Email: {formData.contactEmail || 'N/A'}
                     </p>
                   </div>
 

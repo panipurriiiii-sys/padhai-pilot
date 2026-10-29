@@ -152,47 +152,59 @@ export function AssignmentsView({
       </div>
 
       {/* Assignments List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {assignments.map((asg) => (
-          <div
-            key={asg.id}
-            className="p-5 rounded-xl bg-white border border-[#E3DFD9] hover:border-[#E3DFD9] transition flex flex-col justify-between"
-          >
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-[#F3EFE9] text-[#1677FF] border border-[#1677FF]/20">
-                  {asg.subject}
-                </span>
-                <span className="text-xs text-stone-500 flex items-center gap-1 font-['Inter']">
-                  <Calendar className="w-3.5 h-3.5 text-[#1677FF]" />
-                  Due {new Date(asg.dueDate).toLocaleDateString()}
-                </span>
+      {assignments.length === 0 ? (
+        <div className="paper-card p-12 text-center space-y-3">
+          <FileText className="w-10 h-10 text-[var(--ink-muted)] mx-auto opacity-50" />
+          <h3 className="font-['Playfair_Display'] font-bold text-lg text-[var(--ink-primary)]">
+            No Assignments Published
+          </h3>
+          <p className="font-['Raleway'] text-xs text-[var(--ink-muted)] max-w-md mx-auto">
+            Click &quot;Create Assignment&quot; above to compose and assign problem sets to your batches.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {assignments.map((asg) => (
+            <div
+              key={asg.id}
+              className="p-5 rounded-xl bg-white border border-[#E3DFD9] hover:border-[#E3DFD9] transition flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-[#F3EFE9] text-[#1677FF] border border-[#1677FF]/20">
+                    {asg.subject}
+                  </span>
+                  <span className="text-xs text-stone-500 flex items-center gap-1 font-['Inter']">
+                    <Calendar className="w-3.5 h-3.5 text-[#1677FF]" />
+                    Due {new Date(asg.dueDate).toLocaleDateString()}
+                  </span>
+                </div>
+
+                <h3 className="font-semibold text-base text-stone-900 leading-snug">{asg.title}</h3>
+                <p className="text-xs text-stone-500 mt-1.5 line-clamp-2 leading-relaxed">
+                  {asg.instructions}
+                </p>
               </div>
 
-              <h3 className="font-semibold text-base text-stone-900 leading-snug">{asg.title}</h3>
-              <p className="text-xs text-stone-500 mt-1.5 line-clamp-2 leading-relaxed">
-                {asg.instructions}
-              </p>
-            </div>
+              <div className="mt-5 pt-3 border-t border-[#E3DFD9] flex items-center justify-between">
+                <div className="font-['Inter'] text-xs">
+                  <span className="text-stone-900 font-bold">{asg.submissionCount}</span>
+                  <span className="text-stone-500"> / {asg.totalStudents} submitted</span>
+                  <span className="ml-2 text-[10px] text-stone-500">(Max: {asg.maxMarks} pts)</span>
+                </div>
 
-            <div className="mt-5 pt-3 border-t border-[#E3DFD9] flex items-center justify-between">
-              <div className="font-['Inter'] text-xs">
-                <span className="text-stone-900 font-bold">{asg.submissionCount}</span>
-                <span className="text-stone-500"> / {asg.totalStudents} submitted</span>
-                <span className="ml-2 text-[10px] text-stone-500">(Max: {asg.maxMarks} pts)</span>
+                <button
+                  onClick={() => handleOpenSubmissions(asg)}
+                  className="px-3 py-1.5 rounded-lg bg-[#F3EFE9] hover:bg-[#1677FF] text-stone-700 hover:text-white border border-[#E3DFD9] hover:border-[#1677FF] text-xs font-semibold transition flex items-center gap-1.5"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>Review Work</span>
+                </button>
               </div>
-
-              <button
-                onClick={() => handleOpenSubmissions(asg)}
-                className="px-3 py-1.5 rounded-lg bg-[#F3EFE9] hover:bg-[#1677FF] text-stone-700 hover:text-white border border-[#E3DFD9] hover:border-[#1677FF] text-xs font-semibold transition flex items-center gap-1.5"
-              >
-                <Eye className="w-3.5 h-3.5" />
-                <span>Review Work</span>
-              </button>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Submissions Review Modal */}
       {activeAssignment && (

@@ -29,7 +29,7 @@ interface FacultyLeaveViewProps {
 }
 
 export function FacultyLeaveView({
-  currentUserId = 'usr_teacher_sharma',
+  currentUserId = '',
   isOwnerOrManager = true,
 }: FacultyLeaveViewProps) {
   const [leaves, setLeaves] = useState<FacultyLeaveItem[]>([]);

@@ -49,17 +49,17 @@ export function BulkMarksEntryView({
 }: BulkMarksEntryViewProps) {
   // 1. Class & Assessment Setup State
   const [selectedBatchId, setSelectedBatchId] = useState<string>(
-    initialBatchId || (batches.length > 0 ? batches[0].id : 'btc_jee_math_adv'),
+    initialBatchId || (batches.length > 0 ? batches[0].id : ''),
   );
   const [assessmentList, setAssessmentList] = useState<ClassroomAssessment[]>([]);
   const [currentAssessmentId, setCurrentAssessmentId] = useState<string>('');
-  const [assessmentTitle, setAssessmentTitle] = useState('Unit Test 1 — Differential Calculus & Limits');
-  const [subject, setSubject] = useState('Higher Calculus & Vectors');
+  const [assessmentTitle, setAssessmentTitle] = useState('');
+  const [subject, setSubject] = useState('');
   const [category, setCategory] = useState<AssessmentType>('UNIT_TEST');
   const [assessmentDate, setAssessmentDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [maxMarks, setMaxMarks] = useState<number>(50);
   const [passingMarks, setPassingMarks] = useState<number>(20);
-  const [instructions, setInstructions] = useState('Calculators prohibited. Show complete analytical steps.');
+  const [instructions, setInstructions] = useState('');
   const [assessmentStatus, setAssessmentStatus] = useState<'DRAFT' | 'PUBLISHED'>('DRAFT');
 
   // 2. Marks Roster Table State
@@ -504,6 +504,38 @@ export function BulkMarksEntryView({
   const handlePrintSheet = () => {
     window.print();
   };
+
+  if (batches.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white p-6 rounded-2xl border border-[#E3DFD9] shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#1677FF]/10 flex items-center justify-center text-[#1677FF] border border-[#1677FF]/20">
+              <FileSpreadsheet className="w-5 h-5" />
+            </div>
+            <div>
+              <h1 className="font-['Playfair_Display'] text-2xl font-bold text-stone-900 tracking-tight">
+                Bulk Attendance & Marks Entry
+              </h1>
+              <p className="font-['Raleway'] text-xs text-stone-500">
+                Classroom evaluation spreadsheet, attendance verification, and instant result publishing
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="paper-card p-12 text-center space-y-3">
+          <FileSpreadsheet className="w-10 h-10 text-[var(--ink-muted)] mx-auto opacity-50" />
+          <h3 className="font-['Playfair_Display'] font-bold text-lg text-[var(--ink-primary)]">
+            No Active Batches Found
+          </h3>
+          <p className="font-['Raleway'] text-xs text-[var(--ink-muted)] max-w-md mx-auto">
+            You must create at least one batch and enroll students before you can enter and publish assessment marks.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

@@ -232,7 +232,14 @@ export function StudentFeeAlertView() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border-paper)] font-['Inter']">
-                {filteredFees.map((fee) => {
+                {filteredFees.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-12 text-center text-xs font-['Raleway'] text-[var(--ink-muted)]">
+                      No fee records found. Fee entries will appear here once student invoices are created.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredFees.map((fee) => {
                   const dueDateFormatted = new Date(fee.dueDate).toLocaleDateString('en-IN', {
                     day: 'numeric',
                     month: 'short',
@@ -311,7 +318,7 @@ export function StudentFeeAlertView() {
                       </td>
                     </tr>
                   );
-                })}
+                }))}
               </tbody>
             </table>
           </div>

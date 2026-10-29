@@ -313,7 +313,7 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
               <input
                 type="email"
                 required
-                placeholder="sunita.rao@apexacademy.edu"
+                placeholder="faculty@institution.edu"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full input-paper"

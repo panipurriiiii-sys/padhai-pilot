@@ -89,45 +89,57 @@ export function BatchesView({
       </div>
 
       {/* Batch Cards Selector */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {batches.map((batch) => {
-          const isSelected = batch.id === activeBatch?.id;
-          return (
-            <button
-              key={batch.id}
-              onClick={() => onSelectBatch(batch.id)}
-              className={`text-left p-4 rounded-2xl border transition flex flex-col justify-between ${
-                isSelected
-                  ? 'paper-card-selected'
-                  : 'paper-card-interactive'
-              }`}
-            >
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="badge-code">
-                    {batch.code}
-                  </span>
-                  <span className="font-['Inter'] text-xs font-bold text-[var(--ink-primary)]">
-                    {batch.studentCount} Students
-                  </span>
+      {batches.length === 0 ? (
+        <div className="paper-card p-12 text-center space-y-3">
+          <Users className="w-10 h-10 text-[var(--ink-muted)] mx-auto opacity-50" />
+          <h3 className="font-['Playfair_Display'] font-bold text-lg text-[var(--ink-primary)]">
+            No Batches Found
+          </h3>
+          <p className="font-['Raleway'] text-xs text-[var(--ink-muted)] max-w-md mx-auto">
+            You don&apos;t have any active batches yet. Click &quot;Create New Batch&quot; above to create a batch and generate student invite codes.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {batches.map((batch) => {
+            const isSelected = batch.id === activeBatch?.id;
+            return (
+              <button
+                key={batch.id}
+                onClick={() => onSelectBatch(batch.id)}
+                className={`text-left p-4 rounded-2xl border transition flex flex-col justify-between ${
+                  isSelected
+                    ? 'paper-card-selected'
+                    : 'paper-card-interactive'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="badge-code">
+                      {batch.code}
+                    </span>
+                    <span className="font-['Inter'] text-xs font-bold text-[var(--ink-primary)]">
+                      {batch.studentCount} Students
+                    </span>
+                  </div>
+                  <h3 className="font-bold text-sm text-[var(--ink-primary)] line-clamp-1 font-['Raleway']">
+                    {batch.name}
+                  </h3>
+                  <p className="text-xs text-[var(--ink-muted)] mt-0.5 font-['Raleway']">{batch.subject}</p>
                 </div>
-                <h3 className="font-bold text-sm text-[var(--ink-primary)] line-clamp-1 font-['Raleway']">
-                  {batch.name}
-                </h3>
-                <p className="text-xs text-[var(--ink-muted)] mt-0.5 font-['Raleway']">{batch.subject}</p>
-              </div>
 
-              <div className="mt-4 pt-2.5 border-t border-[var(--border-paper)] flex items-center justify-between text-[11px] text-[var(--ink-muted)] font-['Raleway']">
-                <span className="flex items-center gap-1 font-medium">
-                  <MapPin className="w-3.5 h-3.5 text-[var(--brand-electric)]" />
-                  {batch.room || 'General Hall'}
-                </span>
-                <span className="font-semibold text-[var(--ink-secondary)]">{batch.gradeLevel}</span>
-              </div>
-            </button>
-          );
-        })}
-      </div>
+                <div className="mt-4 pt-2.5 border-t border-[var(--border-paper)] flex items-center justify-between text-[11px] text-[var(--ink-muted)] font-['Raleway']">
+                  <span className="flex items-center gap-1 font-medium">
+                    <MapPin className="w-3.5 h-3.5 text-[var(--brand-electric)]" />
+                    {batch.room || 'General Hall'}
+                  </span>
+                  <span className="font-semibold text-[var(--ink-secondary)]">{batch.gradeLevel}</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Selected Batch Roster Table */}
       {activeBatch && (
@@ -172,7 +184,9 @@ export function BatchesView({
                 {filteredStudents.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="py-8 text-center text-[var(--ink-muted)]">
-                      No student records found matching &ldquo;{searchTerm}&rdquo;.
+                      {searchTerm
+                        ? `No student records found matching "${searchTerm}".`
+                        : 'No students enrolled in this batch yet. Generate an invitation code to invite students.'}
                     </td>
                   </tr>
                 ) : (

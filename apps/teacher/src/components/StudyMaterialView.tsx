@@ -39,7 +39,7 @@ const CATEGORIES: { key: StudyMaterialCategory; label: string }[] = [
 
 export function StudyMaterialView({
   batches,
-  teacherName = 'Prof. Rajesh Sharma',
+  teacherName = 'Faculty Member',
 }: StudyMaterialViewProps) {
   const [materials, setMaterials] = useState<StudyMaterialItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -50,10 +50,10 @@ export function StudyMaterialView({
 
   // Form State
   const [formData, setFormData] = useState<CreateStudyMaterialDto>({
-    batchId: batches[0]?.id || 'btc_jee_math_adv',
+    batchId: batches[0]?.id || '',
     title: '',
     category: 'CHAPTER_NOTES',
-    subject: batches[0]?.subject || 'Higher Calculus & Vectors',
+    subject: batches[0]?.subject || '',
     chapter: '',
     content: '',
     fileUrl: '',
@@ -97,10 +97,10 @@ export function StudyMaterialView({
 
       // Reset
       setFormData({
-        batchId: batches[0]?.id || 'btc_jee_math_adv',
+        batchId: batches[0]?.id || '',
         title: '',
         category: 'CHAPTER_NOTES',
-        subject: batches[0]?.subject || 'Higher Calculus & Vectors',
+        subject: batches[0]?.subject || '',
         chapter: '',
         content: '',
         fileUrl: '',

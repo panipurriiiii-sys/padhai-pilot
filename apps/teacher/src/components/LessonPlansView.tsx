@@ -81,73 +81,85 @@ export function LessonPlansView({
       </div>
 
       {/* Plans List */}
-      <div className="space-y-3">
-        {lessonPlans.map((lp) => (
-          <div
-            key={lp.id}
-            className={`p-4 rounded-xl border transition flex flex-col md:flex-row md:items-center justify-between gap-4 ${
-              lp.isCompleted
-                ? 'bg-[var(--bg-paper-warm)] border-[var(--border-paper)] opacity-85'
-                : 'paper-card-interactive border-[var(--border-paper)]'
-            }`}
-          >
-            <div className="flex items-start gap-3.5">
-              <button
-                onClick={() => onToggleStatus(lp.id)}
-                title={lp.isCompleted ? 'Mark as incomplete' : 'Mark topic completed'}
-                className="mt-0.5 text-[var(--brand-electric)] hover:text-[var(--brand-hover)] shrink-0"
-              >
-                {lp.isCompleted ? (
-                  <CheckCircle className="w-5 h-5 text-emerald-600" />
-                ) : (
-                  <Circle className="w-5 h-5 text-[var(--ink-faint)]" />
-                )}
-              </button>
+      {lessonPlans.length === 0 ? (
+        <div className="paper-card p-12 text-center space-y-3">
+          <BookOpen className="w-10 h-10 text-[var(--ink-muted)] mx-auto opacity-50" />
+          <h3 className="font-['Playfair_Display'] font-bold text-lg text-[var(--ink-primary)]">
+            No Lesson Plans Created
+          </h3>
+          <p className="font-['Raleway'] text-xs text-[var(--ink-muted)] max-w-md mx-auto">
+            Click &quot;New Lesson Plan&quot; above to organize your syllabus topics, schedules, and reference resources.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {lessonPlans.map((lp) => (
+            <div
+              key={lp.id}
+              className={`p-4 rounded-xl border transition flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+                lp.isCompleted
+                  ? 'bg-[var(--bg-paper-warm)] border-[var(--border-paper)] opacity-85'
+                  : 'paper-card-interactive border-[var(--border-paper)]'
+              }`}
+            >
+              <div className="flex items-start gap-3.5">
+                <button
+                  onClick={() => onToggleStatus(lp.id)}
+                  title={lp.isCompleted ? 'Mark as incomplete' : 'Mark topic completed'}
+                  className="mt-0.5 text-[var(--brand-electric)] hover:text-[var(--brand-hover)] shrink-0"
+                >
+                  {lp.isCompleted ? (
+                    <CheckCircle className="w-5 h-5 text-emerald-600" />
+                  ) : (
+                    <Circle className="w-5 h-5 text-[var(--ink-faint)]" />
+                  )}
+                </button>
 
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="badge-code">
-                    Week {lp.weekNumber} • {lp.subject}
-                  </span>
-                  <span className="text-xs font-bold text-[var(--ink-primary)] font-['Raleway']">{lp.batchName}</span>
-                </div>
-                <h3 className="text-sm font-bold text-[var(--ink-primary)] font-['Raleway']">{lp.title}</h3>
-                <p className="text-xs text-[var(--ink-muted)] mt-1 font-['Raleway']">{lp.topic}</p>
-                <p className="text-xs text-[var(--ink-secondary)] mt-1.5 leading-relaxed font-['Raleway']">{lp.content}</p>
-
-                {lp.resources && lp.resources.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-3 pt-2 border-t border-[#E3DFD9]">
-                    {lp.resources.map((res, i) => (
-                      <a
-                        key={i}
-                        href={res.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#FAF8F5] hover:bg-[#1677FF]/15 border border-[#E3DFD9] hover:border-[#1677FF]/40 text-[11px] text-stone-700 hover:text-[#1677FF] transition"
-                      >
-                        {res.type === 'PDF' ? <FileText className="w-3 h-3" /> : <LinkIcon className="w-3 h-3" />}
-                        <span>{res.title}</span>
-                      </a>
-                    ))}
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="badge-code">
+                      Week {lp.weekNumber} • {lp.subject}
+                    </span>
+                    <span className="text-xs font-bold text-[var(--ink-primary)] font-['Raleway']">{lp.batchName}</span>
                   </div>
-                )}
+                  <h3 className="text-sm font-bold text-[var(--ink-primary)] font-['Raleway']">{lp.title}</h3>
+                  <p className="text-xs text-[var(--ink-muted)] mt-1 font-['Raleway']">{lp.topic}</p>
+                  <p className="text-xs text-[var(--ink-secondary)] mt-1.5 leading-relaxed font-['Raleway']">{lp.content}</p>
+
+                  {lp.resources && lp.resources.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-3 pt-2 border-t border-[#E3DFD9]">
+                      {lp.resources.map((res, i) => (
+                        <a
+                          key={i}
+                          href={res.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#FAF8F5] hover:bg-[#1677FF]/15 border border-[#E3DFD9] hover:border-[#1677FF]/40 text-[11px] text-stone-700 hover:text-[#1677FF] transition"
+                        >
+                          {res.type === 'PDF' ? <FileText className="w-3 h-3" /> : <LinkIcon className="w-3 h-3" />}
+                          <span>{res.title}</span>
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="shrink-0 self-end md:self-center">
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                    lp.isCompleted
+                      ? 'bg-[#10B981]/15 text-[#10B981]'
+                      : 'bg-[#F59E0B]/15 text-[#F59E0B]'
+                  }`}
+                >
+                  {lp.isCompleted ? 'Topic Covered' : 'In Progress'}
+                </span>
               </div>
             </div>
-
-            <div className="shrink-0 self-end md:self-center">
-              <span
-                className={`text-[10px] font-bold px-2 py-0.5 rounded ${
-                  lp.isCompleted
-                    ? 'bg-[#10B981]/15 text-[#10B981]'
-                    : 'bg-[#F59E0B]/15 text-[#F59E0B]'
-                }`}
-              >
-                {lp.isCompleted ? 'Topic Covered' : 'In Progress'}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Create Lesson Plan Modal */}
       {showCreateModal && (

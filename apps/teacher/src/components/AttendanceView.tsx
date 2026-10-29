@@ -106,13 +106,13 @@ export function AttendanceView({
         if (!mounted) return;
         setIsRecorded(res.isRecorded || false);
         setRecords(
-          res.records.map((r: any, idx: number) => ({
+          res.records.map((r: any) => ({
             studentId: r.studentId,
             studentName: r.studentName,
-            rollNumber: r.rollNumber || `APX-2026-${String(idx + 1).padStart(3, '0')}`,
+            rollNumber: r.rollNumber || '-',
             status: r.status,
             note: r.note,
-            recentRate: r.recentRate || Math.floor(82 + (idx * 7) % 18),
+            recentRate: r.recentRate ?? 0,
           })),
         );
       })
@@ -291,6 +291,37 @@ export function AttendanceView({
     }
   };
 
+  if (batches.length === 0) {
+    return (
+      <div className="space-y-6 animate-in fade-in duration-200">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pt-2">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100/80 border border-amber-300 text-amber-900 text-xs font-['Raleway'] font-bold tracking-wider mb-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse" />
+              OFFICIAL ACADEMIC REGISTRY
+            </div>
+            <h1 className="text-3xl md:text-4xl font-['Playfair_Display'] font-bold text-stone-900 tracking-tight">
+              Daily Attendance Register
+            </h1>
+            <p className="text-sm font-['Raleway'] text-stone-600 mt-1 max-w-xl">
+              Tangible roll call management with instantaneous attendance statistics, parent SMS triggers, and audited correction slips.
+            </p>
+          </div>
+        </div>
+
+        <div className="paper-card p-12 text-center space-y-3">
+          <Users className="w-10 h-10 text-[var(--ink-muted)] mx-auto opacity-50" />
+          <h3 className="font-['Playfair_Display'] font-bold text-lg text-[var(--ink-primary)]">
+            No Active Batches Found
+          </h3>
+          <p className="font-['Raleway'] text-xs text-[var(--ink-muted)] max-w-md mx-auto">
+            You must create at least one batch and enroll students before you can take attendance.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-10 pb-16">
       {/* Studio Desk Header */}
@@ -323,17 +354,17 @@ export function AttendanceView({
             color="yellow"
             pinColor="blue"
             rotation={-1.5}
-            title={currentBatch?.name || 'Class Alpha'}
+            title={currentBatch?.name || 'Class Batch'}
             badge="QUORUM"
             footer={
               <div className="flex items-center justify-between text-[11px] font-['Inter']">
-                <span>Room: 302 (Lab)</span>
-                <span className="font-semibold">Lecture #18</span>
+                <span>Room: {currentBatch?.room || 'General Room'}</span>
+                <span className="font-semibold">{currentBatch?.code || 'BATCH'}</span>
               </div>
             }
           >
             <p className="font-['Raleway'] font-medium text-xs">
-              Subject: <strong className="font-bold">{currentBatch?.subject || 'JEE Mathematics'}</strong>
+              Subject: <strong className="font-bold">{currentBatch?.subject || 'Class Subject'}</strong>
             </p>
             <div className="mt-2 flex items-baseline gap-2">
               <span className="text-2xl font-bold font-['Inter'] text-[#713F12]">
