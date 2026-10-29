@@ -370,5 +370,5 @@ export function calculateGradeAndPercentage(
   return { percentage, grade };
 }
 
-export * from './features';
-export * from './tuition';
+export * from './features.js';
+export * from './tuition.js';
