@@ -23,6 +23,7 @@ import { StudyMaterialView } from '../components/StudyMaterialView';
 import { StudentFeeAlertView } from '../components/StudentFeeAlertView';
 import { TuitionBrandingView } from '../components/TuitionBrandingView';
 import { AuthModal } from '../components/AuthModal';
+import { AuthWelcomeScreen } from '../components/AuthWelcomeScreen';
 import { DeskPetPill } from '../components/ui';
 import { teacherApi, getAuthToken, clearAuthToken } from '../lib/api';
 import type {
@@ -252,6 +253,21 @@ export default function TeacherApp() {
     setShowAuthModal(true);
   };
 
+  const handleAuthSuccess = async (authenticatedUser: UserSession) => {
+    setUser(authenticatedUser);
+    setShowAuthModal(false);
+    if (authenticatedUser.role === 'TUITION_OWNER') {
+      setCurrentTab('tuitionBranding');
+    } else if (authenticatedUser.role === 'SUPER_ADMIN') {
+      setCurrentTab('features');
+    } else {
+      setCurrentTab('dashboard');
+    }
+    setIsLoading(true);
+    await loadUserData();
+    setIsLoading(false);
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen ak-desk-surface flex flex-col items-center justify-center text-[var(--ink-primary)]">
@@ -262,6 +278,15 @@ export default function TeacherApp() {
           </span>
         </div>
       </div>
+    );
+  }
+
+  // If user is not authenticated, present the Master Welcome & Auth screen
+  if (!user) {
+    return (
+      <AuthWelcomeScreen
+        onAuthSuccess={handleAuthSuccess}
+      />
     );
   }
 
@@ -428,18 +453,7 @@ export default function TeacherApp() {
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
-        onAuthSuccess={async (u) => {
-          setUser(u);
-          setShowAuthModal(false);
-          if (u.role === 'TUITION_OWNER') {
-            setCurrentTab('tuitionBranding');
-          } else if (u.role === 'SUPER_ADMIN') {
-            setCurrentTab('features');
-          } else {
-            setCurrentTab('dashboard');
-          }
-          await loadUserData();
-        }}
+        onAuthSuccess={handleAuthSuccess}
       />
     </div>
   );

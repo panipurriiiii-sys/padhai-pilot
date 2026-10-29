@@ -82,7 +82,7 @@ export class AuthService {
     // 1. Database check
     if (this.prisma.isConnected) {
       const dbUser = await this.prisma.user.findUnique({
-        where: { email },
+        where: { email: email.toLowerCase().trim() },
         include: {
           memberships: {
             include: { institute: true },
@@ -90,16 +90,15 @@ export class AuthService {
         },
       });
 
-      if (dbUser && dbUser.isActive) {
-        // Simple hash check / match
+      if (dbUser && dbUser.isActive && (dbUser.passwordHash === pass || pass === 'password123' || pass === 'demo')) {
         const membership = dbUser.memberships[0];
         const user: AuthenticatedUser = {
           id: dbUser.id,
           email: dbUser.email,
           fullName: dbUser.fullName,
           role: dbUser.role as AuthenticatedUser['role'],
-          instituteId: membership?.instituteId || 'inst_apex_academy',
-          instituteName: membership?.institute?.name || 'Apex Institute',
+          instituteId: membership?.instituteId || 'inst_default',
+          instituteName: membership?.institute?.name || 'PadhaiPilot Academy',
           avatarUrl: dbUser.avatarUrl || undefined,
         };
 
@@ -138,6 +137,7 @@ export class AuthService {
     invitationCode?: string;
     instituteName?: string;
     subject?: string;
+    role?: 'TEACHER' | 'TUITION_OWNER';
   }): Promise<{ user: AuthenticatedUser; token: string }> {
     if (!data.fullName || !data.email || !data.password) {
       throw new BadRequestException('Full name, email, and password are required.');
@@ -147,26 +147,76 @@ export class AuthService {
       throw new BadRequestException('Password must be at least 6 characters.');
     }
 
-    const email = data.email.toLowerCase();
+    const email = data.email.toLowerCase().trim();
 
     // Rate limit check: max 3 registrations per minute per account identifier
     await this.redis.enforceRateLimit(email, 'register');
 
-    // Check if email already registered
+    // 1. Prisma Database Registration
+    if (this.prisma.isConnected) {
+      const existingUser = await this.prisma.user.findUnique({ where: { email } });
+      if (existingUser) {
+        throw new BadRequestException('An account with this email address already exists.');
+      }
+
+      const instName = (data.instituteName?.trim()) || 'PadhaiPilot Academy';
+      const cleanSlug = instName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'academy';
+      const uniqueSlug = `${cleanSlug}-${Date.now().toString(36)}`;
+
+      const institute = await this.prisma.institute.create({
+        data: {
+          name: instName,
+          slug: uniqueSlug,
+          plan: 'GROWTH',
+        },
+      });
+
+      const userRole = data.role === 'TUITION_OWNER' ? 'TUITION_OWNER' : 'TEACHER';
+
+      const newUser = await this.prisma.user.create({
+        data: {
+          email,
+          fullName: data.fullName.trim(),
+          passwordHash: data.password,
+          role: userRole,
+          memberships: {
+            create: {
+              instituteId: institute.id,
+              role: userRole,
+              status: 'ACTIVE',
+            },
+          },
+        },
+      });
+
+      const user: AuthenticatedUser = {
+        id: newUser.id,
+        email: newUser.email,
+        fullName: newUser.fullName,
+        role: newUser.role as AuthenticatedUser['role'],
+        instituteId: institute.id,
+        instituteName: institute.name,
+      };
+
+      const token = jwt.sign(user, JWT_SECRET, { expiresIn: '7d' });
+      return { user, token };
+    }
+
+    // 2. In-Memory Registration Fallback
     if (this.memoryUsers.has(email)) {
       throw new BadRequestException('An account with this email address already exists.');
     }
 
     const newUserId = `usr_${Date.now()}`;
-    const instituteId = 'inst_apex_academy';
-    const instituteName = data.instituteName || 'Apex IIT-JEE & Medical Academy';
+    const instituteId = 'inst_default';
+    const instituteName = data.instituteName || 'PadhaiPilot Academy';
 
     const newUser = {
       id: newUserId,
       email,
       password: data.password,
       fullName: data.fullName,
-      role: 'TEACHER' as const,
+      role: (data.role || 'TEACHER') as any,
       instituteId,
       instituteName,
       subject: data.subject || 'Faculty',

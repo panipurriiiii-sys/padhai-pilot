@@ -60,6 +60,7 @@ export class AuthController {
       invitationCode?: string;
       instituteName?: string;
       subject?: string;
+      role?: 'TEACHER' | 'TUITION_OWNER';
     },
     @Res({ passthrough: true }) res: Response,
   ) {

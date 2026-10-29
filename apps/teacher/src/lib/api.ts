@@ -152,6 +152,7 @@ export const teacherApi = {
     invitationCode?: string;
     instituteName?: string;
     subject?: string;
+    role?: 'TEACHER' | 'TUITION_OWNER';
   }): Promise<{ user: UserSession; token: string }> {
     const res = await request<{ user: UserSession; token: string }>('/auth/register', {
       method: 'POST',

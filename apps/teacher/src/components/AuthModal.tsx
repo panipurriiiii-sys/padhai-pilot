@@ -174,7 +174,7 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
                   <GraduationCap className="w-3.5 h-3.5" />
                   <span className="font-bold font-['Raleway'] text-[10px]">Faculty</span>
                 </div>
-                <div className="text-[10px] text-[var(--ink-muted)] truncate">Prof. Sharma</div>
+                <div className="text-[10px] text-[var(--ink-muted)] truncate">Teacher Demo</div>
               </button>
 
               <button
@@ -187,7 +187,7 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
                   <Building2 className="w-3.5 h-3.5" />
                   <span className="font-bold font-['Raleway'] text-[10px]">Owner</span>
                 </div>
-                <div className="text-[10px] text-[var(--ink-muted)] truncate">R. Singhania</div>
+                <div className="text-[10px] text-[var(--ink-muted)] truncate">Owner Demo</div>
               </button>
 
               <button
@@ -200,7 +200,7 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
                   <ShieldAlert className="w-3.5 h-3.5" />
                   <span className="font-bold font-['Raleway'] text-[10px]">Admin</span>
                 </div>
-                <div className="text-[10px] text-[var(--ink-muted)] truncate">Dr. Vikram</div>
+                <div className="text-[10px] text-[var(--ink-muted)] truncate">Admin Demo</div>
               </button>
             </div>
           </div>
@@ -299,7 +299,7 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
               <input
                 type="text"
                 required
-                placeholder="e.g. Dr. Sunita Rao"
+                placeholder="e.g. Dr. Alok Verma"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 className="w-full input-paper"
