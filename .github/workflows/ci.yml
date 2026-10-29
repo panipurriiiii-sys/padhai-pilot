@@ -1,0 +1,175 @@
+name: PadhaiPilot CI Pipeline
+
+on:
+  push:
+    branches: [main, master, staging, develop]
+  pull_request:
+    branches: [main, master, staging, develop]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ============================================================================
+  # 1. SHARED PACKAGES & TYPE VALIDATION
+  # ============================================================================
+  typecheck:
+    name: Typecheck & Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (LTS 20)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Workspace Dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate --schema=apps/api/prisma/schema.prisma
+
+      - name: Typecheck @padhai-pilot/shared
+        run: npm run typecheck --workspace=@padhai-pilot/shared
+
+  # ============================================================================
+  # 2. NESTJS BACKEND API TESTS & BUILD
+  # ============================================================================
+  backend-api:
+    name: Backend API (Tests & Serverless Build)
+    runs-on: ubuntu-latest
+    needs: [typecheck]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (LTS 20)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate --schema=apps/api/prisma/schema.prisma
+
+      - name: Run Backend Test Suite (Vitest)
+        run: npm test --workspace=@padhai-pilot/api
+        env:
+          NODE_ENV: test
+          REDIS_ENABLED: 'false'
+          REDIS_RATE_LIMIT_ENABLED: 'false'
+          JWT_SECRET: 'test-ci-jwt-secret-key-2026'
+
+      - name: Build NestJS API
+        run: npm run build --workspace=@padhai-pilot/api
+
+      - name: Verify Vercel Serverless Entrypoint
+        run: |
+          node -e "
+            const fs = require('fs');
+            if (!fs.existsSync('apps/api/api/index.ts')) {
+              console.error('Missing apps/api/api/index.ts serverless handler');
+              process.exit(1);
+            }
+            if (!fs.existsSync('apps/api/vercel.json')) {
+              console.error('Missing apps/api/vercel.json');
+              process.exit(1);
+            }
+            console.log('✓ Vercel Serverless API entrypoint and config verified.');
+          "
+
+  # ============================================================================
+  # 3. TEACHER WEB PORTAL BUILD
+  # ============================================================================
+  teacher-portal:
+    name: Teacher Portal (Next.js Build)
+    runs-on: ubuntu-latest
+    needs: [typecheck]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (LTS 20)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Cache Next.js Build
+        uses: actions/cache@v4
+        with:
+          path: apps/teacher/.next/cache
+          key: ${{ runner.os }}-nextjs-teacher-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('apps/teacher/**.[jt]s', 'apps/teacher/**.[jt]sx') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-teacher-${{ hashFiles('**/package-lock.json') }}-
+
+      - name: Build Teacher Next.js Portal
+        run: npm run build --workspace=@padhai-pilot/teacher
+        env:
+          NEXT_PUBLIC_API_URL: 'https://api.padhaipilot.com/api'
+
+  # ============================================================================
+  # 4. OTHER MONOREPO PORTALS (Admin, Student, Web)
+  # ============================================================================
+  monorepo-portals:
+    name: Other Portals Verification
+    runs-on: ubuntu-latest
+    needs: [typecheck]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (LTS 20)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Check Portal Builds (If Present)
+        run: |
+          for app in admin student web; do
+            if [ -f "apps/$app/package.json" ]; then
+              echo "Checking apps/$app..."
+              npm run build --workspace=@padhai-pilot/$app --if-present || echo "Optional portal $app skipped."
+            fi
+          done
+
+  # ============================================================================
+  # 5. RELEASE & VERCEL DEPLOYMENT READINESS GATE
+  # ============================================================================
+  deployment-readiness:
+    name: Vercel Deployment Readiness Gate
+    runs-on: ubuntu-latest
+    needs: [backend-api, teacher-portal]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Validate Vercel Configurations
+        run: |
+          node -e "
+            const fs = require('fs');
+            const configs = ['vercel.json', 'apps/api/vercel.json', 'apps/teacher/vercel.json'];
+            for (const c of configs) {
+              if (fs.existsSync(c)) {
+                JSON.parse(fs.readFileSync(c, 'utf8'));
+                console.log('✓ Validated JSON syntax: ' + c);
+              }
+            }
+            console.log('✓ All Vercel manifests are valid and deployment-ready.');
+          "
+

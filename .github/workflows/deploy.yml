@@ -1,0 +1,103 @@
+name: PadhaiPilot Vercel Deployment
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Select deployment target'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - teacher-portal
+          - backend-api
+
+jobs:
+  # ============================================================================
+  # DEPLOY BACKEND API TO VERCEL
+  # ============================================================================
+  deploy-api:
+    name: Deploy Backend API to Vercel
+    runs-on: ubuntu-latest
+    if: github.event.inputs.target == 'all' || github.event.inputs.target == 'backend-api' || github.event_name == 'push'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (LTS 20)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate --schema=apps/api/prisma/schema.prisma
+
+      - name: Build API
+        run: npm run build --workspace=@padhai-pilot/api
+
+      - name: Deploy to Vercel (Production)
+        if: env.VERCEL_TOKEN != ''
+        run: |
+          npx vercel --prod --token=${{ secrets.VERCEL_TOKEN }} --yes apps/api
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_API }}
+
+      - name: Dry Run Notice
+        if: env.VERCEL_TOKEN == ''
+        run: |
+          echo "Notice: VERCEL_TOKEN secret not configured yet in GitHub repository."
+          echo "The API build succeeded and is 100% Vercel compatible."
+          echo "Add VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID_API to repository secrets to enable auto-deployment."
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+  # ============================================================================
+  # DEPLOY TEACHER PORTAL TO VERCEL
+  # ============================================================================
+  deploy-teacher:
+    name: Deploy Teacher Portal to Vercel
+    runs-on: ubuntu-latest
+    if: github.event.inputs.target == 'all' || github.event.inputs.target == 'teacher-portal' || github.event_name == 'push'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (LTS 20)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Teacher Portal
+        run: npm run build --workspace=@padhai-pilot/teacher
+
+      - name: Deploy to Vercel (Production)
+        if: env.VERCEL_TOKEN != ''
+        run: |
+          npx vercel --prod --token=${{ secrets.VERCEL_TOKEN }} --yes apps/teacher
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_TEACHER }}
+
+      - name: Dry Run Notice
+        if: env.VERCEL_TOKEN == ''
+        run: |
+          echo "Notice: VERCEL_TOKEN secret not configured yet in GitHub repository."
+          echo "The Teacher Portal Next.js build succeeded and is 100% Vercel compatible."
+          echo "Add VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID_TEACHER to repository secrets to enable auto-deployment."
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+

@@ -1,0 +1,27 @@
+{
+  "name": "padhai-pilot",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/web",
+    "apps/admin",
+    "apps/teacher",
+    "apps/student",
+    "apps/api",
+    "packages/shared"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev --workspace=@padhai-pilot/web",
+    "dev:admin": "npm run dev --workspace=@padhai-pilot/admin",
+    "dev:teacher": "npm run dev --workspace=@padhai-pilot/teacher",
+    "dev:student": "npm run dev --workspace=@padhai-pilot/student",
+    "dev:api": "npm run start:dev --workspace=@padhai-pilot/api",
+    "build": "npm run build --workspaces --if-present",
+    "build:shared": "npm run typecheck --workspace=@padhai-pilot/shared",
+    "build:teacher": "npm run build --workspace=@padhai-pilot/teacher",
+    "build:api": "npm run build --workspace=@padhai-pilot/api",
+    "test": "npm test --workspace=@padhai-pilot/api",
+    "typecheck": "npm run typecheck --workspace=@padhai-pilot/shared",
+    "prisma:generate": "npx prisma generate --schema=apps/api/prisma/schema.prisma"
+  }
+}

@@ -1,0 +1,73 @@
+:root {
+  /* Three strictly permitted font families */
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-primary: 'Raleway', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-data: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace;
+
+  /* Default Dark Mode (Extracted from reference portfolio) */
+  --bg-app: #050608;
+  --surface-card: #0A0D12;
+  --surface-elevated: #10151D;
+  --surface-hover: #141A24;
+  --border-subtle: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.16);
+
+  --text-primary: #F5F7FA;
+  --text-secondary: #C3CAD6;
+  --text-muted: #929BAA;
+  --text-disabled: #55595F;
+
+  --primary-accent: #1677FF;
+  --primary-hover: #3395FF;
+  --primary-active: #0A6FE8;
+  --primary-subtle: rgba(22, 119, 255, 0.12);
+  --primary-border: rgba(22, 119, 255, 0.28);
+
+  --status-success: #10B981;
+  --status-success-subtle: rgba(16, 185, 129, 0.12);
+  --status-warning: #F59E0B;
+  --status-warning-subtle: rgba(245, 158, 11, 0.12);
+  --status-error: #F43F5E;
+  --status-error-subtle: rgba(244, 63, 94, 0.12);
+  --status-info: #00B7D7;
+  --status-info-subtle: rgba(0, 183, 215, 0.12);
+
+  --shadow-subtle: 0 4px 12px -2px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 0 20px rgba(22, 119, 255, 0.25);
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+}
+
+[data-theme='light'] {
+  --bg-app: #F8FAFC;
+  --surface-card: #FFFFFF;
+  --surface-elevated: #F1F5F9;
+  --surface-hover: #E2E8F0;
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --border-strong: rgba(0, 0, 0, 0.15);
+
+  --text-primary: #0A0D12;
+  --text-secondary: #334155;
+  --text-muted: #64748B;
+  --text-disabled: #94A3B8;
+
+  --primary-accent: #1677FF;
+  --primary-hover: #0A6FE8;
+  --primary-active: #0A4FBF;
+  --primary-subtle: rgba(22, 119, 255, 0.08);
+  --primary-border: rgba(22, 119, 255, 0.22);
+
+  --status-success: #059669;
+  --status-success-subtle: rgba(5, 150, 105, 0.08);
+  --status-warning: #D97706;
+  --status-warning-subtle: rgba(217, 119, 6, 0.08);
+  --status-error: #E11D48;
+  --status-error-subtle: rgba(225, 29, 72, 0.08);
+  --status-info: #0284C7;
+  --status-info-subtle: rgba(2, 132, 199, 0.08);
+
+  --shadow-subtle: 0 2px 8px -1px rgba(0, 0, 0, 0.08);
+  --shadow-glow: 0 0 16px rgba(22, 119, 255, 0.15);
+}

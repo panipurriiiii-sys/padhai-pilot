@@ -1,0 +1,363 @@
+# PADHAIPILOT — GLOBAL ARCHITECTURE, FEATURE FLAGS & COST OPTIMIZATION RULES
+
+These rules are mandatory for every developer and AI coding agent working on PadhaiPilot. Read the existing `PROJECT_SPEC.md` and inspect the repository before making changes.
+
+## 1. NON-NEGOTIABLE PRINCIPLES
+
+1. Use npm only. Never use pnpm, yarn, or Expo.
+2. Preserve the existing `padhai-pilot` monorepo and inspect existing files before changing anything.
+3. Keep Admin, Teacher, and Student as separate web portals, with a shared NestJS backend and PostgreSQL database.
+4. Build the mobile app using React Native CLI and connect it to the same deployed API.
+5. Production web applications and the backend API must run on the agreed Vercel deployment architecture. No production feature may depend on a server running on my laptop or a developer's local machine.
+6. Server cost is a critical business constraint. Optimize for the lowest sustainable total cost without compromising security, data integrity, reliability, or essential functionality.
+7. Prefer centralized configuration, reusable modules, shared infrastructure, and data-driven behavior over duplicated code.
+8. Do not introduce a new paid provider, database, monitoring product, queue, microservice, or external service without demonstrating why it is necessary and evaluating lower-cost alternatives.
+9. Never claim that deployment, security, testing, or optimization is complete unless it has been verified.
+
+## 2. EVERYTHING THAT CAN REASONABLY BE CONFIGURED MUST BE CENTRALLY MANAGED
+
+Build a centralized configuration and feature-management system rather than scattering hardcoded values throughout the codebase.
+
+The Platform Super Admin must be able to manage platform-level settings from a protected administrative interface wherever appropriate.
+
+Centralize configurable settings such as:
+
+- Global feature availability and emergency disable switches.
+- Default institute settings and supported modules.
+- Subscription plans, feature entitlements, limits, and trial rules.
+- Institute branding: logo, name, brand colors, supported typography, and configurable text.
+- Portal navigation and module visibility.
+- Notification channels, templates, and notification preferences.
+- Attendance rules, enrollment settings, and configurable academic policies where appropriate.
+- Upload size/type limits and other operational limits.
+- Rate-limit policies and configurable security thresholds where safe.
+- Pagination defaults, retention policies, and configurable application limits.
+- Platform announcements and maintenance notices.
+- Authentication/session policies where the selected authentication architecture supports safe configuration.
+- API timeouts, retry policies, and other runtime settings where configurable without redeployment.
+
+Do not put secrets, database credentials, signing keys, or private API keys in a general settings table or expose them through frontend configuration. Keep secrets in Vercel environment variables or an appropriate secret manager.
+
+Maintain one authoritative configuration source for each setting. Do not create multiple competing copies of the same global value.
+
+Not every configuration change needs to trigger a deployment. Operational settings and feature flags should support controlled runtime updates where appropriate. Code changes, schema migrations, and other release changes must still use a proper deployment process.
+
+## 3. FEATURE FLAGS MUST BE FIRST-CLASS INFRASTRUCTURE
+
+Build a reusable feature-flag service that can be used consistently by every web portal, the API, and the mobile app.
+
+Support the following configuration hierarchy:
+
+1. Platform-wide defaults.
+2. Subscription-plan entitlements.
+3. Institute-specific overrides.
+4. User-role and resource-level authorization.
+
+Define deterministic precedence rules. A plan entitlement cannot be bypassed by an institute override, and a feature flag cannot grant a user permissions they do not have.
+
+Each configurable feature should support, where applicable:
+
+- Enabled/disabled state.
+- Platform-wide enablement.
+- Institute-specific configuration.
+- Required subscription entitlement.
+- Role and permission requirements.
+- Usage limits and quotas.
+- Optional rollout percentage or allowlist.
+- Effective date and expiry.
+- Audit history, including who changed the setting and when.
+- Safe defaults when configuration is unavailable.
+- Emergency disable controls.
+- Dependencies on other features, validated to prevent inconsistent configurations.
+
+Every significant module should use these flags consistently. Examples include attendance, assignments, tests, results, fee management, notifications, reports, parent/guardian features, and advanced analytics.
+
+### Important implementation requirements
+
+- A disabled feature must not remain accessible through an unprotected API endpoint.
+- Hiding a button or page is not authorization.
+- The API must enforce feature availability, tenant entitlements, permissions, and quotas.
+- Cache configuration intelligently to avoid hitting PostgreSQL for every feature-flag check.
+- Provide a deliberate refresh/invalidation mechanism so administrative changes become effective promptly.
+- Do not cache security-sensitive permissions or entitlements in a way that permits revoked access or quota bypass.
+- If configuration cannot be loaded, fail safely for protected operations rather than silently granting access.
+- Keep flag evaluation deterministic, testable, and documented.
+- Remove temporary flags when they are no longer needed.
+
+## 4. MULTI-TENANT SECURITY IS MANDATORY
+
+PadhaiPilot must support multiple institutes through one maintained codebase.
+
+- Every institute-owned resource must be scoped to the correct institute.
+- Derive tenant identity from verified authentication and validated membership.
+- Never trust a client-supplied `instituteId`, `role`, or permission as authoritative.
+- Enforce tenant isolation in API services and database queries.
+- Prevent a user from accessing another institute's records by guessing or modifying an identifier.
+- Use explicit resource authorization, not role checks alone.
+- Apply feature flags and subscription entitlements without weakening authorization.
+- Audit sensitive administrative operations.
+- Test cross-tenant access, revoked memberships, disabled modules, and expired invitation codes.
+
+Global management must never mean global unrestricted access to customer data.
+
+## 5. EXTREME SERVER-COST OPTIMIZATION
+
+Treat infrastructure cost as an architectural requirement, not an afterthought.
+
+Before implementing any backend feature, consider:
+
+- How many HTTP requests will it create?
+- How many Vercel function invocations will it cause?
+- How many database queries will it execute?
+- How much CPU, memory, network transfer, and storage will it consume?
+- Does it require polling, a background worker, a scheduled function, or a paid third-party service?
+- Can the same result be achieved with fewer requests or a simpler implementation?
+
+Choose the simplest reliable solution with the lowest expected total cost.
+
+### API and Vercel optimization
+
+- Deploy the NestJS API using a Vercel-compatible serverless entry point and explicitly verify its routing and runtime behavior.
+- Do not assume a normal persistent NestJS server can be deployed unchanged to Vercel.
+- Minimize serverless cold-start overhead and unnecessary imports.
+- Reuse initialized application resources when supported by the runtime, without relying on instance memory for durable state.
+- Avoid unnecessary middleware, duplicate work, and repeated initialization.
+- Avoid long-running synchronous operations in request handlers.
+- Keep serverless functions within the selected plan's execution, payload, memory, and timeout limits.
+- Use efficient request and response payloads.
+- Avoid unnecessary API round trips between the frontend and backend.
+- Do not run expensive analytics or aggregation on every dashboard request when a cached or precomputed result is appropriate.
+- Avoid creating separate microservices unless a measurable requirement justifies the operational and financial cost.
+- Do not introduce Redis, Kafka, Elasticsearch, or another infrastructure dependency merely because it is common in large systems.
+- Add a background-processing service only when the workload requires one and its cost is justified.
+
+### Database and Prisma optimization
+
+- Use managed PostgreSQL that is compatible with the selected Vercel deployment.
+- Configure connection pooling appropriately for serverless workloads, following the database provider's current guidance.
+- Separate pooled runtime connections from direct migration connections when required.
+- Avoid opening unnecessary database connections for every invocation.
+- Prevent N+1 query patterns.
+- Use appropriate indexes based on actual query patterns.
+- Select only the columns the operation needs.
+- Use pagination and bounded result sizes for potentially large datasets.
+- Require filters and limits for expensive listing and reporting endpoints.
+- Use transactions when multiple operations must succeed or fail together.
+- Avoid repeated reads of unchanged configuration and reference data.
+- Use aggregation queries where they are more efficient than transferring large datasets to the application.
+- Avoid premature denormalization or expensive optimization without evidence.
+- Review slow queries and query plans before adding complex caching.
+- Never use an unbounded table scan as the normal path for a frequently used endpoint.
+
+### Caching rules
+
+Apply caching selectively to reduce database queries and repeated computation.
+
+Possible candidates include public content, institute branding, static reference data, feature-flag snapshots, and non-sensitive dashboard aggregates.
+
+- Use cache keys that include the correct tenant and relevant authorization scope.
+- Never share private responses across users or institutes accidentally.
+- Use appropriate cache headers for public versus private data.
+- Define invalidation or expiry behavior.
+- Do not publicly cache personal data, fees, marks, attendance, or authenticated API responses.
+- Ensure private data and permission revocations are not exposed through stale caches.
+- Avoid introducing a paid cache service until traffic and measurements justify it.
+- Prefer simple in-process caching for suitable non-critical data when the runtime permits it, understanding that serverless instances do not share reliable persistent memory.
+- Do not use in-memory state for authoritative session data, locks, quotas, or durable job tracking.
+
+## 6. AVOID UNNECESSARY BACKGROUND ACTIVITY
+
+- Never use frequent client-side polling when an on-demand request or reasonable refresh interval would suffice.
+- Avoid tight refresh loops and automatically retrying failed requests indefinitely.
+- Do not implement a cron job for work that does not need scheduled execution.
+- Consolidate notification events instead of issuing a separate expensive operation for every small change where appropriate.
+- Use pagination, debounce, request cancellation, and deduplication for search and rapidly changing inputs.
+- Avoid running duplicate requests when components mount or users navigate between screens.
+- Use idempotency for retryable operations that could otherwise create duplicate payments, enrollments, or records.
+- Make retry policies bounded and use backoff where appropriate.
+- Do not add always-on workers or servers without a demonstrated workload requirement.
+- Use provider-managed scheduled functions or event-driven workflows only when their limits and cost are understood.
+- Keep email, SMS, push, and payment provider usage within configured quotas and budgets.
+
+## 7. FRONTEND PERFORMANCE AND COST
+
+- Use Next.js Server Components for suitable read-heavy UI and keep client components limited to interactive functionality.
+- Avoid turning entire pages into client components without a reason.
+- Avoid unnecessary API calls and repeated fetching of the same data.
+- Prevent duplicate requests during navigation and rendering.
+- Debounce search and autocomplete inputs.
+- Use server-side pagination for large datasets.
+- Optimize images, fonts, scripts, and bundle sizes.
+- Lazy-load heavy components that are not needed immediately.
+- Avoid unnecessary animation libraries and large dependencies.
+- Do not fetch all students, attendance records, marks, or fees into the browser at once.
+- Use caching only where correct for the data's privacy and freshness requirements.
+- Avoid excessive client-side state and duplicated data sources.
+- Make dashboards useful without triggering numerous expensive queries.
+- Use a consistent shared design system and shared utilities instead of implementing the same behavior separately in each portal.
+
+## 8. COST-AWARE FILE AND STORAGE MANAGEMENT
+
+- Store uploaded files in durable object storage, not a serverless function's temporary filesystem.
+- Do not send large files through the database unless there is a clear requirement.
+- Validate MIME type, file size, authorization, and permitted file extensions.
+- Use short-lived, scoped upload/download URLs when supported.
+- Prevent unauthorized access to private student documents.
+- Optimize images and generate derived versions only when necessary.
+- Apply retention and deletion policies where required.
+- Avoid retaining duplicate files unnecessarily.
+- Monitor storage, egress, backups, and third-party file-processing costs.
+
+## 9. VERCEL DEPLOYMENT REQUIREMENTS
+
+Vercel is the intended production deployment platform for the web applications and API.
+
+- Ensure each deployable application has correct root-directory, build, install, and output settings.
+- Verify that npm workspaces and the lockfile work correctly in clean CI/Vercel builds.
+- Configure environment variables separately for development, preview, and production.
+- Do not put private secrets in browser-visible variables.
+- Make deployments reproducible and avoid installing dependencies from inconsistent lockfiles.
+- Keep build steps deterministic.
+- Avoid building unrelated applications when a deployment only needs one app, where the Vercel configuration supports this safely.
+- Use deployment previews to validate changes before production.
+- Configure custom domains and API origins explicitly.
+- Implement a minimal health/status endpoint appropriate for the serverless deployment.
+- Do not perform expensive database queries or third-party calls in health checks.
+- Verify cold starts, runtime limits, connection behavior, and deployment routing.
+- Set reasonable resource and usage budgets and configure available alerts.
+- Document rollback and recovery steps.
+- Never store important application state on the assumption that serverless filesystem contents will persist.
+
+The backend must be usable in production without any local server running. Local development is permitted for coding and testing only.
+
+## 10. DATABASE COST, BACKUPS, AND PORTABILITY
+
+- Select a managed PostgreSQL provider based on total cost, serverless compatibility, backups, pooling, and data-export support.
+- Do not select a paid database plan until the actual requirements and expected load have been assessed.
+- Keep the database independent of a particular frontend host.
+- Maintain one canonical Prisma schema and migration history.
+- Commit migrations to source control.
+- Test migrations in a non-production environment.
+- Back up data before risky schema changes.
+- Define retention and backup frequency according to business requirements.
+- Test restores, not merely backup creation.
+- Document how to export and migrate the database to another provider.
+- Keep uploaded files and critical records portable.
+- Never sacrifice backups, referential integrity, or tenant isolation merely to save a small amount of money.
+
+## 11. COST VISIBILITY AND BUDGET GUARDRAILS
+
+Build practical cost visibility from the beginning.
+
+Track, where provider metrics permit:
+
+- Vercel function invocations, execution duration, and errors.
+- Web builds and deployment frequency.
+- Database storage, connections, query performance, and compute usage.
+- API requests and unusually expensive endpoints.
+- File storage and network egress.
+- Email/SMS/push and payment-provider usage.
+- Usage per institute and subscription plan.
+- Failed requests, repeated retries, and rate-limit events.
+
+Requirements:
+
+- Establish a baseline before claiming an optimization has saved money.
+- Provide cost estimates and assumptions for proposed paid services.
+- Use quotas and rate limits to control abusive or unexpectedly expensive usage.
+- Use configurable institute-level usage limits where suitable.
+- Add alerts for threshold breaches when supported by the chosen providers.
+- Design graceful behavior for quota exhaustion and provider outages.
+- Avoid collecting unnecessary personal data for analytics.
+- Do not build a complex real-time cost analytics platform before it is needed; begin with provider dashboards, lightweight usage tracking, and actionable alerts.
+
+Never promise a specific monthly bill without current provider pricing, plan limits, region, and workload assumptions.
+
+## 12. SECURITY IS NOT OPTIONAL COST OPTIMIZATION
+
+Never reduce cost by:
+
+- Removing authentication or server-side authorization.
+- Allowing cross-tenant access.
+- Disabling database backups without an approved recovery plan.
+- Exposing secrets to web or mobile clients.
+- Storing passwords, private keys, or long-lived sensitive tokens insecurely.
+- Making private student, attendance, grade, fee, or document data publicly cacheable.
+- Skipping input validation or payment verification.
+- Trusting frontend feature flags as security controls.
+- Disabling audit logs for privileged security-sensitive actions.
+
+Choose efficient implementations that preserve security, privacy, and data integrity.
+
+## 13. TESTING AND VERIFICATION RULES
+
+For every implementation phase:
+
+1. Inspect the existing code and identify the smallest safe change.
+2. Explain the implementation approach and any material cost implications.
+3. Implement the change without deleting unrelated functionality.
+4. Run available type checks, linting, tests, and production builds.
+5. Test authorization, tenant isolation, and feature-flag enforcement where applicable.
+6. Verify deployment compatibility rather than assuming local success implies production success.
+7. Report the exact commands run and the results.
+8. Identify remaining failures and blockers honestly.
+9. Update the project documentation when architecture or deployment decisions change.
+
+Specifically test that:
+- Turning a flag off disables both UI access and API functionality.
+- An institute cannot bypass its plan limits.
+- A teacher cannot access another teacher's unauthorized students.
+- A student cannot access another student's private records.
+- A revoked invitation code cannot be redeemed.
+- Cache keys and invalidation do not leak data across tenants.
+- Database connection usage remains appropriate for serverless execution.
+- The app continues to function when an optional third-party service is unavailable.
+
+## 14. BEFORE ADDING ANY DEPENDENCY OR SERVICE
+
+Before introducing a new package, provider, or infrastructure component, answer:
+
+1. What exact requirement does it solve?
+2. Can existing code or a simpler dependency solve it?
+3. Is it essential to the MVP?
+4. What are its direct and indirect costs?
+5. Does it introduce ongoing compute, storage, requests, or egress?
+6. Does it increase deployment complexity or vendor lock-in?
+7. Is there a lower-cost alternative with acceptable reliability and security?
+8. How can we measure whether it is delivering value?
+
+Do not install dependencies simply because they are fashionable or commonly used in large applications.
+
+## 15. REQUIRED IMPLEMENTATION WORKFLOW
+
+Work in small, verifiable phases:
+
+**Phase A:** Stabilize the npm monorepo, workspace package names, lockfile, and clean installs.
+
+**Phase B:** Establish shared configuration, typed feature-flag evaluation, authorization, tenant context, and logging.
+
+**Phase C:** Define the data model, managed PostgreSQL setup, Prisma migrations, and serverless-safe database connection strategy.
+
+**Phase D:** Verify a minimal NestJS API deployment on Vercel before building many backend modules.
+
+**Phase E:** Deploy and verify the separate Admin, Teacher, Student, and public web applications.
+
+**Phase F:** Connect the React Native CLI app to the deployed API and verify authentication and core workflows.
+
+**Phase G:** Implement core modules, subscription entitlements, branding, usage limits, and advanced features by priority.
+
+**Phase H:** Run security, tenant-isolation, performance, cost, backup/restore, and production acceptance tests.
+
+Do not skip directly to advanced features while the monorepo, deployment, or authorization foundation is unstable.
+
+## FINAL DIRECTIVE
+
+Build PadhaiPilot as a centrally managed, multi-tenant platform with independent role-specific interfaces, a shared secure API, and durable managed PostgreSQL data.
+
+Feature flags, tenant configuration, subscriptions, entitlements, and operational settings must be centrally managed wherever appropriate.
+
+Optimize every layer for low, predictable total operating cost. Prefer fewer requests, efficient queries, pooled connections, small bundles, bounded workloads, sensible caching, and minimal infrastructure.
+
+Do not overengineer, duplicate services, introduce unnecessary paid products, or sacrifice security to reduce cost.
+
+Before major implementation decisions, inspect the repository and explain the trade-offs. After each phase, report what changed, what passed, what failed, expected cost implications, and the next safe step.
