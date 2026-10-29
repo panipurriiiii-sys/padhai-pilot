@@ -17,6 +17,7 @@ out/
 
 # NestJS / TypeScript build output
 dist/
+!packages/shared/dist/
 *.tsbuildinfo
 
 # Debug logs

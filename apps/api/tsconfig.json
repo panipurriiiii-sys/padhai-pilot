@@ -16,6 +16,11 @@
     "rootDir": ".",
     "incremental": true,
     "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@padhai-pilot/shared": ["../../packages/shared/dist/index.d.ts"],
+      "@padhai-pilot/shared/*": ["../../packages/shared/dist/*"]
+    },
     "strict": true,
     "strictPropertyInitialization": false,
     "types": ["vitest/globals", "node"]
