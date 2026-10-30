@@ -250,6 +250,130 @@ export class AuthService {
     return { user, token };
   }
 
+  async registerStudent(data: {
+    fullName: string;
+    email: string;
+    password: string;
+    phone?: string;
+    invitationCode?: string;
+  }): Promise<{ user: AuthenticatedUser; token: string }> {
+    if (!data.fullName || !data.email || !data.password) {
+      throw new BadRequestException('Full name, email, and password are required.');
+    }
+
+    if (data.password.length < 6) {
+      throw new BadRequestException('Password must be at least 6 characters.');
+    }
+
+    const email = data.email.toLowerCase().trim();
+    await this.redis.enforceRateLimit(email, 'register');
+
+    let instituteId = 'inst_apex_academy';
+    let instituteName = 'Apex IIT-JEE & Medical Academy';
+    let targetBatchId: string | undefined;
+
+    // Validate invitation code if provided
+    if (data.invitationCode?.trim()) {
+      const code = data.invitationCode.trim();
+      if (this.prisma.isConnected) {
+        const inv = await this.prisma.invitationCode.findUnique({
+          where: { code },
+          include: { institute: true, batch: true },
+        });
+        if (!inv || inv.isRevoked || new Date(inv.expiresAt) < new Date() || inv.usedCount >= inv.maxUses) {
+          throw new BadRequestException('The provided invitation code is invalid, expired, or exhausted.');
+        }
+        instituteId = inv.instituteId;
+        instituteName = inv.institute.name;
+        targetBatchId = inv.batchId || undefined;
+
+        await this.prisma.invitationCode.update({
+          where: { id: inv.id },
+          data: { usedCount: { increment: 1 } },
+        });
+      }
+    }
+
+    // 1. Prisma Registration
+    if (this.prisma.isConnected) {
+      const existingUser = await this.prisma.user.findUnique({ where: { email } });
+      if (existingUser) {
+        throw new BadRequestException('An account with this email address already exists.');
+      }
+
+      const newUser = await this.prisma.user.create({
+        data: {
+          email,
+          fullName: data.fullName.trim(),
+          phone: data.phone?.trim() || null,
+          passwordHash: data.password,
+          role: 'STUDENT',
+          memberships: {
+            create: {
+              instituteId,
+              role: 'STUDENT',
+              status: 'ACTIVE',
+            },
+          },
+          ...(targetBatchId
+            ? {
+                enrollments: {
+                  create: {
+                    instituteId,
+                    batchId: targetBatchId,
+                    rollNumber: `STU-${Date.now().toString().slice(-4)}`,
+                    status: 'ACTIVE',
+                  },
+                },
+              }
+            : {}),
+        },
+      });
+
+      const user: AuthenticatedUser = {
+        id: newUser.id,
+        email: newUser.email,
+        fullName: newUser.fullName,
+        role: 'STUDENT',
+        instituteId,
+        instituteName,
+      };
+
+      const token = jwt.sign(user, JWT_SECRET, { expiresIn: '7d' });
+      return { user, token };
+    }
+
+    // 2. In-Memory Fallback
+    if (this.memoryUsers.has(email)) {
+      throw new BadRequestException('An account with this email address already exists.');
+    }
+
+    const newUserId = `usr_std_${Date.now()}`;
+    const newUser = {
+      id: newUserId,
+      email,
+      password: data.password,
+      fullName: data.fullName,
+      phone: data.phone,
+      role: 'STUDENT' as const,
+      instituteId,
+      instituteName,
+    };
+    this.memoryUsers.set(email, newUser);
+
+    const user: AuthenticatedUser = {
+      id: newUser.id,
+      email: newUser.email,
+      fullName: newUser.fullName,
+      role: 'STUDENT',
+      instituteId,
+      instituteName,
+    };
+
+    const token = jwt.sign(user, JWT_SECRET, { expiresIn: '7d' });
+    return { user, token };
+  }
+
   // -------------------------------------------------------------
   // 3. FORGOT PASSWORD & RESET TOKEN
   // -------------------------------------------------------------

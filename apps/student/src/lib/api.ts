@@ -79,12 +79,152 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   }
 }
 
+export interface StudentProfileData {
+  id: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  avatarUrl: string | null;
+  role: string;
+  rollNumber: string;
+  instituteId: string;
+  instituteName: string;
+  batchId: string;
+  batchName: string;
+  subject: string;
+  academicYear: string;
+  joinedAt: string;
+  notificationPreferences: {
+    email: boolean;
+    sms: boolean;
+    inApp: boolean;
+    results: boolean;
+    fees: boolean;
+  };
+}
+
+export interface TeachingDiaryEntry {
+  id: string;
+  lessonDate: string;
+  sessionTime?: string;
+  subject: string;
+  facultyName: string;
+  batchName: string;
+  chapterTitle: string;
+  conceptsTaught: string;
+  learningObjectives?: string;
+  homeworkAssigned?: string;
+  attachmentUrl?: string;
+  referenceLinks?: string[];
+  createdAt: string;
+}
+
+export interface TimetableDay {
+  day: string;
+  slots: Array<{
+    time: string;
+    subject: string;
+    topic: string;
+    room: string;
+    faculty: string;
+  }>;
+}
+
+export interface AssignmentItem {
+  id: string;
+  title: string;
+  instructions: string;
+  subject: string;
+  dueDate: string;
+  maxMarks: number;
+  attachmentUrl?: string;
+  status: 'PENDING' | 'SUBMITTED' | 'LATE' | 'GRADED' | 'RESUBMIT';
+  submission?: {
+    submittedAt: string;
+    content?: string;
+    attachmentUrl?: string;
+    marksObtained?: number;
+    feedback?: string;
+  };
+}
+
+export interface TestItem {
+  id: string;
+  title: string;
+  instructions?: string;
+  subject: string;
+  scheduledDate: string;
+  durationMinutes: number;
+  totalMarks: number;
+  status: 'UPCOMING' | 'ACTIVE' | 'COMPLETED';
+  attempt?: {
+    submittedAt: string;
+    score: number;
+    status: string;
+    feedback?: string;
+  };
+}
+
+export interface AcademicQuery {
+  id: string;
+  subject: string;
+  topic?: string;
+  questionText: string;
+  attachmentUrl?: string;
+  status: 'PENDING' | 'ANSWERED';
+  facultyReply?: string;
+  repliedAt?: string;
+  facultyName?: string;
+  createdAt: string;
+}
+
+export interface StudyTask {
+  id: string;
+  title: string;
+  subject?: string;
+  dueDate?: string;
+  priority: 'NORMAL' | 'HIGH' | 'LOW';
+  isCompleted: boolean;
+  createdAt: string;
+}
+
+export interface OfficialDocument {
+  id: string;
+  title: string;
+  category: 'REPORT_CARD' | 'FEE_RECEIPT' | 'STUDY_MATERIAL' | 'TIMETABLE_SCHEDULE' | 'CERTIFICATE';
+  issueDate: string;
+  academicPeriod: string;
+  downloadUrl: string;
+  fileSize?: string;
+}
+
 export const studentApi = {
-  // Authentication
+  // Authentication & Onboarding
   async login(email: string, password: string): Promise<{ user: UserSession; token: string }> {
     const res = await request<{ user: UserSession; token: string }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
+    });
+    if (res.token) setAuthToken(res.token);
+    if (res.user) {
+      cachedSession = res.user;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('padhaipilot_student_session', JSON.stringify(res.user));
+      }
+    }
+    return res;
+  },
+
+  async register(data: {
+    fullName: string;
+    email: string;
+    password: string;
+    phone?: string;
+    invitationCode?: string;
+  }): Promise<{ user: UserSession; token: string }> {
+    const res = await request<{ user: UserSession; token: string }>('/auth/register-student', {
+      method: 'POST',
+      body: JSON.stringify(data),
     });
     if (res.token) setAuthToken(res.token);
     if (res.user) {
@@ -123,52 +263,72 @@ export const studentApi = {
     return null;
   },
 
-  // 1. Published Results for Current Student
-  async getPublishedResults(): Promise<StudentAssessmentResult[]> {
+  // 1. Dashboard Overview
+  async getDashboard(): Promise<any> {
     try {
-      return await request<StudentAssessmentResult[]>('/assessment/student/results');
+      return await request('/student/dashboard');
     } catch {
-      return [];
+      return null;
     }
   },
 
-  // 2. In-App Notifications
-  async getNotifications(): Promise<InAppNotification[]> {
-    try {
-      return await request<InAppNotification[]>('/assessment/student/notifications');
-    } catch {
-      return [];
-    }
+  // 2. Invitation & Batch Enrollment
+  async validateInvitation(code: string): Promise<{
+    valid: boolean;
+    code: string;
+    instituteName: string;
+    batchName: string;
+    subject: string;
+    gradeLevel: string;
+  }> {
+    return await request('/student/validate-invitation', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    });
   },
 
-  async markNotificationRead(id: string): Promise<void> {
-    try {
-      await request(`/assessment/student/notifications/${id}/read`, { method: 'PUT' });
-    } catch {
-      // Ignored
-    }
+  async joinBatch(code: string): Promise<{ success: boolean; message: string; batchName: string }> {
+    return await request('/student/join-batch', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    });
   },
 
-  // 3. Study Materials & Notes (Served directly from Cloudflare Media Host CDN)
-  async getStudyMaterials(batchId?: string, category?: string): Promise<StudyMaterialItem[]> {
+  // 3. Profile & Settings
+  async getProfile(): Promise<StudentProfileData> {
+    return await request('/student/profile');
+  },
+
+  async updateProfile(dto: { fullName?: string; phone?: string; avatarUrl?: string }): Promise<void> {
+    await request('/student/profile', {
+      method: 'PUT',
+      body: JSON.stringify(dto),
+    });
+  },
+
+  // 4. Daily Teaching Diary
+  async getTeachingDiaries(subject?: string, search?: string): Promise<TeachingDiaryEntry[]> {
     try {
       const params = new URLSearchParams();
-      if (batchId && batchId !== 'ALL') params.set('batchId', batchId);
-      if (category && category !== 'ALL') params.set('category', category);
-      const query = params.toString() ? `?${params.toString()}` : '';
-      return await request<StudyMaterialItem[]>(`/student/materials${query}`);
+      if (subject && subject !== 'ALL') params.set('subject', subject);
+      if (search && search.trim()) params.set('search', search.trim());
+      const q = params.toString() ? `?${params.toString()}` : '';
+      return await request<TeachingDiaryEntry[]>(`/student/diary${q}`);
     } catch {
-      // Fallback try tuition endpoint
-      try {
-        const query = batchId && batchId !== 'ALL' ? `?batchId=${batchId}` : '';
-        return await request<StudyMaterialItem[]>(`/assessment/student/materials${query}`);
-      } catch {
-        return [];
-      }
+      return [];
     }
   },
 
-  // 4. Attendance
+  // 5. Timetable & Schedule
+  async getTimetable(): Promise<TimetableDay[]> {
+    try {
+      return await request<TimetableDay[]>('/student/timetable');
+    } catch {
+      return [];
+    }
+  },
+
+  // 6. Attendance & History
   async getAttendance(): Promise<{
     totalClasses: number;
     attended: number;
@@ -190,7 +350,78 @@ export const studentApi = {
     }
   },
 
-  // 5. Fees & Receipts
+  async submitAttendanceCorrection(date: string, reason: string): Promise<{ success: boolean; message: string }> {
+    return await request('/student/attendance/correction-request', {
+      method: 'POST',
+      body: JSON.stringify({ date, reason }),
+    });
+  },
+
+  // 7. Homework & Assignments
+  async getAssignments(): Promise<AssignmentItem[]> {
+    try {
+      return await request<AssignmentItem[]>('/student/assignments');
+    } catch {
+      return [];
+    }
+  },
+
+  async submitAssignment(
+    id: string,
+    payload: { content?: string; attachmentUrl?: string; isDraft?: boolean },
+  ): Promise<{ success: boolean; message: string; status: string }> {
+    return await request(`/student/assignments/${id}/submit`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  // 8. Tests & Quizzes
+  async getTests(): Promise<TestItem[]> {
+    try {
+      return await request<TestItem[]>('/student/tests');
+    } catch {
+      return [];
+    }
+  },
+
+  async getTestDetails(id: string): Promise<any> {
+    return await request(`/student/tests/${id}`);
+  },
+
+  async submitTestAttempt(
+    testId: string,
+    answers: Array<{ questionId: string; selectedOptionIndex?: number; textAnswer?: string }>,
+  ): Promise<{ success: boolean; score: number; totalMarks: number; percentage: number; feedback: string }> {
+    return await request(`/student/tests/${testId}/attempt`, {
+      method: 'POST',
+      body: JSON.stringify({ answers }),
+    });
+  },
+
+  // 9. Published Results
+  async getPublishedResults(): Promise<StudentAssessmentResult[]> {
+    try {
+      return await request<StudentAssessmentResult[]>('/assessment/student/results');
+    } catch {
+      return [];
+    }
+  },
+
+  // 10. Study Materials Library
+  async getStudyMaterials(batchId?: string, category?: string): Promise<StudyMaterialItem[]> {
+    try {
+      const params = new URLSearchParams();
+      if (batchId && batchId !== 'ALL') params.set('batchId', batchId);
+      if (category && category !== 'ALL') params.set('category', category);
+      const query = params.toString() ? `?${params.toString()}` : '';
+      return await request<StudyMaterialItem[]>(`/student/materials${query}`);
+    } catch {
+      return [];
+    }
+  },
+
+  // 11. Fees & Receipts
   async getFees(): Promise<{
     totalFees: number;
     paidAmount: number;
@@ -214,7 +445,7 @@ export const studentApi = {
     }
   },
 
-  // 6. Announcements
+  // 12. Announcements
   async getAnnouncements(): Promise<Array<{
     id: string;
     title: string;
@@ -230,12 +461,94 @@ export const studentApi = {
     }
   },
 
-  // 7. Dashboard Overview
-  async getDashboard(): Promise<any> {
+  // 13. Academic Queries (Student-to-Faculty)
+  async getAcademicQueries(): Promise<AcademicQuery[]> {
     try {
-      return await request('/student/dashboard');
+      return await request<AcademicQuery[]>('/student/queries');
     } catch {
-      return null;
+      return [];
+    }
+  },
+
+  async submitAcademicQuery(dto: {
+    subject: string;
+    topic?: string;
+    questionText: string;
+    attachmentUrl?: string;
+  }): Promise<{ success: boolean; message: string; query: AcademicQuery }> {
+    return await request('/student/queries', {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    });
+  },
+
+  // 14. Study Planner & Personal Tasks
+  async getStudyTasks(): Promise<StudyTask[]> {
+    try {
+      return await request<StudyTask[]>('/student/study-tasks');
+    } catch {
+      return [];
+    }
+  },
+
+  async createStudyTask(dto: {
+    title: string;
+    subject?: string;
+    dueDate?: string;
+    priority?: 'NORMAL' | 'HIGH' | 'LOW';
+  }): Promise<StudyTask> {
+    return await request('/student/study-tasks', {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    });
+  },
+
+  async updateStudyTask(taskId: string, isCompleted: boolean): Promise<StudyTask> {
+    return await request(`/student/study-tasks/${taskId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ isCompleted }),
+    });
+  },
+
+  async deleteStudyTask(taskId: string): Promise<void> {
+    await request(`/student/study-tasks/${taskId}`, { method: 'DELETE' });
+  },
+
+  // 15. Student Documents & PDF Center
+  async getDocuments(): Promise<OfficialDocument[]> {
+    try {
+      return await request<OfficialDocument[]>('/student/documents');
+    } catch {
+      return [];
+    }
+  },
+
+  // 16. Support Requests
+  async submitSupportRequest(dto: {
+    category: 'PROFILE_CORRECTION' | 'ATTENDANCE_MISMATCH' | 'PAYMENT_ISSUE' | 'ACADEMIC_HELP' | 'TECHNICAL_SUPPORT';
+    subject: string;
+    description: string;
+  }): Promise<{ success: boolean; message: string; ticketId: string }> {
+    return await request('/student/support-request', {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    });
+  },
+
+  // 17. In-App Notifications
+  async getNotifications(): Promise<InAppNotification[]> {
+    try {
+      return await request<InAppNotification[]>('/assessment/student/notifications');
+    } catch {
+      return [];
+    }
+  },
+
+  async markNotificationRead(id: string): Promise<void> {
+    try {
+      await request(`/assessment/student/notifications/${id}/read`, { method: 'PUT' });
+    } catch {
+      // Ignored
     }
   },
 };

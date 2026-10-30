@@ -81,6 +81,36 @@ export class AuthController {
     };
   }
 
+  @Post('register-student')
+  @HttpCode(HttpStatus.CREATED)
+  async registerStudent(
+    @Body()
+    body: {
+      fullName: string;
+      email: string;
+      password: string;
+      phone?: string;
+      invitationCode?: string;
+    },
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.registerStudent(body);
+
+    res.cookie('token', result.token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/',
+    });
+
+    return {
+      success: true,
+      user: result.user,
+      token: result.token,
+    };
+  }
+
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
   async forgotPassword(@Body('email') email: string) {
