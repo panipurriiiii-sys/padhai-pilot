@@ -8,6 +8,7 @@ import {
   Save,
   Send,
   Download,
+  FileDown,
   Search,
   Filter,
   CheckSquare,
@@ -24,6 +25,9 @@ import {
   ChevronRight,
   UserCheck,
   UserX,
+  Plus,
+  Trash2,
+  BookOpen,
 } from 'lucide-react';
 import {
   ClassroomAssessment,
@@ -33,9 +37,12 @@ import {
   AttendanceStatus,
   ResultStatus,
   AssessmentType,
+  SubjectScoreConfig,
+  BulkMarksSaveDraftPayload,
   calculateGradeAndPercentage,
 } from '@padhai-pilot/shared';
 import { teacherApi } from '../lib/api';
+import { downloadAssessmentResultPdf } from '../lib/pdfGenerator';
 
 interface BulkMarksEntryViewProps {
   batches: BatchSummary[];
@@ -61,6 +68,14 @@ export function BulkMarksEntryView({
   const [passingMarks, setPassingMarks] = useState<number>(20);
   const [instructions, setInstructions] = useState('');
   const [assessmentStatus, setAssessmentStatus] = useState<'DRAFT' | 'PUBLISHED'>('DRAFT');
+
+  // Multi-Subject Configuration State
+  const [isMultiSubject, setIsMultiSubject] = useState(false);
+  const [subjects, setSubjects] = useState<SubjectScoreConfig[]>([
+    { name: 'Physics', maxMarks: 50 },
+    { name: 'Chemistry', maxMarks: 50 },
+    { name: 'Mathematics', maxMarks: 100 },
+  ]);
 
   // 2. Marks Roster Table State
   const [roster, setRoster] = useState<AssessmentMarkItem[]>([]);
@@ -106,6 +121,13 @@ export function BulkMarksEntryView({
           setPassingMarks(first.passingMarks || Math.round(first.maxMarks * 0.4));
           setInstructions(first.instructions || '');
           setAssessmentStatus(first.status === 'PUBLISHED' ? 'PUBLISHED' : 'DRAFT');
+
+          if (first.isMultiSubject && first.subjects && first.subjects.length > 0) {
+            setIsMultiSubject(true);
+            setSubjects(first.subjects);
+          } else {
+            setIsMultiSubject(false);
+          }
 
           // Load details
           const details = await teacherApi.getAssessmentDetails(first.id);
@@ -155,6 +177,14 @@ export function BulkMarksEntryView({
       setPassingMarks(a.passingMarks || Math.round(a.maxMarks * 0.4));
       setInstructions(a.instructions || '');
       setAssessmentStatus(a.status === 'PUBLISHED' ? 'PUBLISHED' : 'DRAFT');
+
+      if (a.isMultiSubject && a.subjects && a.subjects.length > 0) {
+        setIsMultiSubject(true);
+        setSubjects(a.subjects);
+      } else {
+        setIsMultiSubject(false);
+      }
+
       setRoster(details.roster);
       setPublishSuccessData(null);
     } catch (err) {
@@ -169,7 +199,11 @@ export function BulkMarksEntryView({
     setCurrentAssessmentId('');
     setAssessmentTitle(`Class Assessment #${assessmentList.length + 1} — ${new Date().toLocaleDateString()}`);
     setAssessmentStatus('DRAFT');
-    setMaxMarks(50);
+    if (isMultiSubject) {
+      setMaxMarks(subjects.reduce((sum, s) => sum + s.maxMarks, 0));
+    } else {
+      setMaxMarks(50);
+    }
     setPassingMarks(20);
     setPublishSuccessData(null);
 
@@ -259,6 +293,80 @@ export function BulkMarksEntryView({
   };
 
   // -------------------------------------------------------------
+  // MULTI-SUBJECT MANAGEMENT ACTIONS
+  // -------------------------------------------------------------
+  const handleAddSubject = () => {
+    const nextNum = subjects.length + 1;
+    const newSub: SubjectScoreConfig = { name: `Subject ${nextNum}`, maxMarks: 50 };
+    const updated = [...subjects, newSub];
+    setSubjects(updated);
+    const newTotal = updated.reduce((sum, s) => sum + s.maxMarks, 0);
+    setMaxMarks(newTotal);
+    setPassingMarks(Math.round(newTotal * 0.4));
+  };
+
+  const handleRemoveSubject = (idx: number) => {
+    if (subjects.length <= 1) return;
+    const removedName = subjects[idx].name;
+    const updated = subjects.filter((_, i) => i !== idx);
+    setSubjects(updated);
+    const newTotal = updated.reduce((sum, s) => sum + s.maxMarks, 0);
+    setMaxMarks(newTotal);
+    setPassingMarks(Math.round(newTotal * 0.4));
+
+    setRoster((prev) =>
+      prev.map((item) => {
+        if (!item.subjectMarks) return item;
+        const copy = { ...item.subjectMarks };
+        delete copy[removedName];
+        const scores = Object.values(copy).filter(
+          (v): v is number => typeof v === 'number' && !isNaN(v),
+        );
+        const total = scores.length > 0 ? scores.reduce((s, v) => s + v, 0) : null;
+        const { percentage, grade } =
+          total !== null
+            ? calculateGradeAndPercentage(total, newTotal)
+            : { percentage: null, grade: null };
+        return {
+          ...item,
+          subjectMarks: copy,
+          obtainedMarks: total,
+          percentage,
+          grade,
+          resultStatus: total !== null ? 'SCORED' : 'PENDING',
+        };
+      }),
+    );
+  };
+
+  const handleUpdateSubject = (idx: number, field: 'name' | 'maxMarks', val: string | number) => {
+    const oldName = subjects[idx].name;
+    const updated = [...subjects];
+    if (field === 'name') {
+      updated[idx].name = String(val);
+    } else {
+      updated[idx].maxMarks = Number(val) || 0;
+    }
+    setSubjects(updated);
+    const newTotal = updated.reduce((sum, s) => sum + s.maxMarks, 0);
+    setMaxMarks(newTotal);
+    setPassingMarks(Math.round(newTotal * 0.4));
+
+    if (field === 'name' && oldName !== val) {
+      const newName = String(val);
+      setRoster((prev) =>
+        prev.map((item) => {
+          if (!item.subjectMarks || !(oldName in item.subjectMarks)) return item;
+          const copy = { ...item.subjectMarks };
+          copy[newName] = copy[oldName];
+          delete copy[oldName];
+          return { ...item, subjectMarks: copy };
+        }),
+      );
+    }
+  };
+
+  // -------------------------------------------------------------
   // OBTAINED MARKS INPUT & KEYBOARD NAVIGATION
   // -------------------------------------------------------------
   const handleMarksChange = (studentId: string, value: string) => {
@@ -294,6 +402,45 @@ export function BulkMarksEntryView({
     );
   };
 
+  const handleSubjectMarkChange = (studentId: string, subjectName: string, value: string) => {
+    setRoster((prev) =>
+      prev.map((item) => {
+        if (item.studentId !== studentId) return item;
+
+        const currentSubMarks = { ...(item.subjectMarks || {}) };
+        if (value.trim() === '') {
+          delete currentSubMarks[subjectName];
+        } else {
+          const num = parseFloat(value);
+          if (!isNaN(num)) {
+            currentSubMarks[subjectName] = num;
+          }
+        }
+
+        const scores = Object.values(currentSubMarks).filter(
+          (v): v is number => typeof v === 'number' && !isNaN(v),
+        );
+        const hasScores = scores.length > 0;
+        const totalObtained = hasScores ? scores.reduce((sum, val) => sum + val, 0) : null;
+        const totalMax = subjects.reduce((sum, s) => sum + s.maxMarks, 0);
+        const { percentage, grade } =
+          totalObtained !== null
+            ? calculateGradeAndPercentage(totalObtained, totalMax)
+            : { percentage: null, grade: null };
+
+        return {
+          ...item,
+          subjectMarks: currentSubMarks,
+          obtainedMarks: totalObtained,
+          percentage,
+          grade,
+          resultStatus: totalObtained !== null ? 'SCORED' : 'PENDING',
+          attendanceStatus: item.attendanceStatus === 'ABSENT' ? 'PRESENT' : item.attendanceStatus,
+        };
+      }),
+    );
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, currentIndex: number) => {
     if (e.key === 'ArrowDown' || e.key === 'Enter') {
       e.preventDefault();
@@ -306,6 +453,45 @@ export function BulkMarksEntryView({
       const prevItem = filteredRoster[currentIndex - 1];
       if (prevItem) {
         inputRefs.current.get(prevItem.studentId)?.focus();
+      }
+    }
+  };
+
+  const handleMultiSubjectKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    currentRowIdx: number,
+    currentSubIdx: number,
+  ) => {
+    if (e.key === 'ArrowDown' || e.key === 'Enter') {
+      e.preventDefault();
+      const nextRow = filteredRoster[currentRowIdx + 1];
+      if (nextRow) {
+        const subName = subjects[currentSubIdx].name;
+        inputRefs.current.get(`${nextRow.studentId}_${subName}`)?.focus();
+      }
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      const prevRow = filteredRoster[currentRowIdx - 1];
+      if (prevRow) {
+        const subName = subjects[currentSubIdx].name;
+        inputRefs.current.get(`${prevRow.studentId}_${subName}`)?.focus();
+      }
+    } else if (
+      e.key === 'ArrowRight' &&
+      (e.currentTarget.selectionStart === e.currentTarget.value.length || e.currentTarget.value === '')
+    ) {
+      if (currentSubIdx < subjects.length - 1) {
+        e.preventDefault();
+        const nextSubName = subjects[currentSubIdx + 1].name;
+        const currentRow = filteredRoster[currentRowIdx];
+        inputRefs.current.get(`${currentRow.studentId}_${nextSubName}`)?.focus();
+      }
+    } else if (e.key === 'ArrowLeft' && e.currentTarget.selectionStart === 0) {
+      if (currentSubIdx > 0) {
+        e.preventDefault();
+        const prevSubName = subjects[currentSubIdx - 1].name;
+        const currentRow = filteredRoster[currentRowIdx];
+        inputRefs.current.get(`${currentRow.studentId}_${prevSubName}`)?.focus();
       }
     }
   };
@@ -333,12 +519,22 @@ export function BulkMarksEntryView({
     const scored = eligible.filter((r) => r.resultStatus === 'SCORED').length;
     const pending = eligible.filter((r) => r.resultStatus === 'PENDING').length;
 
-    const invalidRows = eligible.filter(
-      (r) =>
+    const invalidRows = eligible.filter((r) => {
+      if (isMultiSubject) {
+        if (!r.subjectMarks) return false;
+        return Object.entries(r.subjectMarks).some(([sName, sScore]) => {
+          if (sScore === null || sScore === undefined) return false;
+          const subCfg = subjects.find((s) => s.name === sName);
+          const limit = subCfg ? subCfg.maxMarks : maxMarks;
+          return sScore < 0 || sScore > limit;
+        });
+      }
+      return (
         r.obtainedMarks !== null &&
         r.obtainedMarks !== undefined &&
-        (r.obtainedMarks < 0 || r.obtainedMarks > maxMarks),
-    );
+        (r.obtainedMarks < 0 || r.obtainedMarks > maxMarks)
+      );
+    });
 
     const unmarkedPresent = eligible.filter(
       (r) =>
@@ -356,7 +552,7 @@ export function BulkMarksEntryView({
       unmarkedCount: unmarkedPresent.length,
       canPublish: invalidRows.length === 0 && unmarkedPresent.length === 0 && eligible.length > 0,
     };
-  }, [roster, maxMarks]);
+  }, [roster, maxMarks, isMultiSubject, subjects]);
 
   // -------------------------------------------------------------
   // ACTIONS: SAVE DRAFT & PUBLISH
@@ -366,20 +562,23 @@ export function BulkMarksEntryView({
     setSaveMessage(null);
 
     try {
-      const payload = {
+      const payload: BulkMarksSaveDraftPayload = {
         assessmentId: currentAssessmentId || undefined,
         batchId: selectedBatchId,
-        subject,
+        subject: isMultiSubject ? subjects.map((s) => s.name).join(', ') : subject,
+        subjects: isMultiSubject ? subjects : undefined,
+        isMultiSubject,
         title: assessmentTitle,
         category,
         assessmentDate,
-        maxMarks,
+        maxMarks: isMultiSubject ? subjects.reduce((sum, s) => sum + s.maxMarks, 0) : maxMarks,
         passingMarks,
         instructions,
         marks: roster.map((r) => ({
           studentId: r.studentId,
           attendanceStatus: r.attendanceStatus,
           obtainedMarks: r.obtainedMarks,
+          subjectMarks: isMultiSubject ? r.subjectMarks : undefined,
           feedback: r.feedback,
           isEligible: r.isEligible,
         })),
@@ -403,6 +602,32 @@ export function BulkMarksEntryView({
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // -------------------------------------------------------------
+  // FRONTEND PDF GENERATION
+  // -------------------------------------------------------------
+  const handleDownloadPdf = () => {
+    const currentBatch = batches.find((b) => b.id === selectedBatchId);
+    const instituteName = currentBatch?.name
+      ? `${currentBatch.name} • PadhaiPilot Institute`
+      : 'Apex Academy Kota';
+
+    downloadAssessmentResultPdf({
+      assessment: {
+        title: assessmentTitle || 'Assessment Result Sheet',
+        subject: isMultiSubject ? subjects.map((s) => s.name).join(', ') : subject,
+        subjects: isMultiSubject ? subjects : undefined,
+        isMultiSubject,
+        batchName: currentBatch?.name || 'Class Batch',
+        assessmentDate,
+        category,
+        maxMarks: isMultiSubject ? subjects.reduce((sum, s) => sum + s.maxMarks, 0) : maxMarks,
+        passingMarks,
+      },
+      roster: filteredRoster,
+      instituteName,
+    });
   };
 
   const handleConfirmPublish = async () => {
@@ -567,6 +792,15 @@ export function BulkMarksEntryView({
           >
             <RefreshCw className="w-3.5 h-3.5" />
             New Assessment
+          </button>
+
+          <button
+            onClick={handleDownloadPdf}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-all cursor-pointer shadow-sm"
+            title="Generate official PDF marksheet directly from frontend"
+          >
+            <FileDown className="w-3.5 h-3.5 text-rose-600" />
+            Download PDF Report
           </button>
 
           <button
@@ -735,30 +969,45 @@ export function BulkMarksEntryView({
           />
         </div>
 
-        {/* Subject */}
-        <div className="lg:col-span-1">
-          <label className="block text-[11px] font-semibold text-stone-500 uppercase tracking-wider mb-1.5 font-['Raleway']">
-            Subject
-          </label>
-          <input
-            type="text"
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-            className="w-full bg-[#FAF8F5] border border-[#E3DFD9] rounded-xl px-3 py-2 text-xs font-medium text-stone-900 focus:outline-none focus:border-[#1677FF]"
-          />
-        </div>
+        {/* Subject or Total Subjects */}
+        {!isMultiSubject ? (
+          <div className="lg:col-span-1">
+            <label className="block text-[11px] font-semibold text-stone-500 uppercase tracking-wider mb-1.5 font-['Raleway']">
+              Subject
+            </label>
+            <input
+              type="text"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              className="w-full bg-[#FAF8F5] border border-[#E3DFD9] rounded-xl px-3 py-2 text-xs font-medium text-stone-900 focus:outline-none focus:border-[#1677FF]"
+            />
+          </div>
+        ) : (
+          <div className="lg:col-span-1">
+            <label className="block text-[11px] font-semibold text-stone-500 uppercase tracking-wider mb-1.5 font-['Raleway']">
+              Subjects Included
+            </label>
+            <div className="w-full bg-[#FAF8F5] border border-[#E3DFD9] rounded-xl px-3 py-2 text-xs font-semibold text-[#1677FF] flex items-center justify-between">
+              <span>{subjects.length} Subjects</span>
+              <BookOpen className="w-3.5 h-3.5 text-[#1677FF]" />
+            </div>
+          </div>
+        )}
 
         {/* Total Max Marks */}
         <div>
           <label className="block text-[11px] font-semibold text-stone-500 uppercase tracking-wider mb-1.5 font-['Raleway']">
-            Maximum Marks
+            {isMultiSubject ? 'Total Combined Max' : 'Maximum Marks'}
           </label>
           <input
             type="number"
             min="1"
             value={maxMarks}
-            onChange={(e) => setMaxMarks(Number(e.target.value) || 0)}
-            className="w-full bg-[#FAF8F5] border border-[#E3DFD9] rounded-xl px-3 py-2 text-xs font-medium text-stone-900 focus:outline-none focus:border-[#1677FF] font-mono"
+            readOnly={isMultiSubject}
+            onChange={(e) => !isMultiSubject && setMaxMarks(Number(e.target.value) || 0)}
+            className={`w-full bg-[#FAF8F5] border border-[#E3DFD9] rounded-xl px-3 py-2 text-xs font-medium text-stone-900 focus:outline-none focus:border-[#1677FF] font-mono ${
+              isMultiSubject ? 'bg-stone-100/70 text-stone-600 cursor-not-allowed' : ''
+            }`}
           />
         </div>
 
@@ -777,6 +1026,100 @@ export function BulkMarksEntryView({
             </span>
           </div>
         </div>
+
+        {/* Assessment Evaluation Mode Switcher */}
+        <div className="lg:col-span-6 bg-[#FAF8F5] p-3 rounded-xl border border-[#E3DFD9] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-stone-700 font-['Raleway']">Subject Mode:</span>
+            <div className="inline-flex rounded-lg p-0.5 bg-stone-200/70 border border-stone-300">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMultiSubject(false);
+                  setMaxMarks(50);
+                }}
+                className={`px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                  !isMultiSubject
+                    ? 'bg-white text-stone-900 shadow-sm'
+                    : 'text-stone-600 hover:text-stone-900'
+                }`}
+              >
+                Single Subject
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMultiSubject(true);
+                  const total = subjects.reduce((sum, s) => sum + s.maxMarks, 0);
+                  setMaxMarks(total);
+                }}
+                className={`px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                  isMultiSubject
+                    ? 'bg-[#1677FF] text-white shadow-sm'
+                    : 'text-stone-600 hover:text-stone-900'
+                }`}
+              >
+                Multi-Subject Combined Exam
+              </button>
+            </div>
+          </div>
+
+          {isMultiSubject && (
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-stone-500 font-mono">
+                {subjects.length} Subjects • Total Max: <strong className="text-[#1677FF]">{maxMarks}</strong>
+              </span>
+              <button
+                type="button"
+                onClick={handleAddSubject}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-[#E3DFD9] hover:bg-stone-50 text-stone-800 font-semibold text-[11px] shadow-sm cursor-pointer"
+              >
+                <Plus className="w-3 h-3 text-[#1677FF]" /> Add Subject
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Multi-Subject Badges Editor Bar */}
+        {isMultiSubject && (
+          <div className="lg:col-span-6 flex flex-wrap items-center gap-2.5 p-3 rounded-xl bg-blue-50/50 border border-blue-200/60">
+            <span className="text-[11px] font-bold text-blue-900 uppercase tracking-wider">
+              Subjects Breakdown:
+            </span>
+            {subjects.map((sub, sIdx) => (
+              <div
+                key={sIdx}
+                className="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-white border border-blue-200 text-xs shadow-sm"
+              >
+                <input
+                  type="text"
+                  value={sub.name}
+                  onChange={(e) => handleUpdateSubject(sIdx, 'name', e.target.value)}
+                  className="w-24 text-xs font-semibold text-stone-900 bg-transparent border-b border-transparent hover:border-stone-300 focus:outline-none focus:border-blue-500"
+                  placeholder="Subject"
+                />
+                <span className="text-stone-400 text-[11px]">Max:</span>
+                <input
+                  type="number"
+                  min="1"
+                  value={sub.maxMarks}
+                  onChange={(e) => handleUpdateSubject(sIdx, 'maxMarks', e.target.value)}
+                  className="w-12 text-xs font-mono font-bold text-blue-700 bg-blue-50 rounded px-1 text-center border border-blue-200 focus:outline-none"
+                />
+                {subjects.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveSubject(sIdx)}
+                    className="text-stone-400 hover:text-red-500 p-0.5 rounded cursor-pointer"
+                    title={`Remove ${sub.name}`}
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ------------------------------------------------------------- */}
@@ -858,8 +1201,25 @@ export function BulkMarksEntryView({
                 <th className="py-3.5 px-4">Student ID / Roll</th>
                 <th className="py-3.5 px-4">Student Name</th>
                 <th className="py-3.5 px-4 w-44">Attendance</th>
-                <th className="py-3.5 px-4 w-28 text-center font-mono">Max Marks</th>
-                <th className="py-3.5 px-4 w-44 font-mono">Obtained Marks</th>
+                {isMultiSubject ? (
+                  <>
+                    {subjects.map((sub, sIdx) => (
+                      <th key={sIdx} className="py-3.5 px-3 text-center font-mono">
+                        <div className="font-bold text-stone-700">{sub.name}</div>
+                        <div className="text-[10px] text-stone-400 font-normal">Max: {sub.maxMarks}</div>
+                      </th>
+                    ))}
+                    <th className="py-3.5 px-3 text-center font-mono font-bold text-blue-700">
+                      <div>Total</div>
+                      <div className="text-[10px] text-blue-500 font-normal">/{maxMarks}</div>
+                    </th>
+                  </>
+                ) : (
+                  <>
+                    <th className="py-3.5 px-4 w-28 text-center font-mono">Max Marks</th>
+                    <th className="py-3.5 px-4 w-44 font-mono">Obtained Marks</th>
+                  </>
+                )}
                 <th className="py-3.5 px-4 w-20 text-center font-mono">%</th>
                 <th className="py-3.5 px-4 w-20 text-center">Grade</th>
                 <th className="py-3.5 px-4 w-28 text-center">Status</th>
@@ -935,46 +1295,104 @@ export function BulkMarksEntryView({
                       </div>
                     </td>
 
-                    {/* Max Marks (Static per row, global from assessment) */}
-                    <td className="py-3 px-4 text-center font-mono font-medium text-stone-500">
-                      {maxMarks}
-                    </td>
+                    {/* Multi-Subject Columns OR Single Subject Input */}
+                    {isMultiSubject ? (
+                      <>
+                        {subjects.map((sub, sIdx) => {
+                          const subScore = row.subjectMarks?.[sub.name];
+                          const isSubInvalid =
+                            subScore !== null &&
+                            subScore !== undefined &&
+                            (subScore < 0 || subScore > sub.maxMarks);
 
-                    {/* Obtained Marks Input (Keyboard Accessible) */}
-                    <td className="py-3 px-4">
-                      {isAbsent ? (
-                        <div className="px-3 py-1.5 rounded-xl bg-[#EF4444]/10 border border-[#EF4444]/20 text-[#EF4444] text-xs font-semibold text-center select-none">
-                          Absent (No Mark)
-                        </div>
-                      ) : (
-                        <div className="relative">
-                          <input
-                            ref={(el) => {
-                              if (el) inputRefs.current.set(row.studentId, el);
-                              else inputRefs.current.delete(row.studentId);
-                            }}
-                            type="number"
-                            step="0.5"
-                            min="0"
-                            max={maxMarks}
-                            value={row.obtainedMarks !== null && row.obtainedMarks !== undefined ? row.obtainedMarks : ''}
-                            onChange={(e) => handleMarksChange(row.studentId, e.target.value)}
-                            onKeyDown={(e) => handleKeyDown(e, idx)}
-                            placeholder="Enter marks"
-                            className={`w-full bg-[#FAF8F5] border rounded-xl px-3 py-1.5 text-xs font-mono font-semibold text-stone-900 focus:outline-none ${
-                              isInvalid
-                                ? 'border-[#EF4444] focus:border-[#EF4444] shadow-[0_0_8px_rgba(239,68,68,0.3)]'
-                                : 'border-[#E3DFD9] focus:border-[#1677FF]'
-                            }`}
-                          />
-                          {isInvalid && (
-                            <div className="text-[10px] text-[#EF4444] font-sans mt-0.5">
-                              0 - {maxMarks} required
+                          return (
+                            <td key={sIdx} className="py-3 px-2 text-center">
+                              {isAbsent ? (
+                                <span className="text-stone-400 font-mono text-[11px] font-semibold">AB</span>
+                              ) : (
+                                <div className="relative inline-block">
+                                  <input
+                                    ref={(el) => {
+                                      if (el) inputRefs.current.set(`${row.studentId}_${sub.name}`, el);
+                                      else inputRefs.current.delete(`${row.studentId}_${sub.name}`);
+                                    }}
+                                    type="number"
+                                    step="0.5"
+                                    min="0"
+                                    max={sub.maxMarks}
+                                    value={subScore !== null && subScore !== undefined ? subScore : ''}
+                                    onChange={(e) =>
+                                      handleSubjectMarkChange(row.studentId, sub.name, e.target.value)
+                                    }
+                                    onKeyDown={(e) => handleMultiSubjectKeyDown(e, idx, sIdx)}
+                                    placeholder="0"
+                                    className={`w-16 bg-[#FAF8F5] border rounded-lg px-2 py-1 text-center font-mono text-xs font-semibold focus:outline-none transition-all ${
+                                      isSubInvalid
+                                        ? 'border-red-500 bg-red-50 text-red-700'
+                                        : 'border-[#E3DFD9] text-stone-900 focus:border-[#1677FF]'
+                                    }`}
+                                  />
+                                </div>
+                              )}
+                            </td>
+                          );
+                        })}
+                        <td className="py-3 px-3 text-center font-mono font-bold text-[#1677FF]">
+                          {isAbsent
+                            ? '—'
+                            : row.obtainedMarks !== null && row.obtainedMarks !== undefined
+                            ? row.obtainedMarks
+                            : '—'}
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        {/* Max Marks */}
+                        <td className="py-3 px-4 text-center font-mono font-medium text-stone-500">
+                          {maxMarks}
+                        </td>
+
+                        {/* Obtained Marks Input */}
+                        <td className="py-3 px-4">
+                          {isAbsent ? (
+                            <div className="px-3 py-1.5 rounded-xl bg-[#EF4444]/10 border border-[#EF4444]/20 text-[#EF4444] text-xs font-semibold text-center select-none">
+                              Absent (No Mark)
+                            </div>
+                          ) : (
+                            <div className="relative">
+                              <input
+                                ref={(el) => {
+                                  if (el) inputRefs.current.set(row.studentId, el);
+                                  else inputRefs.current.delete(row.studentId);
+                                }}
+                                type="number"
+                                step="0.5"
+                                min="0"
+                                max={maxMarks}
+                                value={
+                                  row.obtainedMarks !== null && row.obtainedMarks !== undefined
+                                    ? row.obtainedMarks
+                                    : ''
+                                }
+                                onChange={(e) => handleMarksChange(row.studentId, e.target.value)}
+                                onKeyDown={(e) => handleKeyDown(e, idx)}
+                                placeholder="Enter marks"
+                                className={`w-full bg-[#FAF8F5] border rounded-xl px-3 py-1.5 text-xs font-mono font-semibold text-stone-900 focus:outline-none ${
+                                  isInvalid
+                                    ? 'border-[#EF4444] focus:border-[#EF4444] shadow-[0_0_8px_rgba(239,68,68,0.3)]'
+                                    : 'border-[#E3DFD9] focus:border-[#1677FF]'
+                                }`}
+                              />
+                              {isInvalid && (
+                                <div className="text-[10px] text-[#EF4444] font-sans mt-0.5">
+                                  0 - {maxMarks} required
+                                </div>
+                              )}
                             </div>
                           )}
-                        </div>
-                      )}
-                    </td>
+                        </td>
+                      </>
+                    )}
 
                     {/* Computed Percentage */}
                     <td className="py-3 px-4 text-center font-mono font-semibold text-stone-900">
@@ -1144,13 +1562,17 @@ export function BulkMarksEntryView({
                 <span className="font-semibold text-stone-900">{assessmentTitle}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-stone-500">Subject & Date:</span>
+                <span className="text-stone-500">Subject(s):</span>
                 <span className="font-semibold text-stone-900">
-                  {subject} | {assessmentDate}
+                  {isMultiSubject ? subjects.map((s) => `${s.name} (${s.maxMarks})`).join(', ') : subject}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-stone-500">Maximum Marks:</span>
+                <span className="text-stone-500">Exam Date:</span>
+                <span className="font-semibold text-stone-900">{assessmentDate}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-stone-500">Total Maximum Marks:</span>
                 <span className="font-mono font-semibold text-[#1677FF]">{maxMarks} Marks</span>
               </div>
             </div>

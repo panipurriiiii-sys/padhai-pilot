@@ -52,3 +52,4 @@ export const Card: React.FC<CardProps> = ({
 
   return <View style={[containerStyle, style]}>{children}</View>;
 };
+

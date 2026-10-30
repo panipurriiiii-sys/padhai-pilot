@@ -229,6 +229,11 @@ export interface TeacherDashboardMetrics {
 export type AssessmentType = 'UNIT_TEST' | 'MONTHLY_EXAM' | 'TERM_EXAM' | 'QUIZ' | 'PRACTICAL' | 'GENERAL';
 export type ClassroomAssessmentStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
 export type ResultStatus = 'SCORED' | 'ABSENT' | 'PENDING' | 'EXCUSED';
+export interface SubjectScoreConfig {
+    name: string;
+    maxMarks: number;
+    passingMarks?: number;
+}
 export interface ClassroomAssessment {
     id: string;
     instituteId: string;
@@ -238,6 +243,8 @@ export interface ClassroomAssessment {
     teacherName?: string;
     title: string;
     subject: string;
+    subjects?: SubjectScoreConfig[];
+    isMultiSubject?: boolean;
     category: AssessmentType;
     assessmentDate: string;
     maxMarks: number;
@@ -261,6 +268,7 @@ export interface AssessmentMarkItem {
     rollNumber: string;
     attendanceStatus: AttendanceStatus;
     obtainedMarks?: number | null;
+    subjectMarks?: Record<string, number | null>;
     percentage?: number | null;
     grade?: string | null;
     resultStatus: ResultStatus;
@@ -274,6 +282,8 @@ export interface BulkMarksSaveDraftPayload {
     assessmentId?: string;
     batchId: string;
     subject: string;
+    subjects?: SubjectScoreConfig[];
+    isMultiSubject?: boolean;
     title: string;
     category?: AssessmentType;
     assessmentDate: string;
@@ -284,6 +294,7 @@ export interface BulkMarksSaveDraftPayload {
         studentId: string;
         attendanceStatus: AttendanceStatus;
         obtainedMarks?: number | null;
+        subjectMarks?: Record<string, number | null>;
         feedback?: string;
         isEligible?: boolean;
     }[];

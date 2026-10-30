@@ -32,3 +32,4 @@ export const useFeesData = () => {
     staleTime: 1000 * 60 * 10,
   });
 };
+

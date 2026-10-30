@@ -327,12 +327,22 @@ export class AssessmentService {
     // Combine roster with existing marks
     const table = students.map((std) => {
       const mark = marksMap.get(std.id);
+      let parsedSubjectMarks = mark?.subjectMarks;
+      if (!parsedSubjectMarks && mark?.feedback && typeof mark.feedback === 'string' && mark.feedback.startsWith('{"')) {
+        try {
+          const parsed = JSON.parse(mark.feedback);
+          const { _note, ...subs } = parsed;
+          parsedSubjectMarks = subs;
+        } catch {}
+      }
+
       return {
         studentId: std.id,
         studentName: std.fullName,
         rollNumber: std.rollNumber,
         attendanceStatus: mark?.attendanceStatus || 'PRESENT',
         obtainedMarks: mark ? mark.obtainedMarks : null,
+        subjectMarks: parsedSubjectMarks,
         percentage: mark ? mark.percentage : null,
         grade: mark ? mark.grade : null,
         resultStatus: mark ? mark.resultStatus : 'PENDING',
@@ -377,11 +387,63 @@ export class AssessmentService {
           studentId: row.studentId,
           attendanceStatus: 'ABSENT',
           obtainedMarks: null,
+          subjectMarks: row.subjectMarks,
           percentage: null,
           grade: null,
           resultStatus: 'ABSENT',
           feedback: row.feedback || 'Absent during assessment session.',
         });
+      } else if (row.subjectMarks && Object.keys(row.subjectMarks).length > 0) {
+        // Multi-subject computation
+        let total = 0;
+        let hasAnyValid = false;
+        let subjectErr: string | null = null;
+        for (const [subName, subScore] of Object.entries(row.subjectMarks)) {
+          if (subScore !== null && subScore !== undefined && String(subScore).trim() !== '') {
+            const num = Number(subScore);
+            if (isNaN(num) || num < 0) {
+              subjectErr = `${subName} marks must be a valid positive number.`;
+              break;
+            }
+            const cfg = dto.subjects?.find((s) => s.name === subName);
+            if (cfg && num > cfg.maxMarks) {
+              subjectErr = `${subName} marks cannot exceed ${cfg.maxMarks}.`;
+              break;
+            }
+            total += num;
+            hasAnyValid = true;
+          }
+        }
+
+        if (subjectErr) {
+          rowErrors.push({ studentId: row.studentId, message: subjectErr });
+          continue;
+        }
+
+        if (hasAnyValid) {
+          const { percentage, grade } = calculateGradeAndPercentage(total, dto.maxMarks);
+          validMarks.push({
+            studentId: row.studentId,
+            attendanceStatus: row.attendanceStatus || 'PRESENT',
+            obtainedMarks: total,
+            subjectMarks: row.subjectMarks,
+            percentage,
+            grade,
+            resultStatus: 'SCORED',
+            feedback: row.feedback || '',
+          });
+        } else {
+          validMarks.push({
+            studentId: row.studentId,
+            attendanceStatus: row.attendanceStatus || 'PRESENT',
+            obtainedMarks: null,
+            subjectMarks: row.subjectMarks,
+            percentage: null,
+            grade: null,
+            resultStatus: 'PENDING',
+            feedback: row.feedback || '',
+          });
+        }
       } else if (row.obtainedMarks !== undefined && row.obtainedMarks !== null) {
         const marksNum = Number(row.obtainedMarks);
         if (isNaN(marksNum)) {
@@ -530,6 +592,8 @@ export class AssessmentService {
         teacherId: user.id,
         title: dto.title,
         subject: dto.subject,
+        subjects: dto.subjects,
+        isMultiSubject: dto.isMultiSubject,
         category: dto.category || 'UNIT_TEST',
         assessmentDate: dto.assessmentDate,
         maxMarks: dto.maxMarks,
@@ -545,6 +609,8 @@ export class AssessmentService {
       if (existing) {
         existing.title = dto.title;
         existing.subject = dto.subject;
+        existing.subjects = dto.subjects || existing.subjects;
+        existing.isMultiSubject = dto.isMultiSubject !== undefined ? dto.isMultiSubject : existing.isMultiSubject;
         existing.category = dto.category || existing.category;
         existing.assessmentDate = dto.assessmentDate;
         existing.maxMarks = dto.maxMarks;
@@ -566,6 +632,7 @@ export class AssessmentService {
         studentId: m.studentId,
         attendanceStatus: m.attendanceStatus,
         obtainedMarks: m.obtainedMarks,
+        subjectMarks: m.subjectMarks,
         percentage: m.percentage,
         grade: m.grade,
         resultStatus: m.resultStatus,
@@ -893,20 +960,46 @@ export class AssessmentService {
     const details = await this.getAssessmentDetails(assessmentId, user);
     const assessment = details.assessment;
 
-    const headers = ['Student ID', 'Roll Number', 'Student Name', 'Attendance', 'Max Marks', 'Obtained Marks', 'Percentage', 'Grade', 'Result Status', 'Feedback'];
+    const isMulti = assessment.isMultiSubject && assessment.subjects && assessment.subjects.length > 0;
+    const headers = ['Student ID', 'Roll Number', 'Student Name', 'Attendance'];
 
-    const rows = details.roster.map((r) => [
-      r.studentId,
-      r.rollNumber,
-      `"${r.studentName}"`,
-      r.attendanceStatus,
-      assessment.maxMarks,
-      r.obtainedMarks !== null ? r.obtainedMarks : 'N/A',
-      r.percentage !== null ? `${r.percentage}%` : 'N/A',
-      r.grade || 'N/A',
-      r.resultStatus,
-      `"${r.feedback || ''}"`,
-    ]);
+    if (isMulti) {
+      assessment.subjects.forEach((s: any) => {
+        headers.push(`"${s.name} (Max ${s.maxMarks})"`);
+      });
+      headers.push(`"Total Marks (Max ${assessment.maxMarks})"`);
+    } else {
+      headers.push('Max Marks', 'Obtained Marks');
+    }
+
+    headers.push('Percentage', 'Grade', 'Result Status', 'Feedback');
+
+    const rows = details.roster.map((r: any) => {
+      const rowVals = [
+        r.studentId,
+        r.rollNumber,
+        `"${r.studentName}"`,
+        r.attendanceStatus,
+      ];
+
+      if (isMulti) {
+        assessment.subjects.forEach((s: any) => {
+          const subScore = r.subjectMarks?.[s.name];
+          rowVals.push(subScore !== undefined && subScore !== null ? subScore : 'N/A');
+        });
+        rowVals.push(r.obtainedMarks !== null ? r.obtainedMarks : 'N/A');
+      } else {
+        rowVals.push(assessment.maxMarks);
+        rowVals.push(r.obtainedMarks !== null ? r.obtainedMarks : 'N/A');
+      }
+
+      rowVals.push(r.percentage !== null ? `${r.percentage}%` : 'N/A');
+      rowVals.push(r.grade || 'N/A');
+      rowVals.push(r.resultStatus);
+      rowVals.push(`"${r.feedback || ''}"`);
+
+      return rowVals;
+    });
 
     const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
 

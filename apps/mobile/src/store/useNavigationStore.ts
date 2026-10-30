@@ -11,3 +11,4 @@ export const useNavigationStore = create<NavigationState>((set) => ({
   currentTab: 'dashboard',
   setTab: (tab: MainTabKey) => set({ currentTab: tab }),
 }));
+
