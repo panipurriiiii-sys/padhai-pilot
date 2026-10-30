@@ -1,4 +1,11 @@
-export type UserRole = 'SUPER_ADMIN' | 'TUITION_OWNER' | 'INSTITUTE_ADMIN' | 'TEACHER' | 'STUDENT';
+export type UserRole =
+  | 'SUPER_ADMIN'
+  | 'TUITION_OWNER'
+  | 'INSTITUTE_ADMIN'
+  | 'INSTITUTE_MANAGER'
+  | 'FACULTY'
+  | 'TEACHER'
+  | 'STUDENT';
 
 export interface UserSession {
   id: string;

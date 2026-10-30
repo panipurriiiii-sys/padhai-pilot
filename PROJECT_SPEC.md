@@ -65,88 +65,78 @@ The final location of the Prisma schema must be chosen deliberately.
 Prefer one canonical schema and migration history, not multiple
 competing schemas. If Prisma lives under `apps/api`, document that and
 keep migrations with the API. Do not duplicate the schema.
-4. Separate Portals
-The three portals must have separate user experiences and route trees:
-4.1 Admin Portal --- `apps/admin`
-For institute owners and authorized administrators: - Institute
-dashboard and key operational summaries. - Manage institute profile,
-logo, colors, typography choices, and branding text. - Manage teachers,
-students, batches/classes, and enrollments. - Manage attendance,
-assignments, tests/results, schedules, announcements, and fee records. -
-Manage invitation codes and their status where permitted. - Configure
-enabled modules and institute-level settings. - Manage plan limits,
-subscription status, and usage visibility where applicable. - Assign
-roles and permissions within the institute. - View appropriate audit
-history for sensitive administrative actions.
-A separate **Platform Super Admin** capability is required for
-platform-level operations. It must not be treated as an ordinary
-institute administrator. Platform administration should be
-access-controlled separately, even if its first UI is a protected area
-of the admin application.
+4. Separate Portals & Target Applications
+
+The applications maintain strict operational and security boundaries:
+
+4.1 Platform Admin Web --- `apps/admin`
+Exclusively for the PadhaiPilot Platform Owner (`SUPER_ADMIN`) and explicitly authorized internal platform administrators.
+- Public registration is strictly prohibited (bootstrap credentials only).
+- Multi-tenant institute lifecycle: create, onboard, activate, suspend, and monitor tuition institutes.
+- Subscription plans and entitlements (`STARTER`, `GROWTH`, `PRO`, `ENTERPRISE`).
+- Global feature flags and emergency kill switches (instant circuit-breakers).
+- Global platform configuration and branding defaults.
+- White-label configuration and dedicated database deployment eligibility.
+- Platform-wide security audit logs and operational health telemetry.
+- Platform broadcast announcements and release management.
+
 4.2 Teacher Portal --- `apps/teacher`
-Teacher dashboard and assigned batches/classes.
-View authorized student lists.
-Create, manage, and revoke student invitation codes according to
-    institute rules.
-Record and review attendance.
-Create and manage assignments, homework, tests, marks, and feedback.
-View schedules and institute announcements.
-Access only the institute, batches, and students they are authorized
-    to access.
+For Tuition Owners (`TUITION_OWNER`), Institute Managers (`INSTITUTE_MANAGER`), and Faculty members (`FACULTY` / `TEACHER`).
+- Tuition Owners configure academy branding, manage faculty roster, oversee payroll/salaries, approve staff leave requests, manage batches, review daily teaching diaries, track fee dues, and generate institute-branded PDFs.
+- Faculty members manage assigned batches, record attendance, enter bulk marks across multiple subjects, grade assignments, conduct CBT tests, log daily teaching diaries, view their own leave requests, and inspect their own salary slips.
+- Zero Platform Super Admin functionality is exposed inside `apps/teacher`.
+
 4.3 Student Portal --- `apps/student`
-Student dashboard.
-Join an institute/batch through a valid invitation code or approved
-    enrollment flow.
-View timetable, attendance, assignments, homework, results,
-    announcements, and permitted fee information.
-Submit work where the relevant feature is enabled.
-Access only their own records and explicitly shared class
-    information.
+Exclusively for student experiences and student-owned records, with access enforced by verified institute and batch membership.
+- Daily Teaching Diary inspection.
+- Cloud Study Vault with instant previews.
+- Interactive Timetable & Schedules.
+- Attendance tracker with formal Correction Request workflows.
+- Homework & Assignments with draft saving and multi-file submissions.
+- Real-time Online CBT Test engine with timer and instant server-side evaluation.
+- Exam Results & Report Card PDF generation.
+- Fee records, pending dues, and official receipts.
+- Faculty Doubts Clinic with Q&A threads.
+- Personal Study Planner & Exam Countdown.
+- Official Document Center for certificates and tuition letters.
+- In-App Notifications Drawer.
+
 4.4 Public Web App --- `apps/web`
-Public product/marketing pages and sign-in entry points as needed.
-Clear navigation to the correct portal.
-No private institute data should be exposed on public pages.
-Do not duplicate the full portal implementation in this app without
-    a clear product reason.
+Public product/marketing pages and sign-in entry points.
+- Clear navigation to appropriate web portals.
+- Zero private institute data exposed publicly.
+
 5. Mobile App --- `apps/mobile`
-Build with React Native CLI, not Expo.
-Support Android first; keep the architecture suitable for iOS
-    support.
-Provide role-aware experiences for teachers and students after
-    authentication.
+Build with React Native CLI, strictly no Expo.
+Support Android first; keep the architecture suitable for iOS support.
+Supports only Teacher/Faculty (including authorized Tuition Owner functionality) and Student accounts.
+Zero Platform Super Admin functionality in mobile.
+Strict backend permission resolution (never blindly trusts client role flags).
+One-hand ergonomic luxury mobile UI with dark mode compatibility and 60 FPS Reanimated motion.
 Reuse the same backend API as the web portals.
-Reuse shared types/validation only where compatible with React
-    Native.
-Keep navigation, loading, empty, error, offline, and permission
-    states deliberate.
+Reuse shared types/validation only where compatible with React Native.
+Keep navigation, loading, empty, error, offline, and permission states deliberate.
 Do not store long-lived secrets in the app.
 Secure tokens using platform-appropriate secure storage.
-Do not trust a role value supplied by the client; the API must
-    authorize every protected operation.
-Avoid duplicating business rules in the mobile app. The backend is
-    the source of truth.
-The mobile app can be distributed separately from the web portals, but
-must use the same tenant, identity, and authorization model.
+Do not trust a role value supplied by the client; the API must authorize every protected operation.
+Avoid duplicating business rules in the mobile app. The backend is the source of truth.
+The mobile app can be distributed separately from the web portals, but must use the same tenant, identity, and authorization model.
+
 6. Roles and Authorization
-Minimum roles:
-**Platform Super Admin** --- platform-wide administration and tenant
-    lifecycle.
-**Institute Admin** --- management within their own institute.
-**Teacher** --- assigned teaching responsibilities and authorized
-    classes.
-**Student** --- own profile, enrollment, and permitted learning
-    records.
-Future roles such as parent/guardian may be considered later, but should
-not delay the initial release unless explicitly approved.
-Authorization requirements: - Enforce permissions in the API, not only
-by hiding UI elements. - Enforce institute/tenant boundaries on every
-relevant database query and mutation. - A user belonging to one
-institute must not be able to read or modify another institute's records
-by changing an ID in a request. - Check both role permissions and
-resource ownership/assignment. - Validate all input on the server. - Use
-rate limiting and abuse protection for authentication and
-invitation-code endpoints. - Record important security-sensitive actions
-in an audit log.
+The corrected role hierarchy across PadhaiPilot:
+
+1. `SUPER_ADMIN` --- PadhaiPilot Platform Owner. Exclusive access to `apps/admin` and privileged control plane APIs (`/api/admin/*`, `/api/features/*`). Never granted through public registration.
+2. `TUITION_OWNER` --- Institute owner and primary administrator in `apps/teacher`. Owns and manages their institute tenant, branding, faculty roster, salaries, and fees.
+3. `INSTITUTE_MANAGER` --- Delegated operational role inside an institute if authorized by the owner.
+4. `FACULTY` / `TEACHER` --- Regular teaching staff. Access strictly scoped to assigned batches, attendance, bulk marks, curriculum, plus personal HR leave and salary view.
+5. `STUDENT` --- Enrolled student. Access strictly scoped to own batch, timetable, study material, results, homework, and fee receipts in `apps/student`.
+
+Authorization requirements:
+- Enforce permissions strictly in the NestJS API with `RolesGuard` and `@Roles(...)`, never client-side alone.
+- Enforce tenant isolation on every database query and Redis cache key (`inst_${id}:*`).
+- Cross-tenant data leakage is strictly prohibited. An institute owner can never access another tuition's data.
+- Platform Admin APIs reject `TUITION_OWNER`, `FACULTY`, and `STUDENT` with `403 Forbidden`.
+
 7. Multi-Tenant SaaS and White-Label Support
 The platform should support many institutes from one maintained
 codebase.

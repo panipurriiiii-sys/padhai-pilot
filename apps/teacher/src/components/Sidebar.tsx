@@ -44,8 +44,7 @@ export type NavTab =
   | 'studentFees'
   | 'tuitionBranding'
   | 'reports'
-  | 'settings'
-  | 'features';
+  | 'settings';
 
 interface SidebarProps {
   currentTab: NavTab;
@@ -64,36 +63,32 @@ export function Sidebar({
   userRole = 'TEACHER',
   onOpenAuthModal,
 }: SidebarProps) {
-  // Contextually filter sections by user role to eliminate clutter
-  const isSuperAdmin = userRole === 'SUPER_ADMIN';
+  // Contextually filter sections by user role (Tuition Owner vs Faculty Member)
   const isOwner = userRole === 'TUITION_OWNER' || userRole === 'INSTITUTE_ADMIN';
+  const roleLabel = isOwner ? 'Tuition Owner' : 'Faculty Member';
 
   const sections = [
-    // 1. Classroom Ops (Visible to Teachers and SuperAdmins)
-    ...(!isOwner
-      ? [
-          {
-            title: 'Classroom & Academic',
-            items: [
-              { id: 'dashboard' as NavTab, label: 'Overview', icon: LayoutDashboard },
-              { id: 'teachingDiary' as NavTab, label: 'Daily Diary', icon: NotebookPen, badge: 'Daily' },
-              { id: 'attendance' as NavTab, label: 'Attendance', icon: CalendarCheck, badge: 'Pinned' },
-              { id: 'bulkMarks' as NavTab, label: 'Bulk Marks', icon: FileSpreadsheet, badge: 'New' },
-              { id: 'batches' as NavTab, label: 'Batches & Roster', icon: Users },
-              { id: 'studyMaterials' as NavTab, label: 'Study Materials', icon: FileText },
-              { id: 'assignments' as NavTab, label: 'Assignments', icon: FileCheck2 },
-              { id: 'tests' as NavTab, label: 'Tests & Quizzes', icon: Award },
-              { id: 'lessonPlans' as NavTab, label: 'Curriculum Plans', icon: BookOpen },
-              { id: 'invitations' as NavTab, label: 'Student Invites', icon: KeyRound },
-              { id: 'timetable' as NavTab, label: 'Timetable', icon: Clock },
-              { id: 'announcements' as NavTab, label: 'Announcements', icon: Megaphone },
-            ],
-          },
-        ]
-      : []),
+    // 1. Classroom & Academic Operations (Available to both Owners and Faculty)
+    {
+      title: 'Classroom & Academic',
+      items: [
+        { id: 'dashboard' as NavTab, label: 'Overview', icon: LayoutDashboard },
+        { id: 'teachingDiary' as NavTab, label: 'Daily Diary', icon: NotebookPen, badge: 'Daily' },
+        { id: 'attendance' as NavTab, label: 'Attendance', icon: CalendarCheck, badge: 'Pinned' },
+        { id: 'bulkMarks' as NavTab, label: 'Bulk Marks', icon: FileSpreadsheet, badge: 'New' },
+        { id: 'batches' as NavTab, label: 'Batches & Roster', icon: Users },
+        { id: 'studyMaterials' as NavTab, label: 'Study Materials', icon: FileText },
+        { id: 'assignments' as NavTab, label: 'Assignments', icon: FileCheck2 },
+        { id: 'tests' as NavTab, label: 'Tests & Quizzes', icon: Award },
+        { id: 'lessonPlans' as NavTab, label: 'Curriculum Plans', icon: BookOpen },
+        { id: 'invitations' as NavTab, label: 'Student Invites', icon: KeyRound },
+        { id: 'timetable' as NavTab, label: 'Timetable', icon: Clock },
+        { id: 'announcements' as NavTab, label: 'Announcements', icon: Megaphone },
+      ],
+    },
 
-    // 2. Tuition Management (Visible to Owners and SuperAdmins)
-    ...(isOwner || isSuperAdmin
+    // 2. Tuition Management (Visible to Tuition Owner) OR My HR (Visible to Faculty)
+    ...(isOwner
       ? [
           {
             title: 'Tuition Management',
@@ -103,20 +98,24 @@ export function Sidebar({
               { id: 'facultySalary' as NavTab, label: 'Salary & Payroll', icon: CreditCard, badge: 'Ledger' },
               { id: 'facultyLeave' as NavTab, label: 'Leave Applications', icon: CalendarDays },
               { id: 'studentFees' as NavTab, label: 'Fee Dues & Alerts', icon: IndianRupee },
-              { id: 'batches' as NavTab, label: 'All Batches', icon: Users },
               { id: 'reports' as NavTab, label: 'Reports & Analytics', icon: BarChart3 },
             ],
           },
         ]
-      : []),
+      : [
+          {
+            title: 'My Leaves & Pay',
+            items: [
+              { id: 'facultyLeave' as NavTab, label: 'My Leaves', icon: CalendarDays },
+              { id: 'facultySalary' as NavTab, label: 'My Pay Slips', icon: CreditCard },
+            ],
+          },
+        ]),
 
-    // 3. System & Preferences
+    // 3. Preferences & Settings
     {
       title: 'Preferences',
       items: [
-        ...(isSuperAdmin
-          ? [{ id: 'features' as NavTab, label: 'Feature Flags', icon: Sliders, badge: 'Admin' }]
-          : []),
         { id: 'settings' as NavTab, label: 'Settings', icon: Settings },
       ],
     },
@@ -210,11 +209,7 @@ export function Sidebar({
               {teacherName}
             </p>
             <p className="font-['Inter'] text-[10px] text-[var(--ink-muted)] truncate">
-              {userRole === 'TUITION_OWNER'
-                ? 'Tuition Owner'
-                : userRole === 'SUPER_ADMIN'
-                  ? 'Platform Super Admin'
-                  : 'Senior Faculty (ID: FAC-702)'}
+              {isOwner ? 'Tuition Owner / Administrator' : 'Faculty Member'}
             </p>
           </div>
           <LogIn className="w-3.5 h-3.5 text-[var(--ink-faint)] group-hover:text-[var(--brand-electric)] transition-colors shrink-0" />

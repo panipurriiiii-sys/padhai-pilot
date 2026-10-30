@@ -12,6 +12,9 @@ import {
 } from '@nestjs/common';
 import { FeaturesService } from './features.service.js';
 import { getAllRegisteredFeatures } from './features.registry.js';
+import { AuthGuard } from '../common/guards/auth.guard.js';
+import { RolesGuard } from '../common/guards/roles.guard.js';
+import { Roles } from '../common/decorators/roles.decorator.js';
 import type {
   FeatureKey,
   SubscriptionPlan,
@@ -84,6 +87,8 @@ export class FeaturesController {
    * Super Admin: View feature flag audit trail
    */
   @Get('audit-logs')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN')
   async getAuditLogs(
     @Query('featureKey') featureKey?: string,
     @Query('instituteId') instituteId?: string,
@@ -105,6 +110,8 @@ export class FeaturesController {
    * Platform Super Admin: Toggle global feature state
    */
   @Post('global')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN')
   async updateGlobalFlag(
     @Body() dto: UpdateGlobalFeatureFlagDto,
     @Req() req?: any,
@@ -130,6 +137,8 @@ export class FeaturesController {
    * Platform Super Admin: Emergency Kill Switch
    */
   @Post('emergency-kill')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN')
   async emergencyKill(
     @Body() dto: EmergencyKillSwitchDto,
     @Req() req?: any,
@@ -155,6 +164,8 @@ export class FeaturesController {
    * Platform Super Admin: Emergency Restore
    */
   @Post('emergency-restore')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN')
   async emergencyRestore(
     @Body() dto: { featureKey: FeatureKey; reason: string },
     @Req() req?: any,
@@ -179,6 +190,8 @@ export class FeaturesController {
    * Platform Super Admin: Configure Plan Entitlements & Quotas
    */
   @Post('plan-entitlements')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN')
   async updatePlanEntitlements(
     @Body() dto: UpdatePlanEntitlementDto,
     @Req() req?: any,

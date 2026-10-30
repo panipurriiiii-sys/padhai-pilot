@@ -47,3 +47,4 @@ This document specifies the end-to-end architecture, authorization boundaries, A
 - NestJS API routes served under `/api/student/*` and `/api/auth/*`.
 - Tested with 77/77 passing unit tests across 9 test suites.
 - Fully verified production build.
+

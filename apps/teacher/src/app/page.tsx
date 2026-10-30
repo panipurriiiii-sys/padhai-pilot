@@ -14,7 +14,6 @@ import { TimetableView } from '../components/TimetableView';
 import { AnnouncementsView } from '../components/AnnouncementsView';
 import { ReportsView } from '../components/ReportsView';
 import { SettingsView } from '../components/SettingsView';
-import { PlatformSuperAdminFeatureView } from '../components/PlatformSuperAdminFeatureView';
 import { DailyTeachingDiaryView } from '../components/DailyTeachingDiaryView';
 import { FacultyManagementView } from '../components/FacultyManagementView';
 import { FacultySalaryView } from '../components/FacultySalaryView';
@@ -257,8 +256,6 @@ export default function TeacherApp() {
     setShowAuthModal(false);
     if (authenticatedUser.role === 'TUITION_OWNER') {
       setCurrentTab('tuitionBranding');
-    } else if (authenticatedUser.role === 'SUPER_ADMIN') {
-      setCurrentTab('features');
     } else {
       setCurrentTab('dashboard');
     }
@@ -438,8 +435,6 @@ export default function TeacherApp() {
               onLogout={handleLogout}
             />
           )}
-
-          {currentTab === 'features' && <PlatformSuperAdminFeatureView />}
         </div>
       </main>
 

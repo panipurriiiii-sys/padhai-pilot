@@ -55,16 +55,21 @@ export class AuthService {
     });
 
     // Seed platform super admin
-    this.memoryUsers.set('admin@padhaipilot.com', {
+    const superAdminRecord = {
       id: 'usr_admin_malhotra',
-      email: 'admin@padhaipilot.com',
+      email: 'super@padhaipilot.com',
       password: 'password123',
-      fullName: 'Dr. Vikram Malhotra',
+      fullName: 'Dr. Vikram Malhotra (Platform Owner)',
       role: 'SUPER_ADMIN',
-      instituteId: 'inst_apex_academy',
-      instituteName: 'PadhaiPilot HQ',
+      instituteId: 'inst_padhaipilot_platform',
+      instituteName: 'PadhaiPilot Platform Control Plane',
       phone: '+91 99000 88776',
       avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=256&q=80',
+    };
+    this.memoryUsers.set('super@padhaipilot.com', superAdminRecord);
+    this.memoryUsers.set('admin@padhaipilot.com', {
+      ...superAdminRecord,
+      email: 'admin@padhaipilot.com',
     });
 
     // Seed student
