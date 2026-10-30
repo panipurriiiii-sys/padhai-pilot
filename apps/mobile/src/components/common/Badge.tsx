@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 
-export type BadgeVariant = 'success' | 'warning' | 'error' | 'neutral' | 'primary';
+export type BadgeVariant = 'success' | 'warning' | 'error' | 'neutral' | 'primary' | 'default' | 'outline';
 
 export interface BadgeProps {
   label: string;
@@ -16,20 +16,40 @@ export const Badge: React.FC<BadgeProps> = ({ label, variant = 'neutral', style 
   const getColors = () => {
     switch (variant) {
       case 'success':
-        return { bg: colors.successSubtle, text: colors.success };
+        return {
+          bg: colors.stickyMintBg,
+          text: colors.stickyMintText,
+          border: colors.stickyMintBorder,
+        };
       case 'warning':
-        return { bg: colors.warningSubtle, text: colors.warning };
+        return {
+          bg: colors.stickyYellowBg,
+          text: colors.stickyYellowText,
+          border: colors.stickyYellowBorder,
+        };
       case 'error':
-        return { bg: colors.errorSubtle, text: colors.error };
+        return {
+          bg: colors.stickyPinkBg,
+          text: colors.stickyPinkText,
+          border: colors.stickyPinkBorder,
+        };
       case 'primary':
-        return { bg: colors.primarySubtle, text: colors.primary };
+        return {
+          bg: colors.stickyBlueBg,
+          text: colors.primary,
+          border: colors.stickyBlueBorder,
+        };
       case 'neutral':
       default:
-        return { bg: colors.surfaceSubtle, text: colors.textSecondary };
+        return {
+          bg: colors.surfaceElevated,
+          text: colors.textSecondary,
+          border: colors.border,
+        };
     }
   };
 
-  const { bg, text } = getColors();
+  const { bg, text, border } = getColors();
 
   return (
     <View
@@ -37,6 +57,8 @@ export const Badge: React.FC<BadgeProps> = ({ label, variant = 'neutral', style 
         styles.badge,
         {
           backgroundColor: bg,
+          borderColor: border,
+          borderWidth: 1,
           paddingHorizontal: spacing.sm,
           paddingVertical: spacing.xxs,
           borderRadius: radii.sm,
@@ -49,6 +71,7 @@ export const Badge: React.FC<BadgeProps> = ({ label, variant = 'neutral', style 
           styles.text,
           {
             color: text,
+            fontFamily: typography.fonts.ui,
             fontSize: typography.sizes.xs,
             fontWeight: typography.weights.semibold,
           },

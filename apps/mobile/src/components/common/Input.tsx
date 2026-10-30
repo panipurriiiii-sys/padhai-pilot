@@ -43,6 +43,7 @@ export const Input: React.FC<InputProps> = ({
           style={[
             styles.label,
             {
+              fontFamily: typography.fonts.ui,
               fontSize: typography.sizes.sm,
               fontWeight: typography.weights.medium,
               color: colors.textSecondary,
@@ -57,10 +58,11 @@ export const Input: React.FC<InputProps> = ({
         style={[
           styles.input,
           {
+            fontFamily: typography.fonts.ui,
             minHeight: 48,
             paddingHorizontal: spacing.lg,
             borderRadius: radii.md,
-            backgroundColor: colors.surface,
+            backgroundColor: colors.surfaceSubtle,
             borderColor,
             borderWidth: isFocused ? 1.5 : 1,
             color: colors.textPrimary,
@@ -68,7 +70,7 @@ export const Input: React.FC<InputProps> = ({
           },
           style,
         ]}
-        placeholderTextColor={colors.textMuted}
+        placeholderTextColor={colors.textFaint || colors.textMuted}
         onFocus={(e) => {
           setIsFocused(true);
           onFocus?.(e);
@@ -84,6 +86,7 @@ export const Input: React.FC<InputProps> = ({
           style={[
             styles.errorText,
             {
+              fontFamily: typography.fonts.ui,
               fontSize: typography.sizes.xs,
               color: colors.error,
               marginTop: spacing.xs,
@@ -97,6 +100,7 @@ export const Input: React.FC<InputProps> = ({
           style={[
             styles.hintText,
             {
+              fontFamily: typography.fonts.ui,
               fontSize: typography.sizes.xs,
               color: colors.textMuted,
               marginTop: spacing.xs,

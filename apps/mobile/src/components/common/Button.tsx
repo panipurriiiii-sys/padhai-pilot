@@ -13,8 +13,8 @@ import { useTheme } from '../../theme/ThemeContext';
 export interface ButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
-  size?: 'md' | 'lg';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline';
+  size?: 'md' | 'lg' | 'sm' | 'small';
   loading?: boolean;
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
@@ -35,16 +35,20 @@ export const Button: React.FC<ButtonProps> = ({
 }) => {
   const { colors, spacing, radii, typography } = useTheme();
 
-  const minHeight = size === 'lg' ? 52 : 46;
-  const paddingHorizontal = size === 'lg' ? spacing.xl : spacing.lg;
+  const minHeight = size === 'lg' ? 52 : size === 'sm' || size === 'small' ? 38 : 46;
+  const paddingHorizontal = size === 'lg' ? spacing.xl : size === 'sm' || size === 'small' ? spacing.md : spacing.lg;
+
+  const isOutline = variant === 'outline' || variant === 'secondary';
 
   const getBackgroundColor = (pressed: boolean) => {
     if (disabled) return colors.surfaceSubtle;
     switch (variant) {
       case 'primary':
-        return pressed ? colors.textPrimary : colors.primary;
+        return pressed ? colors.primaryHover || '#3395FF' : colors.primary;
       case 'secondary':
         return pressed ? colors.borderStrong : colors.surfaceSubtle;
+      case 'outline':
+        return pressed ? colors.primarySubtle : colors.surfaceSubtle;
       case 'danger':
         return pressed ? '#B91C1C' : colors.error;
       case 'ghost':
@@ -60,6 +64,8 @@ export const Button: React.FC<ButtonProps> = ({
       case 'primary':
       case 'danger':
         return colors.primaryContrast;
+      case 'outline':
+        return colors.primary;
       case 'secondary':
         return colors.textPrimary;
       case 'ghost':
@@ -83,8 +89,8 @@ export const Button: React.FC<ButtonProps> = ({
           paddingHorizontal,
           borderRadius: radii.md,
           backgroundColor: getBackgroundColor(pressed),
-          borderColor: variant === 'secondary' ? colors.border : 'transparent',
-          borderWidth: variant === 'secondary' ? 1 : 0,
+          borderColor: isOutline ? colors.border : 'transparent',
+          borderWidth: isOutline ? 1 : 0,
           opacity: disabled ? 0.6 : pressed ? 0.92 : 1,
           transform: [{ scale: pressed ? 0.985 : 1 }],
         },
@@ -101,6 +107,7 @@ export const Button: React.FC<ButtonProps> = ({
           style={[
             styles.text,
             {
+              fontFamily: typography.fonts.ui,
               fontSize: typography.sizes.base,
               fontWeight: typography.weights.semibold,
               color: getTextColor(),

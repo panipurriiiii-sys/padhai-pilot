@@ -156,21 +156,98 @@ export const LoginScreen: React.FC = () => {
           keyboardShouldPersistTaps="handled"
         >
           {/* Brand Header */}
-          <View style={[styles.header, { marginBottom: spacing.xl }]}>
+          <View style={[styles.header, { marginBottom: spacing.lg }]}>
             <View
               style={[
                 styles.brandLogo,
-                { backgroundColor: colors.primary, borderRadius: radii.md },
+                {
+                  backgroundColor: colors.surfaceSubtle,
+                  borderColor: colors.borderStrong,
+                  borderWidth: 1,
+                  borderRadius: radii.xl,
+                },
               ]}
             >
-              <Text style={[styles.brandLogoText, { fontFamily: typography.fonts.display }]}>P</Text>
+              <Text
+                style={[
+                  styles.brandLogoText,
+                  {
+                    fontFamily: typography.fonts.display,
+                    color: colors.primary,
+                  },
+                ]}
+              >
+                P
+              </Text>
             </View>
-            <Title style={{ fontFamily: typography.fonts.display, textAlign: 'center' }}>
+            <Title
+              style={{
+                fontFamily: typography.fonts.display,
+                textAlign: 'center',
+                fontSize: 26,
+                letterSpacing: -0.5,
+                color: colors.textPrimary,
+              }}
+            >
               PadhaiPilot
             </Title>
-            <Caption style={{ textAlign: 'center', color: colors.textMuted, marginTop: spacing.xs }}>
-              Unified Tuition & Academic Mobile Suite
+            <Caption
+              style={{
+                fontFamily: typography.fonts.ui,
+                textAlign: 'center',
+                color: colors.textMuted,
+                marginTop: spacing.xs,
+                fontSize: 12,
+              }}
+            >
+              {activeRole === 'STUDENT'
+                ? 'Student Academic Portal & Verified Results Vault'
+                : 'Teacher & Faculty Classroom Control Suite'}
             </Caption>
+          </View>
+
+          {/* Quick Demo Access Bar (Matching Web Instant Demo Card) */}
+          <View
+            style={[
+              styles.demoCard,
+              {
+                backgroundColor: colors.surfaceSubtle,
+                borderColor: colors.border,
+                borderRadius: radii.xl,
+                padding: spacing.md,
+                marginBottom: spacing.lg,
+              },
+            ]}
+          >
+            <View style={{ flex: 1, marginRight: spacing.sm }}>
+              <Label
+                style={{
+                  fontFamily: typography.fonts.ui,
+                  fontSize: 12,
+                  fontWeight: '700',
+                  color: colors.textPrimary,
+                }}
+              >
+                Instant Demo Access
+              </Label>
+              <Caption
+                style={{
+                  fontFamily: typography.fonts.ui,
+                  fontSize: 11,
+                  color: colors.textMuted,
+                }}
+              >
+                {activeRole === 'STUDENT'
+                  ? 'Aarav Patel (JEE Advanced Alpha)'
+                  : 'Prof. Rajesh Sharma (Faculty Alpha)'}
+              </Caption>
+            </View>
+            <Button
+              title="⚡ Enter Demo"
+              variant="primary"
+              size="small"
+              onPress={activeRole === 'STUDENT' ? handleDemoStudentLogin : handleDemoTeacherLogin}
+            />
           </View>
 
           {/* Role Selector Tabs */}
@@ -181,7 +258,9 @@ export const LoginScreen: React.FC = () => {
                 backgroundColor: colors.surfaceSubtle,
                 borderRadius: radii.lg,
                 padding: spacing.xs,
-                marginBottom: spacing.lg,
+                marginBottom: spacing.md,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
               },
             ]}
           >
@@ -236,17 +315,112 @@ export const LoginScreen: React.FC = () => {
             </Pressable>
           </View>
 
+          {/* Mode Switcher Tabs (Sign In vs New Registration) */}
+          <View
+            style={[
+              styles.roleSelector,
+              {
+                backgroundColor: colors.surfaceSubtle,
+                borderRadius: radii.lg,
+                padding: 3,
+                marginBottom: spacing.lg,
+                borderWidth: 1,
+                borderColor: colors.borderSubtle,
+              },
+            ]}
+          >
+            <Pressable
+              onPress={() => {
+                setAuthMode('SIGN_IN');
+                clearError();
+                setFormError(null);
+              }}
+              style={[
+                styles.roleTab,
+                {
+                  borderRadius: radii.md,
+                  backgroundColor: authMode === 'SIGN_IN' ? colors.primary : 'transparent',
+                },
+              ]}
+            >
+              <Label
+                style={{
+                  color: authMode === 'SIGN_IN' ? colors.primaryContrast : colors.textMuted,
+                  fontWeight: authMode === 'SIGN_IN' ? '700' : '500',
+                  fontFamily: typography.fonts.ui,
+                  fontSize: 12,
+                }}
+              >
+                Sign In
+              </Label>
+            </Pressable>
+
+            <Pressable
+              onPress={() => {
+                setAuthMode('REGISTER');
+                clearError();
+                setFormError(null);
+              }}
+              style={[
+                styles.roleTab,
+                {
+                  borderRadius: radii.md,
+                  backgroundColor: authMode === 'REGISTER' ? colors.primary : 'transparent',
+                },
+              ]}
+            >
+              <Label
+                style={{
+                  color: authMode === 'REGISTER' ? colors.primaryContrast : colors.textMuted,
+                  fontWeight: authMode === 'REGISTER' ? '700' : '500',
+                  fontFamily: typography.fonts.ui,
+                  fontSize: 12,
+                }}
+              >
+                New Registration
+              </Label>
+            </Pressable>
+          </View>
+
           {/* Authentication Card */}
-          <Card style={[styles.formCard, { padding: spacing.xl, borderRadius: radii.xl }]}>
+          <Card
+            style={[
+              styles.formCard,
+              {
+                padding: spacing.xl,
+                borderRadius: radii.xl,
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+              },
+            ]}
+          >
+            {/* Top Accent Strip */}
+            <View
+              style={[
+                styles.topAccentStrip,
+                {
+                  backgroundColor: colors.primary,
+                  borderRadius: radii.xs,
+                  marginBottom: spacing.md,
+                },
+              ]}
+            />
+
             <View style={styles.cardHeader}>
-              <Subtitle style={{ fontFamily: typography.fonts.display, fontSize: typography.sizes.lg }}>
+              <Subtitle
+                style={{
+                  fontFamily: typography.fonts.display,
+                  fontSize: typography.sizes.lg,
+                  color: colors.textPrimary,
+                }}
+              >
                 {authMode === 'SIGN_IN' && `Sign In as ${activeRole === 'STUDENT' ? 'Student' : 'Faculty'}`}
                 {authMode === 'REGISTER' && `New ${activeRole === 'STUDENT' ? 'Student' : 'Faculty'} Account`}
                 {authMode === 'FORGOT_PASSWORD' && 'Reset Password'}
               </Subtitle>
               <Badge
                 variant={activeRole === 'STUDENT' ? 'primary' : 'warning'}
-                label={activeRole === 'STUDENT' ? 'Classroom' : 'Faculty Pass'}
+                label={activeRole === 'STUDENT' ? 'Student Vault' : 'Faculty Pass'}
               />
             </View>
 
@@ -358,15 +532,18 @@ export const LoginScreen: React.FC = () => {
                 isLoading
                   ? 'Verifying...'
                   : authMode === 'SIGN_IN'
-                  ? 'Sign In to Workspace'
+                  ? 'Sign In to Portal'
                   : authMode === 'REGISTER'
-                  ? 'Create Verified Account'
+                  ? 'Create Student Account'
                   : 'Send Reset Link'
               }
               onPress={handleSubmit}
               loading={isLoading}
-              variant="primary"
-              style={{ marginTop: spacing.sm }}
+              variant={authMode === 'REGISTER' ? 'primary' : 'primary'}
+              style={{
+                marginTop: spacing.sm,
+                backgroundColor: authMode === 'REGISTER' ? '#10B981' : colors.primary,
+              }}
             />
 
             {/* Toggles between Sign In, Register, Forgot Password */}
@@ -412,29 +589,6 @@ export const LoginScreen: React.FC = () => {
               )}
             </View>
           </Card>
-
-          {/* Quick Demo Access Bar */}
-          <View style={[styles.demoSection, { marginTop: spacing.xl }]}>
-            <Caption style={{ textAlign: 'center', color: colors.textMuted, marginBottom: spacing.sm }}>
-              Instant Demo Access for Testing
-            </Caption>
-            <View style={styles.demoButtonsRow}>
-              <Button
-                title="⚡ Demo Student (Aarav)"
-                variant="outline"
-                size="small"
-                onPress={handleDemoStudentLogin}
-                style={{ flex: 1, marginRight: spacing.xs }}
-              />
-              <Button
-                title="⚡ Demo Faculty (Prof. Sharma)"
-                variant="outline"
-                size="small"
-                onPress={handleDemoTeacherLogin}
-                style={{ flex: 1, marginLeft: spacing.xs }}
-              />
-            </View>
-          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </ScreenContainer>
@@ -453,33 +607,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   brandLogo: {
-    width: 52,
-    height: 52,
+    width: 48,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
-    elevation: 4,
-    shadowColor: '#1677FF',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
   },
   brandLogoText: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '800',
-    color: '#FFFFFF',
+  },
+  demoCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
   },
   roleSelector: {
     flexDirection: 'row',
   },
   roleTab: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 9,
     alignItems: 'center',
     justifyContent: 'center',
   },
   formCard: {
     elevation: 2,
+    borderWidth: 1,
+  },
+  topAccentStrip: {
+    height: 3,
+    width: '100%',
   },
   cardHeader: {
     flexDirection: 'row',
@@ -498,11 +657,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  demoSection: {
-    width: '100%',
-  },
-  demoButtonsRow: {
-    flexDirection: 'row',
   },
 });

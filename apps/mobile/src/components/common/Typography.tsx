@@ -14,6 +14,7 @@ export const Title: React.FC<TypographyProps> = ({ children, style, color, align
     <Text
       style={[
         {
+          fontFamily: typography.fonts.display,
           fontSize: typography.sizes.title,
           lineHeight: typography.lineHeights.title,
           fontWeight: typography.weights.bold,
@@ -36,6 +37,7 @@ export const Subtitle: React.FC<TypographyProps> = ({ children, style, color, al
     <Text
       style={[
         {
+          fontFamily: typography.fonts.ui,
           fontSize: typography.sizes.lg,
           lineHeight: typography.lineHeights.lg,
           fontWeight: typography.weights.semibold,
@@ -58,6 +60,7 @@ export const Body: React.FC<TypographyProps> = ({ children, style, color, align,
     <Text
       style={[
         {
+          fontFamily: typography.fonts.ui,
           fontSize: typography.sizes.base,
           lineHeight: typography.lineHeights.base,
           fontWeight: typography.weights.regular,
@@ -79,6 +82,7 @@ export const Caption: React.FC<TypographyProps> = ({ children, style, color, ali
     <Text
       style={[
         {
+          fontFamily: typography.fonts.ui,
           fontSize: typography.sizes.xs,
           lineHeight: typography.lineHeights.xs,
           fontWeight: typography.weights.medium,
@@ -100,6 +104,7 @@ export const StatValue: React.FC<TypographyProps> = ({ children, style, color, a
     <Text
       style={[
         {
+          fontFamily: typography.fonts.data,
           fontSize: typography.sizes.xxl,
           lineHeight: typography.lineHeights.xxl,
           fontWeight: typography.weights.bold,
@@ -122,6 +127,7 @@ export const Label: React.FC<TypographyProps> = ({ children, style, color, align
     <Text
       style={[
         {
+          fontFamily: typography.fonts.ui,
           fontSize: typography.sizes.sm,
           lineHeight: typography.lineHeights.sm,
           fontWeight: typography.weights.semibold,
