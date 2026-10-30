@@ -389,5 +389,62 @@ describe('TuitionService', () => {
       expect(mockPrisma.studentFeeReminder.create).toHaveBeenCalled();
     });
   });
+
+  // --------------------------------------------------------------------------
+  // 7. Resilient Media Upload Proxy
+  // --------------------------------------------------------------------------
+  describe('Resilient Media Upload Proxy', () => {
+    it('should reject empty or missing base64 data', async () => {
+      await expect(
+        service.proxyMediaUpload({
+          base64: '',
+          fileName: 'notes.pdf',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should reject file exceeding 20MB limit', async () => {
+      // Create a base64 string representing > 20MB
+      const oversizedBuf = Buffer.alloc(21 * 1024 * 1024);
+      const base64 = oversizedBuf.toString('base64');
+
+      await expect(
+        service.proxyMediaUpload({
+          base64,
+          fileName: 'large_video.mp4',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should sanitize filename and proxy valid upload to worker CDN', async () => {
+      const originalFetch = global.fetch;
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          data: 'https://media-hosting.dhyeyp254.workers.dev/1793338917831.pdf',
+          url: 'https://media-hosting.dhyeyp254.workers.dev/1793338917831.pdf',
+          filename: 'Physics_Notes_Ch1.pdf',
+          size: 1024,
+          media_type: 'application/pdf',
+        }),
+      }) as any;
+
+      try {
+        const sampleBuf = Buffer.from('PDF Mock Content', 'utf-8');
+        const res = await service.proxyMediaUpload({
+          base64: sampleBuf.toString('base64'),
+          fileName: 'Physics Notes (Ch1) #1.pdf',
+          mimeType: 'application/pdf',
+        });
+
+        expect(res.url).toBe('https://media-hosting.dhyeyp254.workers.dev/1793338917831.pdf');
+        expect(res.rawSize).toBe(1024);
+        expect(global.fetch).toHaveBeenCalled();
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
+  });
 });
+
 

@@ -28,6 +28,7 @@ import {
   CreateStudyMaterialDto,
   CreateStudentFeeRecordDto,
   DispatchFeeReminderDto,
+  MediaUploadProxyDto,
 } from './dto/tuition.dto.js';
 
 @Controller('tuition')
@@ -201,6 +202,15 @@ export class TuitionController {
     @Body() dto: CreateStudyMaterialDto,
   ) {
     return this.tuitionService.createStudyMaterial(user.instituteId, user.id, dto);
+  }
+
+  @Post('media-upload')
+  @HttpCode(HttpStatus.OK)
+  async proxyMediaUpload(
+    @CurrentUser() _user: AuthenticatedUser,
+    @Body() dto: MediaUploadProxyDto,
+  ) {
+    return this.tuitionService.proxyMediaUpload(dto);
   }
 
   // --------------------------------------------------------------------------

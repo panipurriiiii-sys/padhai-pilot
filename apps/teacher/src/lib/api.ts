@@ -822,6 +822,24 @@ export const teacherApi = {
     });
   },
 
+  async uploadMediaProxy(
+    base64: string,
+    fileName: string,
+    mimeType?: string,
+  ): Promise<{
+    url: string;
+    data: string;
+    fileName: string;
+    fileSize: string;
+    rawSize: number;
+    mediaType: string;
+  }> {
+    return await request('/tuition/media-upload', {
+      method: 'POST',
+      body: JSON.stringify({ base64, fileName, mimeType }),
+    });
+  },
+
   async getFeeRecords(batchId?: string): Promise<StudentFeeItem[]> {
     try {
       const q = batchId ? `?batchId=${batchId}` : '';

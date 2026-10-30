@@ -56,6 +56,8 @@ export function StudyMaterialView({
 
   // File Upload State
   const [isUploadingFile, setIsUploadingFile] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatusText, setUploadStatusText] = useState('');
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -93,14 +95,19 @@ export function StudyMaterialView({
     }
   }
 
-  // Handle direct file upload to Cloudflare Media Host CDN
+  // Handle direct file upload to Cloudflare Media Host CDN with resilient multi-attempt retry
   async function handleFileSelected(file: File) {
     if (!file) return;
     setIsUploadingFile(true);
+    setUploadProgress(10);
+    setUploadStatusText('Validating file & optimizing filename...');
     setUploadError(null);
 
     try {
-      const result = await uploadMediaFile(file);
+      const result = await uploadMediaFile(file, (percent, statusText) => {
+        setUploadProgress(percent);
+        setUploadStatusText(statusText);
+      });
       setFormData((prev) => ({
         ...prev,
         fileUrl: result.url,
@@ -494,13 +501,20 @@ export function StudyMaterialView({
                     />
 
                     {isUploadingFile ? (
-                      <div className="space-y-2 py-2">
+                      <div className="space-y-3 py-3 px-3">
                         <div className="w-6 h-6 border-2 border-[var(--brand-electric)] border-t-transparent rounded-full animate-spin mx-auto" />
-                        <div className="font-['Raleway'] font-bold text-xs text-[var(--brand-electric)]">
-                          Uploading to Media CDN (https://media.dhyey.cc)...
+                        <div className="font-['Raleway'] font-bold text-xs text-[var(--brand-electric)] text-center">
+                          {uploadStatusText || 'Uploading to Media CDN (https://media.dhyey.cc)...'}
                         </div>
-                        <div className="text-[10px] text-[var(--ink-faint)]">
-                          Streaming directly to Cloudflare Worker
+                        <div className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
+                          <div
+                            className="bg-[var(--brand-electric)] h-full transition-all duration-300 rounded-full"
+                            style={{ width: `${Math.max(8, uploadProgress)}%` }}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between text-[10px] text-[var(--ink-faint)]">
+                          <span>Auto-retry & proxy enabled</span>
+                          <span className="font-mono font-semibold">{uploadProgress}%</span>
                         </div>
                       </div>
                     ) : (
@@ -510,7 +524,7 @@ export function StudyMaterialView({
                           Click to select or drop study material here
                         </div>
                         <div className="text-[10px] text-[var(--ink-muted)]">
-                          PDF, Word Docs, Formula Sheets, or High-Res diagrams (Max 50MB)
+                          PDF, Word Docs, Formula Sheets, or High-Res diagrams (Strict 20MB limit per CDN)
                         </div>
                       </div>
                     )}

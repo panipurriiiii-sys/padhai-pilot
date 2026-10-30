@@ -151,3 +151,10 @@ export class DispatchFeeReminderDto {
   channel!: ReminderChannel;
   customMessage?: string;
 }
+
+export class MediaUploadProxyDto {
+  base64!: string;
+  fileName!: string;
+  mimeType?: string;
+}
+

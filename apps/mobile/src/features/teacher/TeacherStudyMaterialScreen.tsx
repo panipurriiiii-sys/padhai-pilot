@@ -204,10 +204,13 @@ export const TeacherStudyMaterialScreen: React.FC = () => {
                   color: colors.textPrimary,
                   borderColor: colors.border,
                   borderRadius: radii.md,
-                  marginBottom: spacing.md,
+                  marginBottom: spacing.xs,
                 },
               ]}
             />
+            <Caption style={{ marginBottom: spacing.md, color: colors.textMuted, fontSize: 10 }}>
+              Direct Cloudflare CDN link (under 20MB limit). Files stream directly without database bloat.
+            </Caption>
 
             <Button
               title="Publish Document"

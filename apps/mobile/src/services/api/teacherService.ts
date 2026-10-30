@@ -213,6 +213,21 @@ export const teacherService = {
     return apiClient.post<StudyMaterialItem>('/tuition/materials', dto);
   },
 
+  async uploadMediaProxy(
+    base64: string,
+    fileName: string,
+    mimeType?: string,
+  ): Promise<{
+    url: string;
+    data: string;
+    fileName: string;
+    fileSize: string;
+    rawSize: number;
+    mediaType: string;
+  }> {
+    return apiClient.post('/tuition/media-upload', { base64, fileName, mimeType });
+  },
+
   // 7. Teaching Diary
   async getDailyDiary(): Promise<DailyTeachingDiaryItem[]> {
     try {

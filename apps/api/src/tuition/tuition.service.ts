@@ -4,6 +4,7 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  BadGatewayException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { AuthenticatedUser } from '../common/types.js';
@@ -20,6 +21,7 @@ import type {
   CreateStudyMaterialDto,
   CreateStudentFeeRecordDto,
   DispatchFeeReminderDto,
+  MediaUploadProxyDto,
 } from './dto/tuition.dto.js';
 import type {
   TuitionBrandingProfile,
@@ -1363,6 +1365,106 @@ export class TuitionService {
       createdAt: created.createdAt.toISOString(),
       updatedAt: created.updatedAt.toISOString(),
     };
+  }
+
+  async proxyMediaUpload(dto: MediaUploadProxyDto): Promise<{
+    url: string;
+    data: string;
+    fileName: string;
+    fileSize: string;
+    rawSize: number;
+    mediaType: string;
+  }> {
+    if (!dto.base64) {
+      throw new BadRequestException('File base64 data is required.');
+    }
+
+    const buffer = Buffer.from(dto.base64, 'base64');
+    const MAX_SIZE = 20 * 1024 * 1024; // 20MB limit per media.dhyey.cc docs
+    if (buffer.length > MAX_SIZE) {
+      throw new BadRequestException('File exceeds the 20MB maximum allowed limit.');
+    }
+    if (buffer.length === 0) {
+      throw new BadRequestException('Uploaded file is empty.');
+    }
+
+    // Clean filename: remove unsafe chars, keep extension
+    const originalName = dto.fileName || 'document.pdf';
+    const extMatch = originalName.match(/\.[0-9a-z]+$/i);
+    const ext = extMatch ? extMatch[0].toLowerCase() : '.bin';
+    const baseName = originalName.replace(/\.[0-9a-z]+$/i, '');
+    const cleanBase =
+      baseName
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9_\-]/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '') || 'file';
+    const safeFilename = `${cleanBase}${ext}`;
+
+    const mime = dto.mimeType || 'application/octet-stream';
+    const blob = new Blob([buffer], { type: mime });
+    const formData = new FormData();
+    formData.append('file', blob, safeFilename);
+
+    let lastError: Error | null = null;
+    const WORKER_ENDPOINT = 'https://media-hosting.dhyeyp254.workers.dev/upload';
+
+    const formatBytes = (bytes: number, decimals = 1): string => {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const dm = decimals < 0 ? 0 : decimals;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+    };
+
+    // Up to 3 attempts with exponential backoff & jitter
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 35000);
+
+      try {
+        const response = await fetch(WORKER_ENDPOINT, {
+          method: 'POST',
+          body: formData,
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          const errText = await response.text().catch(() => '');
+          throw new Error(`Media worker returned HTTP ${response.status}: ${errText}`);
+        }
+
+        const json = await response.json();
+        const fileUrl = json.url || json.data;
+        if (!fileUrl) {
+          throw new Error('Worker response missing valid download URL');
+        }
+
+        const sizeInBytes = json.size || buffer.length;
+        return {
+          url: fileUrl,
+          data: json.data || fileUrl,
+          fileName: json.filename || safeFilename,
+          fileSize: formatBytes(sizeInBytes),
+          rawSize: sizeInBytes,
+          mediaType: json.media_type || mime,
+        };
+      } catch (err: any) {
+        clearTimeout(timeoutId);
+        lastError = err;
+        if (attempt < 3) {
+          const jitter = Math.floor(Math.random() * 400);
+          await new Promise((r) => setTimeout(r, 1000 * attempt + jitter));
+        }
+      }
+    }
+
+    throw new BadGatewayException(
+      `Failed to upload to media CDN after 3 attempts: ${lastError?.message || 'Upstream timeout'}`,
+    );
   }
 
   // ==========================================================================
