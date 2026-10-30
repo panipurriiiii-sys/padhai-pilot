@@ -64,39 +64,59 @@ export function Sidebar({
   userRole = 'TEACHER',
   onOpenAuthModal,
 }: SidebarProps) {
+  // Contextually filter sections by user role to eliminate clutter
+  const isSuperAdmin = userRole === 'SUPER_ADMIN';
+  const isOwner = userRole === 'TUITION_OWNER' || userRole === 'INSTITUTE_ADMIN';
+
   const sections = [
+    // 1. Classroom Ops (Visible to Teachers and SuperAdmins)
+    ...(!isOwner
+      ? [
+          {
+            title: 'Classroom & Academic',
+            items: [
+              { id: 'dashboard' as NavTab, label: 'Overview', icon: LayoutDashboard },
+              { id: 'teachingDiary' as NavTab, label: 'Daily Diary', icon: NotebookPen, badge: 'Daily' },
+              { id: 'attendance' as NavTab, label: 'Attendance', icon: CalendarCheck, badge: 'Pinned' },
+              { id: 'bulkMarks' as NavTab, label: 'Bulk Marks', icon: FileSpreadsheet, badge: 'New' },
+              { id: 'batches' as NavTab, label: 'Batches & Roster', icon: Users },
+              { id: 'studyMaterials' as NavTab, label: 'Study Materials', icon: FileText },
+              { id: 'assignments' as NavTab, label: 'Assignments', icon: FileCheck2 },
+              { id: 'tests' as NavTab, label: 'Tests & Quizzes', icon: Award },
+              { id: 'lessonPlans' as NavTab, label: 'Curriculum Plans', icon: BookOpen },
+              { id: 'invitations' as NavTab, label: 'Student Invites', icon: KeyRound },
+              { id: 'timetable' as NavTab, label: 'Timetable', icon: Clock },
+              { id: 'announcements' as NavTab, label: 'Announcements', icon: Megaphone },
+            ],
+          },
+        ]
+      : []),
+
+    // 2. Tuition Management (Visible to Owners and SuperAdmins)
+    ...(isOwner || isSuperAdmin
+      ? [
+          {
+            title: 'Tuition Management',
+            items: [
+              { id: 'tuitionBranding' as NavTab, label: 'Academy Branding', icon: Building2, badge: 'Owner' },
+              { id: 'facultyRoster' as NavTab, label: 'Faculty & Workload', icon: Users, badge: 'HR' },
+              { id: 'facultySalary' as NavTab, label: 'Salary & Payroll', icon: CreditCard, badge: 'Ledger' },
+              { id: 'facultyLeave' as NavTab, label: 'Leave Applications', icon: CalendarDays },
+              { id: 'studentFees' as NavTab, label: 'Fee Dues & Alerts', icon: IndianRupee },
+              { id: 'batches' as NavTab, label: 'All Batches', icon: Users },
+              { id: 'reports' as NavTab, label: 'Reports & Analytics', icon: BarChart3 },
+            ],
+          },
+        ]
+      : []),
+
+    // 3. System & Preferences
     {
-      title: 'Classroom & Academic Ops',
+      title: 'Preferences',
       items: [
-        { id: 'dashboard' as NavTab, label: 'Dashboard', icon: LayoutDashboard },
-        { id: 'teachingDiary' as NavTab, label: 'Daily Teaching Diary', icon: NotebookPen, badge: 'Daily' },
-        { id: 'attendance' as NavTab, label: 'Daily Attendance', icon: CalendarCheck, badge: 'Pinned' },
-        { id: 'bulkMarks' as NavTab, label: 'Bulk Marks & Publish', icon: FileSpreadsheet, badge: 'New' },
-        { id: 'batches' as NavTab, label: 'Batches & Rosters', icon: Users },
-        { id: 'studyMaterials' as NavTab, label: 'Notes & Materials', icon: FileText },
-        { id: 'assignments' as NavTab, label: 'Assignments', icon: FileCheck2 },
-        { id: 'tests' as NavTab, label: 'Tests & Quizzes', icon: Award },
-        { id: 'lessonPlans' as NavTab, label: 'Curriculum Plans', icon: BookOpen },
-        { id: 'invitations' as NavTab, label: 'Student Invites', icon: KeyRound },
-        { id: 'timetable' as NavTab, label: 'Weekly Timetable', icon: Clock },
-        { id: 'announcements' as NavTab, label: 'Announcements', icon: Megaphone },
-      ],
-    },
-    {
-      title: 'Tuition Owner & Faculty',
-      items: [
-        { id: 'tuitionBranding' as NavTab, label: 'Tuition Branding', icon: Building2, badge: 'Owner' },
-        { id: 'facultyRoster' as NavTab, label: 'Faculty & Workload', icon: Users, badge: 'HR' },
-        { id: 'facultySalary' as NavTab, label: 'Salary & Payroll', icon: CreditCard, badge: 'Ledger' },
-        { id: 'facultyLeave' as NavTab, label: 'Leave Applications', icon: CalendarDays },
-        { id: 'studentFees' as NavTab, label: 'Fee Dues & Alerts', icon: IndianRupee },
-        { id: 'reports' as NavTab, label: 'Analytics & Reports', icon: BarChart3 },
-      ],
-    },
-    {
-      title: 'System & Control',
-      items: [
-        { id: 'features' as NavTab, label: 'Feature Flags & Limits', icon: Sliders, badge: 'SuperAdmin' },
+        ...(isSuperAdmin
+          ? [{ id: 'features' as NavTab, label: 'Feature Flags', icon: Sliders, badge: 'Admin' }]
+          : []),
         { id: 'settings' as NavTab, label: 'Settings', icon: Settings },
       ],
     },
