@@ -50,11 +50,22 @@ import {
   FeeSummaryOverview,
 } from '@padhai-pilot/shared';
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  (typeof window !== 'undefined' && window.location.hostname === 'localhost'
-    ? 'http://localhost:3001/api'
-    : '/api');
+function getCleanApiBaseUrl(): string {
+  let base = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (!base) {
+    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+      return 'http://localhost:3001/api';
+    }
+    return '/api';
+  }
+  // Strip trailing slashes
+  base = base.replace(/\/+$/, '');
+  // If base doesn't end with /api, ensure /api is included
+  if (!base.endsWith('/api')) {
+    base = `${base}/api`;
+  }
+  return base;
+}
 
 let cachedToken: string | null = null;
 
@@ -89,7 +100,9 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     headers.set('Authorization', `Bearer ${token}`);
   }
 
-  const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
+  const baseUrl = getCleanApiBaseUrl();
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const url = endpoint.startsWith('http') ? endpoint : `${baseUrl}${cleanEndpoint}`;
 
   try {
     const res = await fetch(url, {
@@ -566,7 +579,7 @@ export const teacherApi = {
   },
 
   async exportResultSheetCsv(assessmentId: string): Promise<string> {
-    const res = await fetch(`${API_BASE_URL}/assessment/${assessmentId}/export`, {
+    const res = await fetch(`${getCleanApiBaseUrl()}/assessment/${assessmentId}/export`, {
       headers: { Authorization: `Bearer ${getAuthToken()}` },
     });
     if (!res.ok) throw new Error('Failed to export CSV');
