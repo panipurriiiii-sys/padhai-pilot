@@ -12,11 +12,19 @@ import {
   AlertCircle,
   Building2,
   GraduationCap,
-  ShieldCheck,
   KeyRound,
+  Disc3,
+  Play,
+  Pause,
+  Sparkles,
+  QrCode,
+  ShieldCheck,
 } from 'lucide-react';
 import { teacherApi } from '../lib/api';
 import type { UserSession } from '@padhai-pilot/shared';
+import { Corkboard, CoffeeCup, YellowPencil, DeskPetPill } from './ui';
+import { StickyNote } from './ui/StickyNote';
+import { PushPin } from './ui/PushPin';
 
 type AuthTab = 'login' | 'register' | 'forgot' | 'reset';
 
@@ -49,12 +57,13 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
   const [newPassword, setNewPassword] = useState('');
   const [showResetPassword, setShowResetPassword] = useState(false);
 
-  // Async & UI status
+  // Status & interactive feedback
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [isVinylPlaying, setIsVinylPlaying] = useState(false);
 
-  // Minimalist password strength score (0 to 4)
+  // Password strength score
   const getStrengthScore = (pwd: string) => {
     if (!pwd) return 0;
     let s = 0;
@@ -66,6 +75,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
   };
   const strengthScore = getStrengthScore(registerPassword);
 
+  // Handlers
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!loginEmail.trim() || !loginPassword) return;
@@ -113,7 +123,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
         subject: role === 'TEACHER' ? subject.trim() : undefined,
       });
 
-      setSuccessMsg('Workspace created! Logging you in...');
+      setSuccessMsg('Account registered! Launching your studio...');
       onAuthSuccess(res.user);
     } catch (err: any) {
       setErrorMsg(err.message || 'Registration failed. Please check your details.');
@@ -132,7 +142,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
 
     try {
       const res = await teacherApi.requestPasswordReset(forgotEmail.trim());
-      setSuccessMsg(res.message || 'Reset instructions dispatched.');
+      setSuccessMsg(res.message || 'Reset token generated.');
       if (res.debugToken) {
         setResetToken(res.debugToken);
         setActiveTab('reset');
@@ -184,499 +194,729 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-[#FBFBF9] flex flex-col justify-between items-center p-6 md:p-10 select-none relative overflow-hidden font-['Raleway']">
-      {/* Subtle Ambient Radial Lighting */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[360px] bg-gradient-to-b from-blue-50/70 via-amber-50/20 to-transparent blur-3xl pointer-events-none -z-10" />
+  // Dynamic preview text for lanyard badge
+  const previewName = activeTab === 'register' ? fullName || 'New Faculty' : 'Faculty Member';
+  const previewAcademy = activeTab === 'register' ? (instituteName || 'PadhaiPilot Academy') : 'PadhaiPilot Academy';
+  const previewRole = role === 'TUITION_OWNER' ? 'Tuition Director' : 'Senior Faculty';
 
-      {/* Top Header / Subtle Brand Presence */}
-      <header className="w-full max-w-md pt-2 sm:pt-6 flex flex-col items-center text-center">
-        {/* Monogram Seal */}
-        <div className="w-11 h-11 rounded-2xl bg-white border border-[#E8E4DD] shadow-sm flex items-center justify-center mb-3 transition hover:scale-105 duration-200">
-          <span className="font-['Playfair_Display'] font-black text-xl text-[var(--brand-electric)]">
+  return (
+    <div className="min-h-screen ak-desk-surface flex flex-col justify-between p-4 sm:p-6 md:p-8 select-none relative overflow-x-hidden font-['Raleway']">
+      
+      {/* 1. TOP GLASS NAV BAR */}
+      <header className="max-w-7xl w-full mx-auto flex items-center justify-between py-2 px-4 rounded-2xl bg-white/80 backdrop-blur-md border border-[#E3DFD9] shadow-sm z-30">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-xl bg-[var(--brand-electric)] flex items-center justify-center text-white font-['Playfair_Display'] font-black text-sm shadow-[0_2px_8px_rgba(22,119,255,0.3)]">
             P
-          </span>
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-['Playfair_Display'] font-extrabold text-sm sm:text-base text-[#1C1917] tracking-tight">
+                PadhaiPilot
+              </span>
+              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-blue-50 text-[var(--brand-electric)] border border-blue-100 hidden sm:inline-block">
+                Faculty Studio
+              </span>
+            </div>
+          </div>
         </div>
 
-        <h1 className="font-['Playfair_Display'] text-2xl sm:text-3xl font-extrabold text-[#1F1E1D] tracking-tight">
-          PadhaiPilot
-        </h1>
-        <p className="text-xs text-[#78716C] mt-1 font-medium tracking-wide">
-          The quiet, paper-crafted workspace for educators.
-        </p>
+        {/* Right Session & Desk State */}
+        <div className="flex items-center gap-4 text-xs font-semibold">
+          <span className="hidden md:inline-flex items-center gap-1.5 text-stone-600 font-['Inter'] text-[11px]">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            Academic Session 2026–27
+          </span>
+          <div className="h-4 w-[1px] bg-stone-300 hidden md:block" />
+          <button
+            type="button"
+            onClick={() => setIsVinylPlaying(!isVinylPlaying)}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-700 text-[11px] transition"
+            title="Toggle focus ambience"
+          >
+            <Disc3 className={`w-3.5 h-3.5 text-[var(--brand-electric)] ${isVinylPlaying ? 'animate-spin' : ''}`} />
+            <span>{isVinylPlaying ? 'Sound On' : 'Sound Off'}</span>
+          </button>
+        </div>
       </header>
 
-      {/* Main Floating Auth Card */}
-      <main className="w-full max-w-[420px] my-6">
-        <div className="bg-white/95 backdrop-blur-md rounded-2xl border border-[#E8E4DD] p-7 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300">
+      {/* 2. MAIN INTERACTIVE DESK WORKSPACE */}
+      <main className="max-w-7xl w-full mx-auto my-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center py-6 z-20">
+        
+        {/* LEFT FLANK: Interactive Faculty Lanyard ID Card & Vinyl Turntable */}
+        <div className="lg:col-span-3 hidden lg:flex flex-col items-center gap-6 animate-in fade-in slide-in-from-left-4 duration-300">
           
-          {/* Fluid Segmented Tab Controller */}
-          <div className="flex bg-[#F4F1EB] p-1 rounded-xl mb-6">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('login');
-                setErrorMsg('');
-                setSuccessMsg('');
-              }}
-              className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 ${
-                activeTab === 'login'
-                  ? 'bg-white text-[#1F1E1D] shadow-sm'
-                  : 'text-[#78716C] hover:text-[#1F1E1D]'
-              }`}
-            >
-              Sign In
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('register');
-                setErrorMsg('');
-                setSuccessMsg('');
-              }}
-              className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 ${
-                activeTab === 'register'
-                  ? 'bg-white text-[#1F1E1D] shadow-sm'
-                  : 'text-[#78716C] hover:text-[#1F1E1D]'
-              }`}
-            >
-              Create Account
-            </button>
+          {/* Real Lanyard Strap & Faculty Pass Badge */}
+          <div className="flex flex-col items-center group cursor-pointer transition-transform duration-300 hover:-translate-y-1">
+            {/* Black Fabric Lanyard Strap */}
+            <div className="w-5 h-14 bg-gradient-to-r from-stone-900 via-stone-800 to-stone-900 rounded-t-sm shadow-sm flex justify-center">
+              <div className="w-[1.5px] h-full bg-blue-500/40" />
+            </div>
+
+            {/* Metallic Silver Swivel Clip */}
+            <div className="w-7 h-4 bg-gradient-to-r from-stone-300 via-stone-100 to-stone-400 border border-stone-400 rounded-sm shadow-sm flex items-center justify-center -mt-0.5 z-10">
+              <div className="w-3 h-1.5 bg-stone-700 rounded-full" />
+            </div>
+
+            {/* Translucent PVC ID Badge Sleeve */}
+            <div className="w-56 bg-white/95 rounded-2xl border border-stone-300/80 shadow-[0_12px_32px_rgba(40,30,20,0.12)] p-4 relative overflow-hidden backdrop-blur-md">
+              {/* Holographic Gloss Sheen */}
+              <div className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-blue-400/10 via-amber-300/10 to-transparent rotate-45 pointer-events-none" />
+
+              {/* Slot cutout */}
+              <div className="w-12 h-1.5 bg-stone-200 border border-stone-300 rounded-full mx-auto mb-3" />
+
+              {/* Card Header */}
+              <div className="flex items-center justify-between border-b border-stone-200 pb-2.5 mb-3">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-5 h-5 rounded-md bg-[var(--brand-electric)] text-white text-[10px] font-bold font-['Playfair_Display'] flex items-center justify-center">
+                    P
+                  </div>
+                  <span className="font-['Playfair_Display'] font-black text-xs text-stone-900">
+                    PadhaiPilot
+                  </span>
+                </div>
+                <span className="text-[9px] font-['Inter'] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                  VERIFIED
+                </span>
+              </div>
+
+              {/* Faculty Info Body */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-stone-100 border border-stone-300 flex items-center justify-center text-stone-700 font-bold text-lg font-['Playfair_Display'] shadow-inner">
+                    {previewName.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-['Playfair_Display'] font-bold text-xs text-stone-900 truncate">
+                      {previewName}
+                    </p>
+                    <p className="text-[10px] font-['Raleway'] text-[var(--brand-electric)] font-bold truncate">
+                      {previewRole}
+                    </p>
+                    <p className="text-[9px] font-['Inter'] text-stone-500 truncate">
+                      {previewAcademy}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Micro Barcode & Key */}
+                <div className="pt-2 border-t border-stone-200 flex items-center justify-between text-[8px] font-['Inter'] text-stone-400">
+                  <span className="font-mono tracking-widest">FAC-2026-9042</span>
+                  <QrCode className="w-4 h-4 text-stone-700" />
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Feedback Banners */}
-          {errorMsg && (
-            <div className="mb-5 p-3 rounded-xl bg-rose-50/80 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
-              <span>{errorMsg}</span>
+          {/* Turntable Vinyl Record Player */}
+          <div className="w-56 bg-white p-3.5 rounded-2xl border border-[#E3DFD9] shadow-[0_8px_24px_rgba(60,52,40,0.08)] relative">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-['Raleway'] font-bold uppercase tracking-wider text-stone-600">
+                Focus Vinyl
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsVinylPlaying(!isVinylPlaying)}
+                className="w-6 h-6 rounded-full bg-[var(--brand-electric)] text-white flex items-center justify-center shadow-sm hover:scale-105 transition"
+              >
+                {isVinylPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3 ml-0.5" />}
+              </button>
             </div>
-          )}
 
-          {successMsg && (
-            <div className="mb-5 p-3 rounded-xl bg-emerald-50/80 border border-emerald-200 text-emerald-800 text-xs font-medium flex items-center gap-2">
-              <Check className="w-4 h-4 shrink-0 text-emerald-600" />
-              <span>{successMsg}</span>
+            {/* Grooved Vinyl Disc */}
+            <div className="relative w-full aspect-square rounded-full bg-gradient-to-tr from-stone-950 via-stone-900 to-stone-950 border-4 border-stone-800 shadow-inner flex items-center justify-center overflow-hidden">
+              {/* Circular grooves */}
+              <div className="absolute inset-2 rounded-full border border-stone-700/50" />
+              <div className="absolute inset-5 rounded-full border border-stone-700/40" />
+              <div className="absolute inset-8 rounded-full border border-stone-700/30" />
+
+              {/* Spinning Vinyl Center Label */}
+              <div
+                className={`w-14 h-14 rounded-full bg-[var(--brand-electric)] border-2 border-stone-100 flex flex-col items-center justify-center text-white text-[8px] font-bold font-['Playfair_Display'] ${
+                  isVinylPlaying ? 'animate-[spin_4s_linear_infinite]' : ''
+                }`}
+              >
+                <span>STUDIO</span>
+                <span className="text-[6px] font-['Inter'] font-normal opacity-80">2026–27</span>
+              </div>
             </div>
-          )}
+            <p className="text-[10px] text-stone-500 font-['Raleway'] text-center mt-2 font-medium">
+              {isVinylPlaying ? 'Now Playing: Academic Flow' : 'Click to play ambient focus'}
+            </p>
+          </div>
 
-          {/* TAB 1: SIGN IN */}
-          {activeTab === 'login' && (
-            <form onSubmit={handleLoginSubmit} className="space-y-4">
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-[#78716C] mb-1.5">
-                  Email
-                </label>
-                <div className="relative">
-                  <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#A8A29E]" />
+        </div>
+
+        {/* CENTER STAGE: The Master Paper Stationery Ledger (The Auth Pad) */}
+        <div className="lg:col-span-6 w-full max-w-lg mx-auto">
+          <div className="relative bg-[#FFFFFF] rounded-3xl border border-[#E3DFD9] p-6 sm:p-9 shadow-[0_4px_6px_rgba(60,52,40,0.04),0_20px_40px_-8px_rgba(60,52,40,0.14)]">
+            
+            {/* Top Brass Binder Clip Accent */}
+            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none select-none z-10">
+              <div className="w-12 h-3 bg-gradient-to-r from-amber-400 via-amber-200 to-amber-500 border border-amber-600 rounded-sm shadow-sm" />
+              <div className="w-8 h-2 bg-gradient-to-r from-amber-500 via-amber-300 to-amber-600 rounded-b-md shadow-inner" />
+            </div>
+
+            {/* Ledger Editorial Title */}
+            <div className="text-center pt-2 pb-5 border-b border-[#F0ECE6]">
+              <span className="text-[10px] font-['Raleway'] font-bold uppercase tracking-widest text-[var(--brand-electric)] block mb-1">
+                Institutional Workspace Access
+              </span>
+              <h2 className="font-['Playfair_Display'] text-2xl sm:text-3xl font-extrabold text-[#1C1917] tracking-tight">
+                Faculty Studio Ledger
+              </h2>
+              <p className="text-xs text-stone-500 mt-1 font-['Raleway'] font-medium">
+                Where dedicated teachers manage classrooms, attendance & grading.
+              </p>
+            </div>
+
+            {/* Seamless Segmented Tab Controller */}
+            <div className="flex bg-[#F4F1EB] p-1 rounded-xl my-5">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('login');
+                  setErrorMsg('');
+                  setSuccessMsg('');
+                }}
+                className={`flex-1 py-2 text-xs font-['Raleway'] font-bold rounded-lg transition-all duration-200 ${
+                  activeTab === 'login'
+                    ? 'bg-white text-[#1C1917] shadow-sm'
+                    : 'text-stone-500 hover:text-stone-900'
+                }`}
+              >
+                Sign In to Studio
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('register');
+                  setErrorMsg('');
+                  setSuccessMsg('');
+                }}
+                className={`flex-1 py-2 text-xs font-['Raleway'] font-bold rounded-lg transition-all duration-200 ${
+                  activeTab === 'register'
+                    ? 'bg-white text-[#1C1917] shadow-sm'
+                    : 'text-stone-500 hover:text-stone-900'
+                }`}
+              >
+                Register Account
+              </button>
+            </div>
+
+            {/* Alert Messages */}
+            {errorMsg && (
+              <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-['Raleway'] font-semibold flex items-center gap-2 animate-in fade-in">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
+
+            {successMsg && (
+              <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-['Raleway'] font-semibold flex items-center gap-2 animate-in fade-in">
+                <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{successMsg}</span>
+              </div>
+            )}
+
+            {/* TAB 1: SIGN IN */}
+            {activeTab === 'login' && (
+              <form onSubmit={handleLoginSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-[11px] font-['Raleway'] font-bold uppercase tracking-wider text-stone-600 mb-1">
+                    Institutional Email *
+                  </label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
+                    <input
+                      type="email"
+                      required
+                      placeholder="faculty@academy.edu"
+                      value={loginEmail}
+                      onChange={(e) => setLoginEmail(e.target.value)}
+                      className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Inter'] text-[#1C1917] placeholder:text-stone-400 focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-[11px] font-['Raleway'] font-bold uppercase tracking-wider text-stone-600">
+                      Password *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveTab('forgot');
+                        setForgotEmail(loginEmail);
+                        setErrorMsg('');
+                        setSuccessMsg('');
+                      }}
+                      className="text-[11px] text-[var(--brand-electric)] hover:underline font-semibold"
+                    >
+                      Forgot Password?
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
+                    <input
+                      type={showLoginPassword ? 'text' : 'password'}
+                      required
+                      placeholder="Enter workstation password"
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Inter'] text-[#1C1917] placeholder:text-stone-400 focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowLoginPassword(!showLoginPassword)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-800 transition"
+                    >
+                      {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-['Raleway'] text-stone-600">
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className="rounded border-stone-300 text-[var(--brand-electric)] focus:ring-0"
+                    />
+                    <span>Remember workstation session</span>
+                  </label>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full mt-2 py-3 px-4 rounded-xl bg-[var(--brand-electric)] hover:bg-[#0A6FE8] active:scale-[0.99] text-white text-xs font-['Raleway'] font-bold shadow-[0_4px_12px_rgba(22,119,255,0.25)] transition flex items-center justify-center gap-2"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Verifying Session...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Enter Faculty Studio</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </form>
+            )}
+
+            {/* TAB 2: REGISTER */}
+            {activeTab === 'register' && (
+              <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
+                {/* Role Switcher Pill */}
+                <div>
+                  <label className="block text-[11px] font-['Raleway'] font-bold uppercase tracking-wider text-stone-600 mb-1.5">
+                    Account Category *
+                  </label>
+                  <div className="grid grid-cols-2 gap-2 bg-[#F4F1EB] p-1 rounded-xl">
+                    <button
+                      type="button"
+                      onClick={() => setRole('TEACHER')}
+                      className={`flex items-center justify-center gap-1.5 py-1.5 text-xs font-['Raleway'] font-bold rounded-lg transition-all ${
+                        role === 'TEACHER'
+                          ? 'bg-white text-[var(--brand-electric)] shadow-sm'
+                          : 'text-stone-600 hover:text-stone-900'
+                      }`}
+                    >
+                      <GraduationCap className="w-3.5 h-3.5" />
+                      <span>Faculty Member</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setRole('TUITION_OWNER')}
+                      className={`flex items-center justify-center gap-1.5 py-1.5 text-xs font-['Raleway'] font-bold rounded-lg transition-all ${
+                        role === 'TUITION_OWNER'
+                          ? 'bg-white text-[var(--brand-electric)] shadow-sm'
+                          : 'text-stone-600 hover:text-stone-900'
+                      }`}
+                    >
+                      <Building2 className="w-3.5 h-3.5" />
+                      <span>Tuition Owner</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Name */}
+                <div>
+                  <label className="block text-[11px] font-['Raleway'] font-bold uppercase tracking-wider text-stone-600 mb-1">
+                    Full Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Dr. Alok Verma"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="w-full px-3.5 py-2 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Raleway'] font-bold text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
+                  />
+                </div>
+
+                {/* Email */}
+                <div>
+                  <label className="block text-[11px] font-['Raleway'] font-bold uppercase tracking-wider text-stone-600 mb-1">
+                    Institutional Email *
+                  </label>
                   <input
                     type="email"
                     required
-                    placeholder="name@institution.com"
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-[#E3DFD9] bg-[#FAFAF8] text-xs font-['Inter'] text-[#1F1E1D] placeholder:text-[#A8A29E] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
+                    placeholder="alok.verma@academy.edu"
+                    value={registerEmail}
+                    onChange={(e) => setRegisterEmail(e.target.value)}
+                    className="w-full px-3.5 py-2 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Inter'] text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
                   />
                 </div>
-              </div>
 
-              <div>
-                <div className="flex justify-between items-center mb-1.5">
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-[#78716C]">
-                    Password
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveTab('forgot');
-                      setForgotEmail(loginEmail);
-                      setErrorMsg('');
-                      setSuccessMsg('');
-                    }}
-                    className="text-[11px] text-[var(--brand-electric)] hover:underline font-semibold"
-                  >
-                    Forgot?
-                  </button>
-                </div>
-                <div className="relative">
-                  <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#A8A29E]" />
-                  <input
-                    type={showLoginPassword ? 'text' : 'password'}
-                    required
-                    placeholder="••••••••"
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-[#E3DFD9] bg-[#FAFAF8] text-xs font-['Inter'] text-[#1F1E1D] placeholder:text-[#A8A29E] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowLoginPassword(!showLoginPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#A8A29E] hover:text-[#1F1E1D] transition"
-                  >
-                    {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between pt-1">
-                <label className="flex items-center gap-2 cursor-pointer text-xs text-[#57534E]">
-                  <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="rounded border-[#DDD8D2] text-[var(--brand-electric)] focus:ring-0"
-                  />
-                  <span>Remember me</span>
-                </label>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full mt-2 py-2.5 px-4 rounded-xl bg-[#1677FF] hover:bg-[#0A6FE8] active:scale-[0.99] text-white text-xs font-bold shadow-sm transition flex items-center justify-center gap-2"
-              >
-                {isLoading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                {/* Conditional Fields */}
+                {role === 'TUITION_OWNER' ? (
+                  <div>
+                    <label className="block text-[11px] font-['Raleway'] font-bold uppercase tracking-wider text-stone-600 mb-1">
+                      Coaching / Tuition Academy Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Zenith IIT-JEE Academy"
+                      value={instituteName}
+                      onChange={(e) => setInstituteName(e.target.value)}
+                      className="w-full px-3.5 py-2 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Raleway'] font-bold text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
+                    />
+                  </div>
                 ) : (
-                  <>
-                    <span>Sign In</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </>
-                )}
-              </button>
-            </form>
-          )}
-
-          {/* TAB 2: REGISTER */}
-          {activeTab === 'register' && (
-            <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
-              {/* Role Segmented Pill Switcher */}
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-[#78716C] mb-1.5">
-                  I am a
-                </label>
-                <div className="grid grid-cols-2 gap-1.5 bg-[#F4F1EB] p-1 rounded-xl">
-                  <button
-                    type="button"
-                    onClick={() => setRole('TEACHER')}
-                    className={`flex items-center justify-center gap-1.5 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                      role === 'TEACHER'
-                        ? 'bg-white text-[var(--brand-electric)] shadow-sm'
-                        : 'text-[#78716C] hover:text-[#1F1E1D]'
-                    }`}
-                  >
-                    <GraduationCap className="w-3.5 h-3.5" />
-                    <span>Teacher / Faculty</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setRole('TUITION_OWNER')}
-                    className={`flex items-center justify-center gap-1.5 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                      role === 'TUITION_OWNER'
-                        ? 'bg-white text-[var(--brand-electric)] shadow-sm'
-                        : 'text-[#78716C] hover:text-[#1F1E1D]'
-                    }`}
-                  >
-                    <Building2 className="w-3.5 h-3.5" />
-                    <span>Academy Owner</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Full Name */}
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-[#78716C] mb-1">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Alok Verma"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl border border-[#E3DFD9] bg-[#FAFAF8] text-xs font-medium text-[#1F1E1D] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
-                />
-              </div>
-
-              {/* Email */}
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-[#78716C] mb-1">
-                  Institutional Email
-                </label>
-                <input
-                  type="email"
-                  required
-                  placeholder="alok.verma@academy.in"
-                  value={registerEmail}
-                  onChange={(e) => setRegisterEmail(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl border border-[#E3DFD9] bg-[#FAFAF8] text-xs font-['Inter'] text-[#1F1E1D] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
-                />
-              </div>
-
-              {/* Role-Specific Context Field */}
-              {role === 'TUITION_OWNER' ? (
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-[#78716C] mb-1">
-                    Academy / Coaching Name
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Zenith Academy"
-                    value={instituteName}
-                    onChange={(e) => setInstituteName(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-xl border border-[#E3DFD9] bg-[#FAFAF8] text-xs font-medium text-[#1F1E1D] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
-                  />
-                </div>
-              ) : (
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-[#78716C] mb-1">
-                    Subject Specialization
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Mathematics, Physics"
-                    value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-xl border border-[#E3DFD9] bg-[#FAFAF8] text-xs font-medium text-[#1F1E1D] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
-                  />
-                </div>
-              )}
-
-              {/* Password */}
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-[#78716C] mb-1">
-                  Password
-                </label>
-                <div className="relative">
-                  <input
-                    type={showRegisterPassword ? 'text' : 'password'}
-                    required
-                    minLength={6}
-                    placeholder="Minimum 6 characters"
-                    value={registerPassword}
-                    onChange={(e) => setRegisterPassword(e.target.value)}
-                    className="w-full px-3.5 py-2 pr-9 rounded-xl border border-[#E3DFD9] bg-[#FAFAF8] text-xs font-['Inter'] text-[#1F1E1D] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowRegisterPassword(!showRegisterPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A8A29E] hover:text-[#1F1E1D] transition"
-                  >
-                    {showRegisterPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  </button>
-                </div>
-
-                {/* Minimalist 4-Segment Strength Indicator */}
-                {registerPassword && (
-                  <div className="flex gap-1.5 mt-1.5">
-                    {[1, 2, 3, 4].map((step) => (
-                      <div
-                        key={step}
-                        className={`h-1 flex-1 rounded-full transition-colors duration-200 ${
-                          strengthScore >= step
-                            ? strengthScore <= 2
-                              ? 'bg-amber-400'
-                              : 'bg-emerald-500'
-                            : 'bg-[#E8E4DD]'
-                        }`}
-                      />
-                    ))}
+                  <div>
+                    <label className="block text-[11px] font-['Raleway'] font-bold uppercase tracking-wider text-stone-600 mb-1">
+                      Subject Specialization
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Higher Mathematics, Mechanics"
+                      value={subject}
+                      onChange={(e) => setSubject(e.target.value)}
+                      className="w-full px-3.5 py-2 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Raleway'] text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
+                    />
                   </div>
                 )}
-              </div>
 
-              {/* Confirm Password */}
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-[#78716C] mb-1">
-                  Confirm Password
-                </label>
-                <input
-                  type="password"
-                  required
-                  placeholder="Re-enter password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className={`w-full px-3.5 py-2 rounded-xl border bg-[#FAFAF8] text-xs font-['Inter'] text-[#1F1E1D] focus:outline-none focus:bg-white transition ${
-                    confirmPassword && confirmPassword !== registerPassword
-                      ? 'border-rose-400'
-                      : 'border-[#E3DFD9] focus:border-[var(--brand-electric)]'
-                  }`}
-                />
-              </div>
+                {/* Password & Confirm */}
+                <div>
+                  <label className="block text-[11px] font-['Raleway'] font-bold uppercase tracking-wider text-stone-600 mb-1">
+                    Password (min 6 characters) *
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showRegisterPassword ? 'text' : 'password'}
+                      required
+                      minLength={6}
+                      placeholder="••••••••"
+                      value={registerPassword}
+                      onChange={(e) => setRegisterPassword(e.target.value)}
+                      className="w-full px-3.5 py-2 pr-9 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Inter'] text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowRegisterPassword(!showRegisterPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-800 transition"
+                    >
+                      {showRegisterPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
 
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full mt-2 py-2.5 px-4 rounded-xl bg-[#1677FF] hover:bg-[#0A6FE8] active:scale-[0.99] text-white text-xs font-bold shadow-sm transition flex items-center justify-center gap-2"
-              >
-                {isLoading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <span>Create Workspace</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </>
-                )}
-              </button>
-            </form>
-          )}
+                  {/* Micro Strength Bars */}
+                  {registerPassword && (
+                    <div className="flex gap-1.5 mt-1.5">
+                      {[1, 2, 3, 4].map((step) => (
+                        <div
+                          key={step}
+                          className={`h-1 flex-1 rounded-full transition-colors duration-200 ${
+                            strengthScore >= step
+                              ? strengthScore <= 2
+                                ? 'bg-amber-400'
+                                : 'bg-emerald-500'
+                              : 'bg-stone-200'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
 
-          {/* TAB 3: FORGOT PASSWORD */}
-          {activeTab === 'forgot' && (
-            <form onSubmit={handleForgotSubmit} className="space-y-4">
-              <p className="text-xs text-[#57534E] leading-relaxed">
-                Enter your institutional email. We will generate password recovery instructions for your account.
-              </p>
-
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-[#78716C] mb-1.5">
-                  Email
-                </label>
-                <div className="relative">
-                  <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#A8A29E]" />
+                <div>
+                  <label className="block text-[11px] font-['Raleway'] font-bold uppercase tracking-wider text-stone-600 mb-1">
+                    Confirm Password *
+                  </label>
                   <input
-                    type="email"
+                    type="password"
                     required
-                    placeholder="name@institution.com"
-                    value={forgotEmail}
-                    onChange={(e) => setForgotEmail(e.target.value)}
-                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-[#E3DFD9] bg-[#FAFAF8] text-xs font-['Inter'] text-[#1F1E1D] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
+                    placeholder="Re-enter password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className={`w-full px-3.5 py-2 rounded-xl border bg-[#FAF8F5] text-xs font-['Inter'] text-[#1C1917] focus:outline-none focus:bg-white transition ${
+                      confirmPassword && confirmPassword !== registerPassword
+                        ? 'border-rose-400'
+                        : 'border-[#DDD8D2] focus:border-[var(--brand-electric)]'
+                    }`}
                   />
                 </div>
-              </div>
 
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full py-2.5 px-4 rounded-xl bg-[#1677FF] hover:bg-[#0A6FE8] text-white text-xs font-bold shadow-sm transition flex items-center justify-center gap-2"
-              >
-                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Send Reset Instructions</span>}
-              </button>
-
-              <div className="text-center pt-2">
                 <button
-                  type="button"
-                  onClick={() => setActiveTab('login')}
-                  className="text-xs text-[#78716C] hover:text-[#1F1E1D] font-bold transition"
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full mt-2 py-3 px-4 rounded-xl bg-[var(--brand-electric)] hover:bg-[#0A6FE8] active:scale-[0.99] text-white text-xs font-['Raleway'] font-bold shadow-[0_4px_12px_rgba(22,119,255,0.25)] transition flex items-center justify-center gap-2"
                 >
-                  ← Return to Sign In
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Creating Account...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Complete Registration</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
                 </button>
-              </div>
-            </form>
-          )}
+              </form>
+            )}
 
-          {/* TAB 4: RESET PASSWORD */}
-          {activeTab === 'reset' && (
-            <form onSubmit={handleResetSubmit} className="space-y-4">
-              <p className="text-xs text-[#57534E] leading-relaxed">
-                Paste your reset token below to configure your new password.
-              </p>
+            {/* TAB 3: FORGOT PASSWORD */}
+            {activeTab === 'forgot' && (
+              <form onSubmit={handleForgotSubmit} className="space-y-4">
+                <p className="text-xs text-stone-600 leading-relaxed font-['Raleway']">
+                  Enter your registered institutional email. We will generate password recovery instructions for your workstation.
+                </p>
 
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-[#78716C] mb-1.5">
-                  Reset Token
-                </label>
-                <div className="relative">
-                  <KeyRound className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#A8A29E]" />
-                  <input
-                    type="text"
-                    required
-                    placeholder="Token string"
-                    value={resetToken}
-                    onChange={(e) => setResetToken(e.target.value)}
-                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-[#E3DFD9] bg-[#FAFAF8] text-xs font-['Inter'] font-mono text-[#1F1E1D] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
-                  />
+                <div>
+                  <label className="block text-[11px] font-['Raleway'] font-bold uppercase tracking-wider text-stone-600 mb-1">
+                    Email *
+                  </label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
+                    <input
+                      type="email"
+                      required
+                      placeholder="faculty@academy.edu"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Inter'] text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-[#78716C] mb-1.5">
-                  New Password
-                </label>
-                <div className="relative">
-                  <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#A8A29E]" />
-                  <input
-                    type={showResetPassword ? 'text' : 'password'}
-                    required
-                    minLength={6}
-                    placeholder="••••••••"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-[#E3DFD9] bg-[#FAFAF8] text-xs font-['Inter'] text-[#1F1E1D] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
-                  />
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full py-2.5 px-4 rounded-xl bg-[var(--brand-electric)] hover:bg-[#0A6FE8] text-white text-xs font-['Raleway'] font-bold shadow-sm transition flex items-center justify-center gap-2"
+                >
+                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Dispatch Reset Token</span>}
+                </button>
+
+                <div className="text-center pt-2">
                   <button
                     type="button"
-                    onClick={() => setShowResetPassword(!showResetPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#A8A29E] hover:text-[#1F1E1D] transition"
+                    onClick={() => setActiveTab('login')}
+                    className="text-xs text-stone-600 hover:text-stone-900 font-bold transition"
                   >
-                    {showResetPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    ← Back to Sign In
                   </button>
                 </div>
-              </div>
+              </form>
+            )}
 
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full py-2.5 px-4 rounded-xl bg-[#1677FF] hover:bg-[#0A6FE8] text-white text-xs font-bold shadow-sm transition flex items-center justify-center gap-2"
-              >
-                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Update Password</span>}
-              </button>
+            {/* TAB 4: RESET PASSWORD */}
+            {activeTab === 'reset' && (
+              <form onSubmit={handleResetSubmit} className="space-y-4">
+                <p className="text-xs text-stone-600 leading-relaxed font-['Raleway']">
+                  Paste the verification token to configure your new password.
+                </p>
 
-              <div className="text-center pt-2">
+                <div>
+                  <label className="block text-[11px] font-['Raleway'] font-bold uppercase tracking-wider text-stone-600 mb-1">
+                    Reset Token *
+                  </label>
+                  <div className="relative">
+                    <KeyRound className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
+                    <input
+                      type="text"
+                      required
+                      placeholder="Paste reset token string"
+                      value={resetToken}
+                      onChange={(e) => setResetToken(e.target.value)}
+                      className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Inter'] font-mono text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-['Raleway'] font-bold uppercase tracking-wider text-stone-600 mb-1">
+                    New Password (min 6 chars) *
+                  </label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
+                    <input
+                      type={showResetPassword ? 'text' : 'password'}
+                      required
+                      minLength={6}
+                      placeholder="••••••••"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Inter'] text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowResetPassword(!showResetPassword)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-800 transition"
+                    >
+                      {showResetPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full py-2.5 px-4 rounded-xl bg-[var(--brand-electric)] hover:bg-[#0A6FE8] text-white text-xs font-['Raleway'] font-bold shadow-sm transition flex items-center justify-center gap-2"
+                >
+                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Update Password</span>}
+                </button>
+
+                <div className="text-center pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('login')}
+                    className="text-xs text-stone-600 hover:text-stone-900 font-bold transition"
+                  >
+                    ← Back to Sign In
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Quick 1-Click Sandbox Test Bar */}
+            <div className="mt-6 pt-4 border-t border-[#F0ECE6] flex items-center justify-between text-xs text-stone-400">
+              <span className="font-['Raleway'] font-bold flex items-center gap-1 text-stone-600">
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                <span>Instant Demo:</span>
+              </span>
+              <div className="flex items-center gap-2 text-stone-600 font-semibold text-[11px]">
                 <button
                   type="button"
-                  onClick={() => setActiveTab('login')}
-                  className="text-xs text-[#78716C] hover:text-[#1F1E1D] font-bold transition"
+                  onClick={() => handleQuickDemo('TEACHER')}
+                  disabled={isLoading}
+                  className="hover:text-[var(--brand-electric)] hover:underline"
                 >
-                  ← Return to Sign In
+                  Faculty
+                </button>
+                <span>•</span>
+                <button
+                  type="button"
+                  onClick={() => handleQuickDemo('TUITION_OWNER')}
+                  disabled={isLoading}
+                  className="hover:text-[var(--brand-electric)] hover:underline"
+                >
+                  Owner
+                </button>
+                <span>•</span>
+                <button
+                  type="button"
+                  onClick={() => handleQuickDemo('SUPER_ADMIN')}
+                  disabled={isLoading}
+                  className="hover:text-[var(--brand-electric)] hover:underline"
+                >
+                  Admin
                 </button>
               </div>
-            </form>
-          )}
-
-          {/* Discreet Sandbox Quick Switcher */}
-          <div className="mt-6 pt-5 border-t border-[#F0ECE6] flex items-center justify-between text-[11px] text-[#A8A29E]">
-            <span className="font-medium">Sandbox Demo:</span>
-            <div className="flex items-center gap-2.5 text-[#57534E]">
-              <button
-                type="button"
-                onClick={() => handleQuickDemo('TEACHER')}
-                disabled={isLoading}
-                className="hover:text-[var(--brand-electric)] hover:underline font-semibold transition"
-              >
-                Faculty
-              </button>
-              <span>•</span>
-              <button
-                type="button"
-                onClick={() => handleQuickDemo('TUITION_OWNER')}
-                disabled={isLoading}
-                className="hover:text-[var(--brand-electric)] hover:underline font-semibold transition"
-              >
-                Owner
-              </button>
-              <span>•</span>
-              <button
-                type="button"
-                onClick={() => handleQuickDemo('SUPER_ADMIN')}
-                disabled={isLoading}
-                className="hover:text-[var(--brand-electric)] hover:underline font-semibold transition"
-              >
-                Admin
-              </button>
             </div>
+
           </div>
         </div>
+
+        {/* RIGHT FLANK: Framed Wooden Corkboard with Tangible Sticky Notes */}
+        <div className="lg:col-span-3 hidden lg:flex flex-col items-center gap-5 animate-in fade-in slide-in-from-right-4 duration-300">
+          
+          {/* Porcelain Coffee Cup top down */}
+          <div className="self-end mr-4">
+            <CoffeeCup />
+          </div>
+
+          {/* Framed Corkboard with 3 realistic sticky notes */}
+          <Corkboard title="Live Academy Noticeboard" className="w-full max-w-xs">
+            <div className="space-y-4 pt-1">
+              {/* Yellow Note */}
+              <StickyNote
+                color="yellow"
+                pinColor="blue"
+                rotation={1.5}
+                title="Class 12 Adv Calculus"
+              >
+                <p className="text-[11px] font-['Raleway'] font-medium leading-relaxed">
+                  42 students marked present. Automatic SMS triggered to absent guardians.
+                </p>
+                <div className="mt-1.5 text-[9px] font-bold font-['Inter'] text-amber-800">
+                  ● Batch Roll Call Done
+                </div>
+              </StickyNote>
+
+              {/* Mint Note */}
+              <StickyNote
+                color="mint"
+                pinColor="red"
+                rotation={-2}
+                title="Bulk Marks Evaluation"
+              >
+                <p className="text-[11px] font-['Raleway'] font-medium leading-relaxed">
+                  Physics Mock #4 evaluated in 4 mins. Full batch ranks published.
+                </p>
+                <div className="mt-1.5 text-[9px] font-bold font-['Inter'] text-emerald-800">
+                  ● 100% Graded
+                </div>
+              </StickyNote>
+
+              {/* Pink Note */}
+              <StickyNote
+                color="pink"
+                pinColor="green"
+                rotation={1.2}
+                title="White-Label Identity"
+              >
+                <p className="text-[11px] font-['Raleway'] font-medium leading-relaxed">
+                  Tenant-isolated PostgreSQL & Upstash Redis caching layer active.
+                </p>
+                <div className="mt-1.5 text-[9px] font-bold font-['Inter'] text-rose-800">
+                  ● Zero Cross-Academy Leaks
+                </div>
+              </StickyNote>
+            </div>
+          </Corkboard>
+
+          {/* Yellow Drafting Pencil resting on desk */}
+          <div className="self-start ml-2 mt-2">
+            <YellowPencil rotation={-15} />
+          </div>
+
+        </div>
+
       </main>
 
-      {/* Minimal Footer Trust Seal */}
-      <footer className="w-full max-w-md pb-2 sm:pb-6 text-center text-[11px] text-[#A8A29E] flex items-center justify-center gap-2">
-        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-        <span>Tenant-Isolated Database</span>
-        <span>•</span>
-        <span>Upstash Redis Caching</span>
+      {/* 3. BOTTOM DESK FOOTER */}
+      <footer className="max-w-7xl w-full mx-auto flex flex-col sm:flex-row items-center justify-between py-3 border-t border-[#E3DFD9] text-[11px] text-stone-500 font-['Raleway']">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-emerald-600" />
+          <span>Tenant-Isolated Database • Upstash Redis Realtime • Session 2026–27</span>
+        </div>
+        <div className="mt-2 sm:mt-0">
+          <DeskPetPill />
+        </div>
       </footer>
+
     </div>
   );
 }
