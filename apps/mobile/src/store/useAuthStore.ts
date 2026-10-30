@@ -9,6 +9,7 @@ interface AuthState {
 
   login: (payload: LoginPayload) => Promise<void>;
   loginDemo: () => Promise<void>;
+  loginDemoTeacher: () => Promise<void>;
   logout: () => void;
   clearError: () => void;
 }
@@ -37,7 +38,19 @@ export const useAuthStore = create<AuthState>((set) => ({
       const session = await authService.loginDemoStudent();
       set({ session, isAuthenticated: true, isLoading: false, error: null });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Demo login failed.';
+      const msg = err instanceof Error ? err.message : 'Demo student login failed.';
+      set({ error: msg, isLoading: false });
+      throw err;
+    }
+  },
+
+  loginDemoTeacher: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const session = await authService.loginDemoTeacher();
+      set({ session, isAuthenticated: true, isLoading: false, error: null });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Demo teacher login failed.';
       set({ error: msg, isLoading: false });
       throw err;
     }

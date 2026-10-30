@@ -150,6 +150,11 @@ export class AuthController {
     };
   }
 
+  @Post('demo-teacher')
+  postDemoToken(@Res({ passthrough: true }) res: Response) {
+    return this.getDemoToken(res);
+  }
+
   @Get('demo-owner')
   getDemoOwnerToken(@Res({ passthrough: true }) res: Response) {
     const result = this.authService.getDemoOwner();
@@ -182,5 +187,27 @@ export class AuthController {
       user: result.user,
       token: result.token,
     };
+  }
+
+  @Get('demo-student')
+  getDemoStudentToken(@Res({ passthrough: true }) res: Response) {
+    const result = this.authService.getDemoStudent();
+    res.cookie('token', result.token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/',
+    });
+    return {
+      success: true,
+      user: result.user,
+      token: result.token,
+    };
+  }
+
+  @Post('demo-student')
+  postDemoStudentToken(@Res({ passthrough: true }) res: Response) {
+    return this.getDemoStudentToken(res);
   }
 }

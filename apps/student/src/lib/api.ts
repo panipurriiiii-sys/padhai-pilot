@@ -156,15 +156,86 @@ export const studentApi = {
       if (batchId && batchId !== 'ALL') params.set('batchId', batchId);
       if (category && category !== 'ALL') params.set('category', category);
       const query = params.toString() ? `?${params.toString()}` : '';
-      return await request<StudyMaterialItem[]>(`/assessment/student/materials${query}`);
+      return await request<StudyMaterialItem[]>(`/student/materials${query}`);
     } catch {
       // Fallback try tuition endpoint
       try {
         const query = batchId && batchId !== 'ALL' ? `?batchId=${batchId}` : '';
-        return await request<StudyMaterialItem[]>(`/tuition/materials${query}`);
+        return await request<StudyMaterialItem[]>(`/assessment/student/materials${query}`);
       } catch {
         return [];
       }
+    }
+  },
+
+  // 4. Attendance
+  async getAttendance(): Promise<{
+    totalClasses: number;
+    attended: number;
+    absent: number;
+    late: number;
+    percentage: number;
+    records: Array<{
+      id: string;
+      date: string;
+      status: 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED';
+      subjectName?: string;
+      remarks?: string;
+    }>;
+  }> {
+    try {
+      return await request('/student/attendance');
+    } catch {
+      return { totalClasses: 0, attended: 0, absent: 0, late: 0, percentage: 0, records: [] };
+    }
+  },
+
+  // 5. Fees & Receipts
+  async getFees(): Promise<{
+    totalFees: number;
+    paidAmount: number;
+    balanceDue: number;
+    status: 'PAID' | 'PARTIAL' | 'OVERDUE';
+    receipts: Array<{
+      id: string;
+      title: string;
+      dueDate: string;
+      amount: number;
+      paidAmount: number;
+      status: 'PAID' | 'PENDING' | 'OVERDUE';
+      paidDate?: string;
+      receiptNumber?: string;
+    }>;
+  }> {
+    try {
+      return await request('/student/fees');
+    } catch {
+      return { totalFees: 0, paidAmount: 0, balanceDue: 0, status: 'PAID', receipts: [] };
+    }
+  },
+
+  // 6. Announcements
+  async getAnnouncements(): Promise<Array<{
+    id: string;
+    title: string;
+    content: string;
+    date: string;
+    priority: 'NORMAL' | 'URGENT';
+    authorName?: string;
+  }>> {
+    try {
+      return await request('/student/announcements');
+    } catch {
+      return [];
+    }
+  },
+
+  // 7. Dashboard Overview
+  async getDashboard(): Promise<any> {
+    try {
+      return await request('/student/dashboard');
+    } catch {
+      return null;
     }
   },
 };

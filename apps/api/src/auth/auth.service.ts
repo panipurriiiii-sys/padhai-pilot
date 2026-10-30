@@ -66,6 +66,19 @@ export class AuthService {
       phone: '+91 99000 88776',
       avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=256&q=80',
     });
+
+    // Seed student
+    this.memoryUsers.set('student@padhaipilot.com', {
+      id: 'std_01',
+      email: 'student@padhaipilot.com',
+      password: 'password123',
+      fullName: 'Aarav Patel',
+      role: 'STUDENT',
+      instituteId: 'inst_apex_academy',
+      instituteName: 'Apex IIT-JEE & Medical Academy',
+      phone: '+91 98111 22334',
+      avatarUrl: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=256&q=80',
+    });
   }
 
   // -------------------------------------------------------------
@@ -365,6 +378,21 @@ export class AuthService {
 
   getDemoAdmin(): { user: AuthenticatedUser; token: string } {
     const user = this.memoryUsers.get('admin@padhaipilot.com');
+    const authUser: AuthenticatedUser = {
+      id: user.id,
+      email: user.email,
+      fullName: user.fullName,
+      role: user.role,
+      instituteId: user.instituteId,
+      instituteName: user.instituteName,
+      avatarUrl: user.avatarUrl,
+    };
+    const token = jwt.sign(authUser, JWT_SECRET, { expiresIn: '7d' });
+    return { user: authUser, token };
+  }
+
+  getDemoStudent(): { user: AuthenticatedUser; token: string } {
+    const user = this.memoryUsers.get('student@padhaipilot.com');
     const authUser: AuthenticatedUser = {
       id: user.id,
       email: user.email,

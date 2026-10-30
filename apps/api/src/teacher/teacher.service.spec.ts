@@ -10,7 +10,7 @@ describe('TeacherService Core Workflows & Redis Caching', () => {
   let mockTeacher: AuthenticatedUser;
   let rogueTeacher: AuthenticatedUser;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     const prisma = new PrismaService();
     redisService = new RedisService();
     redisService.onModuleInit();
@@ -24,6 +24,8 @@ describe('TeacherService Core Workflows & Redis Caching', () => {
       instituteId: 'inst_apex_academy',
       instituteName: 'Apex Academy',
     };
+
+    await redisService.invalidateTeacherDashboard(mockTeacher.instituteId, mockTeacher.id);
 
     rogueTeacher = {
       id: 'usr_rogue_intruder',

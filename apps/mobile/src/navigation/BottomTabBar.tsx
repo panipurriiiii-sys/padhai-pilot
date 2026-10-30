@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigationStore, MainTabKey } from '../store/useNavigationStore';
+import { useAuthStore } from '../store/useAuthStore';
 import { useTheme } from '../theme/ThemeContext';
 
 interface TabItem {
@@ -10,17 +11,31 @@ interface TabItem {
   iconSymbol: string;
 }
 
-const TABS: TabItem[] = [
-  { key: 'dashboard', label: 'Home', iconSymbol: '⌂' },
-  { key: 'attendance', label: 'Attendance', iconSymbol: '✓' },
-  { key: 'results', label: 'Results', iconSymbol: '★' },
-  { key: 'profile', label: 'Profile', iconSymbol: '●' },
+const TEACHER_TABS: TabItem[] = [
+  { key: 'teacher_dashboard', label: 'Home', iconSymbol: '⌂' },
+  { key: 'teacher_marks', label: 'Marks', iconSymbol: '✎' },
+  { key: 'teacher_materials', label: 'Vault', iconSymbol: '▤' },
+  { key: 'teacher_diary', label: 'Diary', iconSymbol: '📓' },
+  { key: 'teacher_profile', label: 'Profile', iconSymbol: '●' },
+];
+
+const STUDENT_TABS: TabItem[] = [
+  { key: 'student_dashboard', label: 'Home', iconSymbol: '⌂' },
+  { key: 'student_results', label: 'Results', iconSymbol: '★' },
+  { key: 'student_materials', label: 'Vault', iconSymbol: '▤' },
+  { key: 'student_attendance', label: 'Attendance', iconSymbol: '✓' },
+  { key: 'student_fees', label: 'Fees', iconSymbol: '₹' },
+  { key: 'student_profile', label: 'Profile', iconSymbol: '●' },
 ];
 
 export const BottomTabBar: React.FC = () => {
   const { colors, typography, hitSlop } = useTheme();
   const { currentTab, setTab } = useNavigationStore();
+  const { session } = useAuthStore();
   const insets = useSafeAreaInsets();
+
+  const isTeacher = session?.user?.role === 'TEACHER' || session?.user?.role === 'TUITION_OWNER';
+  const tabs = isTeacher ? TEACHER_TABS : STUDENT_TABS;
 
   return (
     <View
@@ -33,8 +48,14 @@ export const BottomTabBar: React.FC = () => {
         },
       ]}
     >
-      {TABS.map((tab) => {
-        const isActive = currentTab === tab.key;
+      {tabs.map((tab) => {
+        const isActive =
+          currentTab === tab.key ||
+          (tab.key === 'student_dashboard' && currentTab === 'dashboard') ||
+          (tab.key === 'student_results' && currentTab === 'results') ||
+          (tab.key === 'student_attendance' && currentTab === 'attendance') ||
+          (tab.key === 'student_profile' && currentTab === 'profile');
+
         const color = isActive ? colors.primary : colors.textMuted;
 
         return (
@@ -55,7 +76,7 @@ export const BottomTabBar: React.FC = () => {
                 styles.icon,
                 {
                   color,
-                  fontSize: 18,
+                  fontSize: 16,
                   fontWeight: isActive ? '700' : '400',
                 },
               ]}
@@ -67,8 +88,8 @@ export const BottomTabBar: React.FC = () => {
                 styles.label,
                 {
                   color,
-                  fontSize: typography.sizes.xs,
-                  fontWeight: isActive ? '600' : '400',
+                  fontSize: 10,
+                  fontWeight: isActive ? '700' : '500',
                 },
               ]}
             >
@@ -102,4 +123,3 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-

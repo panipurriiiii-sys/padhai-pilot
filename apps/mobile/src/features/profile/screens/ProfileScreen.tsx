@@ -98,10 +98,25 @@ export const ProfileScreen: React.FC = () => {
         </View>
 
         {/* System info */}
-        <View style={{ marginBottom: spacing.xxxl }}>
-          <Caption align="center">PadhaiPilot Mobile v0.0.1</Caption>
+        <View style={{ marginBottom: spacing.lg }}>
+          <Subtitle style={{ marginBottom: spacing.xs }}>Role Switcher</Subtitle>
+          <Caption style={{ marginBottom: spacing.sm }}>
+            Preview the faculty interface with bulk marks entry, study material upload, and teaching diary.
+          </Caption>
+          <Button
+            title="Preview Faculty Portal"
+            variant="secondary"
+            onPress={async () => {
+              const { loginDemoTeacher } = useAuthStore.getState();
+              await loginDemoTeacher();
+            }}
+          />
+        </View>
+
+        <View style={{ marginBottom: spacing.xl }}>
+          <Caption align="center">PadhaiPilot Mobile v1.0.0</Caption>
           <Caption align="center" style={{ marginTop: spacing.xxs }}>
-            React Native CLI Engine • High Precision Sync
+            React Native CLI • Live Cloudflare Worker CDN
           </Caption>
         </View>
 

@@ -26,17 +26,22 @@ import {
   ExternalLink,
   Layers,
   Globe,
+  Clock,
+  CreditCard,
+  AlertTriangle,
+  User,
+  GraduationCap,
+  Percent,
 } from 'lucide-react';
 import {
   StudentAssessmentResult,
   InAppNotification,
   UserSession,
   StudyMaterialItem,
-  StudyMaterialCategory,
 } from '@padhai-pilot/shared';
 import { studentApi, clearAuthToken } from '../lib/api';
 
-type PortalTab = 'RESULTS' | 'MATERIALS';
+type PortalTab = 'OVERVIEW' | 'RESULTS' | 'MATERIALS' | 'ATTENDANCE' | 'FEES';
 
 const MATERIAL_CATEGORIES: { key: string; label: string }[] = [
   { key: 'ALL', label: 'All Resources' },
@@ -50,16 +55,69 @@ const MATERIAL_CATEGORIES: { key: string; label: string }[] = [
 
 export default function StudentPortal() {
   const [student, setStudent] = useState<UserSession | null>(null);
-  const [activeTab, setActiveTab] = useState<PortalTab>('RESULTS');
+  const [activeTab, setActiveTab] = useState<PortalTab>('OVERVIEW');
   const [results, setResults] = useState<StudentAssessmentResult[]>([]);
   const [materials, setMaterials] = useState<StudyMaterialItem[]>([]);
   const [notifications, setNotifications] = useState<InAppNotification[]>([]);
+  const [attendanceData, setAttendanceData] = useState<{
+    totalClasses: number;
+    attended: number;
+    absent: number;
+    late: number;
+    percentage: number;
+    records: Array<{
+      id: string;
+      date: string;
+      status: 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED';
+      subjectName?: string;
+      remarks?: string;
+    }>;
+  }>({
+    totalClasses: 0,
+    attended: 0,
+    absent: 0,
+    late: 0,
+    percentage: 0,
+    records: [],
+  });
+  const [feesData, setFeesData] = useState<{
+    totalFees: number;
+    paidAmount: number;
+    balanceDue: number;
+    status: 'PAID' | 'PARTIAL' | 'OVERDUE';
+    receipts: Array<{
+      id: string;
+      title: string;
+      dueDate: string;
+      amount: number;
+      paidAmount: number;
+      status: 'PAID' | 'PENDING' | 'OVERDUE';
+      paidDate?: string;
+      receiptNumber?: string;
+    }>;
+  }>({
+    totalFees: 0,
+    paidAmount: 0,
+    balanceDue: 0,
+    status: 'PAID',
+    receipts: [],
+  });
+  const [announcements, setAnnouncements] = useState<
+    Array<{
+      id: string;
+      title: string;
+      content: string;
+      date: string;
+      priority: 'NORMAL' | 'URGENT';
+      authorName?: string;
+    }>
+  >([]);
+
   const [selectedSubject, setSelectedSubject] = useState<string>('ALL');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [showNotifications, setShowNotifications] = useState<boolean>(false);
   const [selectedResult, setSelectedResult] = useState<StudentAssessmentResult | null>(null);
-  const [selectedMaterial, setSelectedMaterial] = useState<StudyMaterialItem | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [copiedMaterialId, setCopiedMaterialId] = useState<string | null>(null);
 
@@ -72,14 +130,20 @@ export default function StudentPortal() {
   const loadStudentData = async () => {
     setIsLoading(true);
     try {
-      const [resList, notifList, matList] = await Promise.all([
+      const [resList, notifList, matList, att, fee, ann] = await Promise.all([
         studentApi.getPublishedResults(),
         studentApi.getNotifications(),
         studentApi.getStudyMaterials(),
+        studentApi.getAttendance(),
+        studentApi.getFees(),
+        studentApi.getAnnouncements(),
       ]);
       setResults(resList);
       setNotifications(notifList);
       setMaterials(matList);
+      setAttendanceData(att);
+      setFeesData(fee);
+      setAnnouncements(ann);
     } catch (err) {
       console.error('Failed to load student portal data:', err);
     } finally {
@@ -208,8 +272,9 @@ export default function StudentPortal() {
       avgPercentage,
       overallGrade,
       totalMaterials: materials.length,
+      attendanceRate: attendanceData.percentage || 94,
     };
-  }, [results, materials]);
+  }, [results, materials, attendanceData]);
 
   // -----------------------------------------------------------------
   // 1. UNAUTHENTICATED STATE
@@ -249,7 +314,7 @@ export default function StudentPortal() {
                   <input
                     type="email"
                     required
-                    placeholder="student@example.com"
+                    placeholder="student@padhaipilot.com"
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
                     className="w-full bg-[#050608] border border-[#ffffff17] rounded-xl pl-9 pr-3 py-2 text-xs text-[#F5F7FA] placeholder-[#929BAA] focus:outline-none focus:border-[#1677FF]"
@@ -317,7 +382,7 @@ export default function StudentPortal() {
   return (
     <div className="min-h-screen bg-[#050608] text-[#F5F7FA] font-['Raleway']">
       {/* TOP NAVIGATION BAR */}
-      <header className="sticky top-0 z-40 bg-[#0A0D12]/90 backdrop-blur-md border-b border-[#ffffff12] px-6 py-3.5">
+      <header className="sticky top-0 z-40 bg-[#0A0D12]/90 backdrop-blur-md border-b border-[#ffffff12] px-4 md:px-8 py-3.5">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-[#1677FF] flex items-center justify-center text-white font-bold text-sm shadow-[0_0_12px_rgba(22,119,255,0.4)]">
@@ -332,19 +397,20 @@ export default function StudentPortal() {
                   Student
                 </span>
               </div>
-              <div className="text-[11px] text-[#929BAA] font-['Raleway']">
-                {student.instituteName || 'PadhaiPilot Academy'}
+              <div className="text-[11px] text-[#929BAA] font-['Raleway'] truncate max-w-[200px] sm:max-w-xs">
+                {student.instituteName || 'Apex IIT-JEE & Medical Academy'}
               </div>
             </div>
           </div>
 
           {/* Student Profile & Actions */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             {/* Notification Bell */}
             <div className="relative">
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
                 className="relative p-2 rounded-xl bg-[#ffffff0a] hover:bg-[#ffffff14] border border-[#ffffff14] text-[#F5F7FA] transition-all cursor-pointer"
+                title="Notifications"
               >
                 <Bell className="w-4 h-4 text-[#929BAA]" />
                 {unreadCount > 0 && (
@@ -407,10 +473,12 @@ export default function StudentPortal() {
               </div>
               <div className="hidden sm:block text-left">
                 <div className="text-xs font-semibold text-[#F5F7FA] leading-tight">
-                  {student.fullName}
+                  {student.fullName || 'Aarav Patel'}
                 </div>
                 <div className="text-[10px] text-[#929BAA] font-mono">
-                  {student.id.startsWith('usr_') ? 'Student ID' : student.id}
+                  {student.id.startsWith('usr_') || student.id === 'std_01'
+                    ? 'APX-2026-001'
+                    : student.id}
                 </div>
               </div>
             </div>
@@ -428,7 +496,7 @@ export default function StudentPortal() {
       </header>
 
       {/* MAIN CONTENT AREA */}
-      <main className="max-w-6xl mx-auto p-6 md:p-10 space-y-6">
+      <main className="max-w-6xl mx-auto p-4 md:p-8 space-y-6">
         {/* Banner with Verified Status */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-[#0A0D12] via-[#0A0D12] to-[#1677FF]/10 p-6 md:p-8 rounded-3xl border border-[#ffffff14] shadow-xl">
           <div>
@@ -436,73 +504,113 @@ export default function StudentPortal() {
               <ShieldCheck className="w-4 h-4" />
               Verified Student Portal
             </div>
-            <h1 className="font-['Playfair_Display'] text-3xl font-bold text-[#F5F7FA] tracking-tight mb-2">
-              {activeTab === 'RESULTS' ? 'Assessment Results & Marks' : 'Study Materials & Vault'}
+            <h1 className="font-['Playfair_Display'] text-2xl md:text-3xl font-bold text-[#F5F7FA] tracking-tight mb-2">
+              Welcome back, {student.fullName ? student.fullName.split(' ')[0] : 'Aarav'}
             </h1>
             <p className="text-xs text-[#929BAA] max-w-xl leading-relaxed">
-              {activeTab === 'RESULTS'
-                ? 'Official classroom test scores, evaluation sheets, and teacher remarks.'
-                : 'Verified chapter notes, DPP worksheets, and formula sheets served via high-speed media CDN.'}
+              Enrolled in JEE Advanced — Mathematics Alpha • Apex IIT-JEE & Medical Academy
             </p>
           </div>
 
           <div className="flex items-center gap-3">
             <div className="p-3 bg-[#050608] border border-[#ffffff14] rounded-2xl text-center min-w-[90px]">
-              <div className="text-[10px] font-bold text-[#929BAA] uppercase tracking-wider">Student ID</div>
-              <div className="font-mono font-bold text-xs text-[#1677FF] mt-0.5 truncate max-w-[120px]">
-                {student.id}
+              <div className="text-[10px] font-bold text-[#929BAA] uppercase tracking-wider">
+                Roll Number
+              </div>
+              <div className="font-mono font-bold text-xs text-[#1677FF] mt-0.5">
+                APX-2026-001
               </div>
             </div>
             <div className="p-3 bg-[#050608] border border-[#ffffff14] rounded-2xl text-center min-w-[90px]">
-              <div className="text-[10px] font-bold text-[#929BAA] uppercase tracking-wider">Status</div>
-              <div className="font-semibold text-xs text-emerald-400 mt-0.5">Enrolled</div>
+              <div className="text-[10px] font-bold text-[#929BAA] uppercase tracking-wider">
+                Attendance
+              </div>
+              <div className="font-semibold text-xs text-emerald-400 mt-0.5">
+                {kpis.attendanceRate}%
+              </div>
             </div>
           </div>
         </div>
 
         {/* PRIMARY TAB SWITCHER */}
-        <div className="flex items-center gap-2 border-b border-[#ffffff14] pb-3">
+        <div className="flex items-center gap-2 border-b border-[#ffffff14] pb-3 overflow-x-auto no-scrollbar">
+          <button
+            onClick={() => setActiveTab('OVERVIEW')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+              activeTab === 'OVERVIEW'
+                ? 'bg-[#1677FF] text-white shadow-md'
+                : 'bg-[#ffffff08] text-[#929BAA] hover:text-[#F5F7FA] border border-[#ffffff10]'
+            }`}
+          >
+            <GraduationCap className="w-3.5 h-3.5" />
+            <span>Overview</span>
+          </button>
+
           <button
             onClick={() => setActiveTab('RESULTS')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
               activeTab === 'RESULTS'
                 ? 'bg-[#1677FF] text-white shadow-md'
                 : 'bg-[#ffffff08] text-[#929BAA] hover:text-[#F5F7FA] border border-[#ffffff10]'
             }`}
           >
             <BookOpen className="w-3.5 h-3.5" />
-            <span>Test Results & Reports ({results.length})</span>
+            <span>Test Results ({results.length})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('MATERIALS')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
               activeTab === 'MATERIALS'
                 ? 'bg-[#1677FF] text-white shadow-md'
                 : 'bg-[#ffffff08] text-[#929BAA] hover:text-[#F5F7FA] border border-[#ffffff10]'
             }`}
           >
             <Layers className="w-3.5 h-3.5" />
-            <span>Study Materials & Notes ({materials.length})</span>
+            <span>Study Notes & Vault ({materials.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('ATTENDANCE')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+              activeTab === 'ATTENDANCE'
+                ? 'bg-[#1677FF] text-white shadow-md'
+                : 'bg-[#ffffff08] text-[#929BAA] hover:text-[#F5F7FA] border border-[#ffffff10]'
+            }`}
+          >
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            <span>Attendance ({attendanceData.percentage || 94}%)</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('FEES')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+              activeTab === 'FEES'
+                ? 'bg-[#1677FF] text-white shadow-md'
+                : 'bg-[#ffffff08] text-[#929BAA] hover:text-[#F5F7FA] border border-[#ffffff10]'
+            }`}
+          >
+            <CreditCard className="w-3.5 h-3.5" />
+            <span>Fees & Receipts</span>
           </button>
         </div>
 
         {/* ============================================================== */}
-        {/* TAB 1: RESULTS VIEW                                            */}
+        {/* TAB 1: OVERVIEW DASHBOARD                                      */}
         {/* ============================================================== */}
-        {activeTab === 'RESULTS' && (
+        {activeTab === 'OVERVIEW' && (
           <div className="space-y-6">
             {/* KPI METRIC CARDS */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-[#0A0D12] p-5 rounded-2xl border border-[#ffffff14] space-y-1">
                 <div className="flex items-center justify-between text-[#929BAA]">
-                  <span className="text-xs uppercase font-bold tracking-wider">Tests Taken</span>
+                  <span className="text-xs uppercase font-bold tracking-wider">Tests Evaluated</span>
                   <BookOpen className="w-4 h-4 text-[#1677FF]" />
                 </div>
                 <div className="font-['Playfair_Display'] text-2xl font-bold text-[#F5F7FA]">
                   {kpis.totalTests}
                 </div>
-                <div className="text-[11px] text-[#929BAA]">Published tests</div>
+                <div className="text-[11px] text-[#929BAA]">Classroom assessments</div>
               </div>
 
               <div className="bg-[#0A0D12] p-5 rounded-2xl border border-[#ffffff14] space-y-1">
@@ -518,27 +626,230 @@ export default function StudentPortal() {
 
               <div className="bg-[#0A0D12] p-5 rounded-2xl border border-[#ffffff14] space-y-1">
                 <div className="flex items-center justify-between text-[#929BAA]">
-                  <span className="text-xs uppercase font-bold tracking-wider">Overall Grade</span>
-                  <Award className="w-4 h-4 text-[#F59E0B]" />
+                  <span className="text-xs uppercase font-bold tracking-wider">Attendance Rate</span>
+                  <CheckCircle2 className="w-4 h-4 text-[#10B981]" />
                 </div>
-                <div className="font-['Playfair_Display'] text-2xl font-bold text-[#F59E0B]">
-                  {kpis.overallGrade}
+                <div className="font-['Playfair_Display'] text-2xl font-bold text-[#10B981]">
+                  {kpis.attendanceRate}%
                 </div>
-                <div className="text-[11px] text-[#929BAA]">Grading Scale</div>
+                <div className="text-[11px] text-[#929BAA]">Presence record</div>
               </div>
 
               <div className="bg-[#0A0D12] p-5 rounded-2xl border border-[#ffffff14] space-y-1">
                 <div className="flex items-center justify-between text-[#929BAA]">
-                  <span className="text-xs uppercase font-bold tracking-wider">Attendance</span>
-                  <CheckCircle2 className="w-4 h-4 text-[#1677FF]" />
+                  <span className="text-xs uppercase font-bold tracking-wider">Study Vault</span>
+                  <Layers className="w-4 h-4 text-[#F59E0B]" />
                 </div>
-                <div className="font-['Playfair_Display'] text-2xl font-bold text-[#F5F7FA]">
-                  100%
+                <div className="font-['Playfair_Display'] text-2xl font-bold text-[#F59E0B]">
+                  {kpis.totalMaterials}
                 </div>
-                <div className="text-[11px] text-[#929BAA]">Batch Presence</div>
+                <div className="text-[11px] text-[#929BAA]">CDN-hosted documents</div>
               </div>
             </div>
 
+            {/* TWO COLUMN GRID: TODAY'S SCHEDULE & ANNOUNCEMENTS */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Daily Schedule */}
+              <div className="bg-[#0A0D12] p-6 rounded-3xl border border-[#ffffff14] space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-[#1677FF]" />
+                    <h3 className="font-['Playfair_Display'] text-base font-bold text-[#F5F7FA]">
+                      Today&apos;s Class Schedule
+                    </h3>
+                  </div>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#1677FF]/15 text-[#1677FF]">
+                    LIVE
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {[
+                    {
+                      time: '09:00 AM - 10:30 AM',
+                      subject: 'Higher Calculus & Vectors',
+                      topic: 'Definite Integration — King Property Models',
+                      room: 'Room 302',
+                      faculty: 'Prof. Rajesh Sharma',
+                    },
+                    {
+                      time: '11:00 AM - 12:30 PM',
+                      subject: 'Physics Mechanics',
+                      topic: 'Rotational Dynamics & Torque Equations',
+                      room: 'Lecture Hall 1',
+                      faculty: 'Dr. Alok Verma',
+                    },
+                    {
+                      time: '02:00 PM - 03:30 PM',
+                      subject: 'Daily Problem Practice (DPP)',
+                      topic: 'Supervised doubt solving & speed drill',
+                      room: 'Study Wing 3',
+                      faculty: 'Faculty Assistant',
+                    },
+                  ].map((slot, i) => (
+                    <div
+                      key={i}
+                      className="p-3.5 rounded-2xl bg-[#050608] border border-[#ffffff0a] flex items-start justify-between gap-3"
+                    >
+                      <div className="space-y-1">
+                        <div className="text-xs font-semibold text-[#F5F7FA]">{slot.subject}</div>
+                        <div className="text-[11px] text-[#929BAA]">{slot.topic}</div>
+                        <div className="text-[10px] text-[#CAD0D9]">
+                          {slot.faculty} • {slot.room}
+                        </div>
+                      </div>
+                      <span className="text-[11px] font-mono font-semibold text-[#1677FF] bg-[#1677FF]/10 px-2 py-1 rounded-lg shrink-0">
+                        {slot.time}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Institute Announcements */}
+              <div className="bg-[#0A0D12] p-6 rounded-3xl border border-[#ffffff14] space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Bell className="w-4 h-4 text-amber-400" />
+                    <h3 className="font-['Playfair_Display'] text-base font-bold text-[#F5F7FA]">
+                      Notices & Announcements
+                    </h3>
+                  </div>
+                  <span className="text-[10px] text-[#929BAA]">
+                    {announcements.length} updates
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {announcements.map((ann) => (
+                    <div
+                      key={ann.id}
+                      className="p-3.5 rounded-2xl bg-[#050608] border border-[#ffffff0a] space-y-1.5"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-semibold text-[#F5F7FA]">{ann.title}</span>
+                        {ann.priority === 'URGENT' && (
+                          <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-rose-950/40 text-rose-400 border border-rose-800/40">
+                            Urgent
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-[#929BAA] leading-relaxed">{ann.content}</p>
+                      <div className="flex items-center justify-between text-[10px] text-[#CAD0D9] pt-1">
+                        <span>{ann.authorName}</span>
+                        <span className="font-mono">{ann.date}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* RECENT VAULT ASSETS & TEST SCORES TEASER */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Recent Results Teaser */}
+              <div className="bg-[#0A0D12] p-6 rounded-3xl border border-[#ffffff14] space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-['Playfair_Display'] text-base font-bold text-[#F5F7FA]">
+                    Recent Test Scores
+                  </h3>
+                  <button
+                    onClick={() => setActiveTab('RESULTS')}
+                    className="text-xs text-[#1677FF] hover:underline font-semibold flex items-center gap-1"
+                  >
+                    <span>View all tests</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="space-y-2.5">
+                  {results.slice(0, 3).map((item) => (
+                    <div
+                      key={item.markId}
+                      onClick={() => {
+                        setSelectedResult(item);
+                        setActiveTab('RESULTS');
+                      }}
+                      className="p-3 rounded-2xl bg-[#050608] hover:bg-[#0E1219] border border-[#ffffff0a] hover:border-[#1677FF]/40 transition flex items-center justify-between gap-3 cursor-pointer"
+                    >
+                      <div>
+                        <div className="text-xs font-semibold text-[#F5F7FA]">{item.title}</div>
+                        <div className="text-[10px] text-[#929BAA] flex items-center gap-2 mt-0.5">
+                          <span>{item.subject}</span>
+                          <span>•</span>
+                          <span className="font-mono">{item.assessmentDate}</span>
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <div className="text-xs font-mono font-bold text-[#10B981]">
+                          {item.percentage !== null ? `${item.percentage}%` : '—'}
+                        </div>
+                        <div className="text-[10px] font-mono text-[#929BAA]">
+                          {item.obtainedMarks}/{item.maxMarks}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Recent Study Materials Teaser */}
+              <div className="bg-[#0A0D12] p-6 rounded-3xl border border-[#ffffff14] space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-['Playfair_Display'] text-base font-bold text-[#F5F7FA]">
+                    Latest Learning Notes
+                  </h3>
+                  <button
+                    onClick={() => setActiveTab('MATERIALS')}
+                    className="text-xs text-[#1677FF] hover:underline font-semibold flex items-center gap-1"
+                  >
+                    <span>Open Vault</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="space-y-2.5">
+                  {materials.slice(0, 3).map((mat) => (
+                    <div
+                      key={mat.id}
+                      className="p-3 rounded-2xl bg-[#050608] border border-[#ffffff0a] flex items-center justify-between gap-3"
+                    >
+                      <div className="overflow-hidden">
+                        <div className="text-xs font-semibold text-[#F5F7FA] truncate">
+                          {mat.title}
+                        </div>
+                        <div className="text-[10px] text-[#929BAA] flex items-center gap-2 mt-0.5">
+                          <span className="badge-code font-['Inter'] text-[9px]">
+                            {mat.category.replace(/_/g, ' ')}
+                          </span>
+                          <span>{mat.fileSize || 'PDF'}</span>
+                        </div>
+                      </div>
+
+                      {mat.fileUrl && (
+                        <button
+                          type="button"
+                          onClick={() => window.open(mat.fileUrl, '_blank', 'noopener,noreferrer')}
+                          className="px-2.5 py-1.5 rounded-lg bg-[#1677FF] hover:bg-[#0A6FE8] text-white text-[11px] font-bold transition flex items-center gap-1 shrink-0"
+                        >
+                          <Download className="w-3 h-3" />
+                          <span>Get</span>
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================== */}
+        {/* TAB 2: RESULTS VIEW                                            */}
+        {/* ============================================================== */}
+        {activeTab === 'RESULTS' && (
+          <div className="space-y-6">
             {/* FILTER & SEARCH BAR */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#0A0D12] p-4 rounded-2xl border border-[#ffffff14]">
               <div className="flex flex-wrap items-center gap-1.5">
@@ -647,7 +958,7 @@ export default function StudentPortal() {
         )}
 
         {/* ============================================================== */}
-        {/* TAB 2: STUDY MATERIALS & NOTES                                 */}
+        {/* TAB 3: STUDY MATERIALS & VAULT                                 */}
         {/* ============================================================== */}
         {activeTab === 'MATERIALS' && (
           <div className="space-y-6">
@@ -803,6 +1114,193 @@ export default function StudentPortal() {
                 })}
               </div>
             )}
+          </div>
+        )}
+
+        {/* ============================================================== */}
+        {/* TAB 4: ATTENDANCE HISTORY                                      */}
+        {/* ============================================================== */}
+        {activeTab === 'ATTENDANCE' && (
+          <div className="space-y-6">
+            {/* Attendance KPI Summary */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-[#0A0D12] p-5 rounded-2xl border border-[#ffffff14] space-y-1">
+                <span className="text-xs uppercase font-bold text-[#929BAA]">Total Classes</span>
+                <div className="font-['Playfair_Display'] text-2xl font-bold text-[#F5F7FA]">
+                  {attendanceData.totalClasses || 24}
+                </div>
+                <span className="text-[11px] text-[#929BAA]">Conducted sessions</span>
+              </div>
+
+              <div className="bg-[#0A0D12] p-5 rounded-2xl border border-[#ffffff14] space-y-1">
+                <span className="text-xs uppercase font-bold text-[#929BAA]">Present</span>
+                <div className="font-['Playfair_Display'] text-2xl font-bold text-emerald-400">
+                  {attendanceData.attended || 22}
+                </div>
+                <span className="text-[11px] text-[#929BAA]">Full attendance</span>
+              </div>
+
+              <div className="bg-[#0A0D12] p-5 rounded-2xl border border-[#ffffff14] space-y-1">
+                <span className="text-xs uppercase font-bold text-[#929BAA]">Late Arrival</span>
+                <div className="font-['Playfair_Display'] text-2xl font-bold text-amber-400">
+                  {attendanceData.late || 1}
+                </div>
+                <span className="text-[11px] text-[#929BAA]">Recorded tardy</span>
+              </div>
+
+              <div className="bg-[#0A0D12] p-5 rounded-2xl border border-[#ffffff14] space-y-1">
+                <span className="text-xs uppercase font-bold text-[#929BAA]">Presence %</span>
+                <div className="font-['Playfair_Display'] text-2xl font-bold text-[#1677FF]">
+                  {attendanceData.percentage || 94}%
+                </div>
+                <span className="text-[11px] text-[#929BAA]">Academic criteria met</span>
+              </div>
+            </div>
+
+            {/* Attendance Records List */}
+            <div className="bg-[#0A0D12] rounded-3xl border border-[#ffffff14] overflow-hidden">
+              <div className="p-4 md:p-6 border-b border-[#ffffff0a] flex items-center justify-between">
+                <h3 className="font-['Playfair_Display'] text-base font-bold text-[#F5F7FA]">
+                  Daily Attendance Logs
+                </h3>
+                <span className="text-xs text-[#929BAA]">Recent 30 sessions</span>
+              </div>
+
+              <div className="divide-y divide-[#ffffff08]">
+                {attendanceData.records.map((rec) => (
+                  <div
+                    key={rec.id}
+                    className="p-4 flex items-center justify-between gap-4 hover:bg-[#0E1219] transition"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-2.5 h-2.5 rounded-full ${
+                          rec.status === 'PRESENT'
+                            ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]'
+                            : rec.status === 'LATE'
+                            ? 'bg-amber-400'
+                            : 'bg-rose-500'
+                        }`}
+                      />
+                      <div>
+                        <div className="text-xs font-semibold text-[#F5F7FA]">
+                          {rec.subjectName || 'JEE Mathematics'}
+                        </div>
+                        <div className="text-[10px] text-[#929BAA] font-mono">{rec.date}</div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      {rec.remarks && (
+                        <span className="text-[11px] text-[#CAD0D9] italic hidden sm:inline">
+                          &ldquo;{rec.remarks}&rdquo;
+                        </span>
+                      )}
+
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-[10px] font-bold font-mono ${
+                          rec.status === 'PRESENT'
+                            ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-800/40'
+                            : rec.status === 'LATE'
+                            ? 'bg-amber-950/40 text-amber-400 border border-amber-800/40'
+                            : 'bg-rose-950/40 text-rose-400 border border-rose-800/40'
+                        }`}
+                      >
+                        {rec.status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================== */}
+        {/* TAB 5: FEES & RECEIPTS                                         */}
+        {/* ============================================================== */}
+        {activeTab === 'FEES' && (
+          <div className="space-y-6">
+            {/* Fees Overview KPI */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-[#0A0D12] p-5 rounded-2xl border border-[#ffffff14] space-y-1">
+                <span className="text-xs uppercase font-bold text-[#929BAA]">Total Tuition Fee</span>
+                <div className="font-['Playfair_Display'] text-2xl font-bold text-[#F5F7FA]">
+                  ₹{(feesData.totalFees || 35000).toLocaleString('en-IN')}
+                </div>
+                <span className="text-[11px] text-[#929BAA]">Full academic year</span>
+              </div>
+
+              <div className="bg-[#0A0D12] p-5 rounded-2xl border border-[#ffffff14] space-y-1">
+                <span className="text-xs uppercase font-bold text-[#929BAA]">Amount Paid</span>
+                <div className="font-['Playfair_Display'] text-2xl font-bold text-emerald-400">
+                  ₹{(feesData.paidAmount || 20000).toLocaleString('en-IN')}
+                </div>
+                <span className="text-[11px] text-emerald-500 font-semibold">Verified receipts</span>
+              </div>
+
+              <div className="bg-[#0A0D12] p-5 rounded-2xl border border-[#ffffff14] space-y-1">
+                <span className="text-xs uppercase font-bold text-[#929BAA]">Outstanding Balance</span>
+                <div className="font-['Playfair_Display'] text-2xl font-bold text-amber-400">
+                  ₹{(feesData.balanceDue || 15000).toLocaleString('en-IN')}
+                </div>
+                <span className="text-[11px] text-amber-500">Term 2 due Nov 15</span>
+              </div>
+            </div>
+
+            {/* Fee Receipts Table */}
+            <div className="bg-[#0A0D12] rounded-3xl border border-[#ffffff14] overflow-hidden">
+              <div className="p-4 md:p-6 border-b border-[#ffffff0a] flex items-center justify-between">
+                <h3 className="font-['Playfair_Display'] text-base font-bold text-[#F5F7FA]">
+                  Payment Receipts & Invoices
+                </h3>
+                <span className="text-xs text-[#929BAA]">Instant download</span>
+              </div>
+
+              <div className="divide-y divide-[#ffffff08]">
+                {feesData.receipts.map((rec) => (
+                  <div
+                    key={rec.id}
+                    className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-[#0E1219] transition"
+                  >
+                    <div>
+                      <div className="text-xs font-semibold text-[#F5F7FA]">{rec.title}</div>
+                      <div className="text-[10px] text-[#929BAA] font-mono mt-0.5">
+                        Receipt: {rec.receiptNumber} • Due Date: {rec.dueDate}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 self-end sm:self-auto">
+                      <div className="text-right">
+                        <div className="text-xs font-mono font-bold text-[#F5F7FA]">
+                          ₹{rec.amount.toLocaleString('en-IN')}
+                        </div>
+                        <span
+                          className={`text-[10px] font-mono uppercase font-bold ${
+                            rec.status === 'PAID'
+                              ? 'text-emerald-400'
+                              : 'text-amber-400'
+                          }`}
+                        >
+                          {rec.status}
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          alert(`Downloading receipt ${rec.receiptNumber}`);
+                        }}
+                        className="px-3 py-1.5 rounded-xl bg-[#ffffff0a] hover:bg-[#ffffff14] border border-[#ffffff14] text-xs font-semibold text-[#F5F7FA] flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Download className="w-3.5 h-3.5 text-[#1677FF]" />
+                        <span>Receipt</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
       </main>

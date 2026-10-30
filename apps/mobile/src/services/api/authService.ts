@@ -6,7 +6,8 @@ export interface MobileUserSession {
     id: string;
     email: string;
     name: string;
-    role: 'STUDENT' | 'PARENT' | 'TEACHER' | 'ADMIN';
+    fullName?: string;
+    role: 'STUDENT' | 'PARENT' | 'TEACHER' | 'ADMIN' | 'TUITION_OWNER' | 'SUPER_ADMIN';
     instituteId: string;
     instituteName?: string;
     rollNumber?: string;
@@ -32,6 +33,14 @@ export const authService = {
 
   async loginDemoStudent(): Promise<MobileUserSession> {
     const data = await apiClient.post<MobileUserSession>('/auth/demo-student', {});
+    if (data?.token) {
+      apiClient.setAuthToken(data.token);
+    }
+    return data;
+  },
+
+  async loginDemoTeacher(): Promise<MobileUserSession> {
+    const data = await apiClient.post<MobileUserSession>('/auth/demo-teacher', {});
     if (data?.token) {
       apiClient.setAuthToken(data.token);
     }
