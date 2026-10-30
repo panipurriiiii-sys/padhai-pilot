@@ -13,18 +13,10 @@ import {
   Building2,
   GraduationCap,
   KeyRound,
-  Disc3,
-  Play,
-  Pause,
   Sparkles,
-  QrCode,
-  ShieldCheck,
 } from 'lucide-react';
 import { teacherApi } from '../lib/api';
 import type { UserSession } from '@padhai-pilot/shared';
-import { Corkboard, CoffeeCup, YellowPencil, DeskPetPill } from './ui';
-import { StickyNote } from './ui/StickyNote';
-import { PushPin } from './ui/PushPin';
 
 type AuthTab = 'login' | 'register' | 'forgot' | 'reset';
 
@@ -61,7 +53,6 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
-  const [isVinylPlaying, setIsVinylPlaying] = useState(false);
 
   // Password strength score
   const getStrengthScore = (pwd: string) => {
@@ -194,181 +185,48 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
     }
   };
 
-  // Dynamic preview text for lanyard badge
-  const previewName = activeTab === 'register' ? fullName || 'Teacher' : 'Faculty Member';
-  const previewAcademy = activeTab === 'register' ? (instituteName || 'PadhaiPilot Academy') : 'PadhaiPilot Academy';
-  const previewRole = role === 'TUITION_OWNER' ? 'Tuition Owner' : 'Teacher';
-
   return (
-    <div className="min-h-screen ak-desk-surface flex flex-col justify-between p-4 sm:p-6 md:p-8 select-none relative overflow-x-hidden font-['Raleway']">
+    <div className="min-h-screen bg-[#FBFBF9] flex flex-col justify-between items-center p-4 sm:p-6 md:p-8 font-['Raleway'] select-none">
       
-      {/* 1. TOP GLASS NAV BAR */}
-      <header className="max-w-7xl w-full mx-auto flex items-center justify-between py-2 px-4 rounded-2xl bg-white/80 backdrop-blur-md border border-[#E3DFD9] shadow-sm z-30">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-[var(--brand-electric)] flex items-center justify-center text-white font-['Playfair_Display'] font-black text-sm shadow-[0_2px_8px_rgba(22,119,255,0.3)]">
+      {/* 1. TOP HEADER */}
+      <header className="w-full max-w-4xl mx-auto flex items-center justify-between py-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-[var(--brand-electric)] flex items-center justify-center text-white font-['Playfair_Display'] font-black text-sm shadow-sm">
             P
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-['Playfair_Display'] font-extrabold text-sm sm:text-base text-[#1C1917] tracking-tight">
-                PadhaiPilot
-              </span>
-              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-blue-50 text-[var(--brand-electric)] border border-blue-100 hidden sm:inline-block">
-                Teacher Portal
-              </span>
-            </div>
-          </div>
+          <span className="font-['Playfair_Display'] font-bold text-lg text-[#1C1917] tracking-tight">
+            PadhaiPilot
+          </span>
         </div>
 
-        {/* Right Session & Desk State */}
-        <div className="flex items-center gap-4 text-xs font-semibold">
-          <span className="hidden md:inline-flex items-center gap-1.5 text-stone-600 font-['Inter'] text-[11px]">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            Session 2026–27
-          </span>
-          <div className="h-4 w-[1px] bg-stone-300 hidden md:block" />
-          <button
-            type="button"
-            onClick={() => setIsVinylPlaying(!isVinylPlaying)}
-            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-700 text-[11px] transition"
-            title="Toggle background music"
-          >
-            <Disc3 className={`w-3.5 h-3.5 text-[var(--brand-electric)] ${isVinylPlaying ? 'animate-spin' : ''}`} />
-            <span>{isVinylPlaying ? 'Music On' : 'Music Off'}</span>
-          </button>
+        <div className="text-xs font-semibold text-stone-500">
+          <span>Session 2026–27</span>
         </div>
       </header>
 
-      {/* 2. MAIN INTERACTIVE DESK WORKSPACE */}
-      <main className="max-w-7xl w-full mx-auto my-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center py-6 z-20">
-        
-        {/* LEFT FLANK: Interactive Faculty Lanyard ID Card & Vinyl Turntable */}
-        <div className="lg:col-span-3 hidden lg:flex flex-col items-center gap-6 animate-in fade-in slide-in-from-left-4 duration-300">
+      {/* 2. CENTERED AUTH CARD */}
+      <main className="w-full max-w-[440px] my-auto">
+        <div className="bg-white rounded-2xl border border-[#E3DFD9] p-6 sm:p-8 shadow-[0_4px_20px_rgba(0,0,0,0.05)]">
           
-          {/* Real Lanyard Strap & Faculty Pass Badge */}
-          <div className="flex flex-col items-center group cursor-pointer transition-transform duration-300 hover:-translate-y-1">
-            {/* Black Fabric Lanyard Strap */}
-            <div className="w-5 h-14 bg-gradient-to-r from-stone-900 via-stone-800 to-stone-900 rounded-t-sm shadow-sm flex justify-center">
-              <div className="w-[1.5px] h-full bg-blue-500/40" />
-            </div>
-
-            {/* Metallic Silver Swivel Clip */}
-            <div className="w-7 h-4 bg-gradient-to-r from-stone-300 via-stone-100 to-stone-400 border border-stone-400 rounded-sm shadow-sm flex items-center justify-center -mt-0.5 z-10">
-              <div className="w-3 h-1.5 bg-stone-700 rounded-full" />
-            </div>
-
-            {/* Translucent PVC ID Badge Sleeve */}
-            <div className="w-56 bg-white/95 rounded-2xl border border-stone-300/80 shadow-[0_12px_32px_rgba(40,30,20,0.12)] p-4 relative overflow-hidden backdrop-blur-md">
-              {/* Holographic Gloss Sheen */}
-              <div className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-blue-400/10 via-amber-300/10 to-transparent rotate-45 pointer-events-none" />
-
-              {/* Slot cutout */}
-              <div className="w-12 h-1.5 bg-stone-200 border border-stone-300 rounded-full mx-auto mb-3" />
-
-              {/* Card Header */}
-              <div className="flex items-center justify-between border-b border-stone-200 pb-2.5 mb-3">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-5 h-5 rounded-md bg-[var(--brand-electric)] text-white text-[10px] font-bold font-['Playfair_Display'] flex items-center justify-center">
-                    P
-                  </div>
-                  <span className="font-['Playfair_Display'] font-black text-xs text-stone-900">
-                    PadhaiPilot
-                  </span>
-                </div>
-                <span className="text-[9px] font-['Inter'] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                  VERIFIED
-                </span>
-              </div>
-
-              {/* Faculty Info Body */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-stone-100 border border-stone-300 flex items-center justify-center text-stone-700 font-bold text-lg font-['Playfair_Display'] shadow-inner">
-                    {previewName.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-['Playfair_Display'] font-bold text-xs text-stone-900 truncate">
-                      {previewName}
-                    </p>
-                    <p className="text-[10px] font-['Raleway'] text-[var(--brand-electric)] font-bold truncate">
-                      {previewRole}
-                    </p>
-                    <p className="text-[9px] font-['Inter'] text-stone-500 truncate">
-                      {previewAcademy}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Micro Barcode & Key */}
-                <div className="pt-2 border-t border-stone-200 flex items-center justify-between text-[8px] font-['Inter'] text-stone-400">
-                  <span className="font-mono tracking-widest">FAC-2026-9042</span>
-                  <QrCode className="w-4 h-4 text-stone-700" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Turntable Vinyl Record Player */}
-          <div className="w-56 bg-white p-3.5 rounded-2xl border border-[#E3DFD9] shadow-[0_8px_24px_rgba(60,52,40,0.08)] relative">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-['Raleway'] font-bold uppercase tracking-wider text-stone-600">
-                Desk Music
-              </span>
-              <button
-                type="button"
-                onClick={() => setIsVinylPlaying(!isVinylPlaying)}
-                className="w-6 h-6 rounded-full bg-[var(--brand-electric)] text-white flex items-center justify-center shadow-sm hover:scale-105 transition"
-              >
-                {isVinylPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3 ml-0.5" />}
-              </button>
-            </div>
-
-            {/* Grooved Vinyl Disc */}
-            <div className="relative w-full aspect-square rounded-full bg-gradient-to-tr from-stone-950 via-stone-900 to-stone-950 border-4 border-stone-800 shadow-inner flex items-center justify-center overflow-hidden">
-              {/* Circular grooves */}
-              <div className="absolute inset-2 rounded-full border border-stone-700/50" />
-              <div className="absolute inset-5 rounded-full border border-stone-700/40" />
-              <div className="absolute inset-8 rounded-full border border-stone-700/30" />
-
-              {/* Spinning Vinyl Center Label */}
-              <div
-                className={`w-14 h-14 rounded-full bg-[var(--brand-electric)] border-2 border-stone-100 flex flex-col items-center justify-center text-white text-[8px] font-bold font-['Playfair_Display'] ${
-                  isVinylPlaying ? 'animate-[spin_4s_linear_infinite]' : ''
-                }`}
-              >
-                <span>PADHAI</span>
-                <span className="text-[6px] font-['Inter'] font-normal opacity-80">PILOT</span>
-              </div>
-            </div>
-            <p className="text-[10px] text-stone-500 font-['Raleway'] text-center mt-2 font-medium">
-              {isVinylPlaying ? 'Playing Lo-Fi Beats' : 'Click to play study music'}
+          {/* Card Title */}
+          <div className="text-center mb-6">
+            <h1 className="font-['Playfair_Display'] text-2xl sm:text-3xl font-bold text-[#1C1917] tracking-tight">
+              {activeTab === 'login' && 'Sign in to your account'}
+              {activeTab === 'register' && 'Create your account'}
+              {activeTab === 'forgot' && 'Reset your password'}
+              {activeTab === 'reset' && 'Set a new password'}
+            </h1>
+            <p className="text-xs text-stone-500 mt-1 font-['Raleway']">
+              {activeTab === 'login' && 'Enter your details to access your portal.'}
+              {activeTab === 'register' && 'Sign up to manage batches, attendance, and tests.'}
+              {activeTab === 'forgot' && 'Enter your email to receive a password reset code.'}
+              {activeTab === 'reset' && 'Choose a secure new password.'}
             </p>
           </div>
 
-        </div>
-
-        {/* CENTER STAGE: The Master Paper Stationery Ledger (The Auth Pad) */}
-        <div className="lg:col-span-6 w-full max-w-lg mx-auto">
-          <div className="relative bg-[#FFFFFF] rounded-3xl border border-[#E3DFD9] p-6 sm:p-9 shadow-[0_4px_6px_rgba(60,52,40,0.04),0_20px_40px_-8px_rgba(60,52,40,0.14)]">
-            
-            {/* Top Brass Binder Clip Accent */}
-            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none select-none z-10">
-              <div className="w-12 h-3 bg-gradient-to-r from-amber-400 via-amber-200 to-amber-500 border border-amber-600 rounded-sm shadow-sm" />
-              <div className="w-8 h-2 bg-gradient-to-r from-amber-500 via-amber-300 to-amber-600 rounded-b-md shadow-inner" />
-            </div>
-
-            {/* Ledger Editorial Title */}
-            <div className="text-center pt-2 pb-5 border-b border-[#F0ECE6]">
-              <h2 className="font-['Playfair_Display'] text-2xl sm:text-3xl font-bold text-[#1C1917] tracking-tight">
-                Teacher & Tuition Portal
-              </h2>
-              <p className="text-xs text-stone-500 mt-1 font-['Raleway']">
-                Sign in to manage batches, attendance, and student marks.
-              </p>
-            </div>
-
-            {/* Seamless Segmented Tab Controller */}
-            <div className="flex bg-[#F4F1EB] p-1 rounded-xl my-5">
+          {/* Segmented Switcher for Login / Register */}
+          {(activeTab === 'login' || activeTab === 'register') && (
+            <div className="flex bg-[#F4F1EB] p-1 rounded-xl mb-6">
               <button
                 type="button"
                 onClick={() => {
@@ -376,7 +234,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                   setErrorMsg('');
                   setSuccessMsg('');
                 }}
-                className={`flex-1 py-2 text-xs font-['Raleway'] font-bold rounded-lg transition-all duration-200 ${
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
                   activeTab === 'login'
                     ? 'bg-white text-[#1C1917] shadow-sm'
                     : 'text-stone-500 hover:text-stone-900'
@@ -391,7 +249,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                   setErrorMsg('');
                   setSuccessMsg('');
                 }}
-                className={`flex-1 py-2 text-xs font-['Raleway'] font-bold rounded-lg transition-all duration-200 ${
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
                   activeTab === 'register'
                     ? 'bg-white text-[#1C1917] shadow-sm'
                     : 'text-stone-500 hover:text-stone-900'
@@ -400,518 +258,441 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                 Create Account
               </button>
             </div>
+          )}
 
-            {/* Alert Messages */}
-            {errorMsg && (
-              <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-['Raleway'] font-semibold flex items-center gap-2 animate-in fade-in">
-                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                <span>{errorMsg}</span>
+          {/* Alert Messages */}
+          {errorMsg && (
+            <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
+          {successMsg && (
+            <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2">
+              <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>{successMsg}</span>
+            </div>
+          )}
+
+          {/* TAB 1: SIGN IN */}
+          {activeTab === 'login' && (
+            <form onSubmit={handleLoginSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-stone-700 mb-1">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
+                  <input
+                    type="email"
+                    required
+                    placeholder="name@example.com"
+                    value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)}
+                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Inter'] text-[#1C1917] placeholder:text-stone-400 focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
+                  />
+                </div>
               </div>
-            )}
 
-            {successMsg && (
-              <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-['Raleway'] font-semibold flex items-center gap-2 animate-in fade-in">
-                <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>{successMsg}</span>
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-xs font-bold text-stone-700">
+                    Password
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('forgot');
+                      setForgotEmail(loginEmail);
+                      setErrorMsg('');
+                      setSuccessMsg('');
+                    }}
+                    className="text-xs text-[var(--brand-electric)] hover:underline font-semibold"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+                <div className="relative">
+                  <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
+                  <input
+                    type={showLoginPassword ? 'text' : 'password'}
+                    required
+                    placeholder="••••••••"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Inter'] text-[#1C1917] placeholder:text-stone-400 focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowLoginPassword(!showLoginPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-800 transition"
+                  >
+                    {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
-            )}
 
-            {/* TAB 1: SIGN IN */}
-            {activeTab === 'login' && (
-              <form onSubmit={handleLoginSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-[11px] font-['Raleway'] font-bold uppercase tracking-wider text-stone-600 mb-1">
-                    Email Address *
-                  </label>
-                  <div className="relative">
-                    <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
-                    <input
-                      type="email"
-                      required
-                      placeholder="teacher@example.com"
-                      value={loginEmail}
-                      onChange={(e) => setLoginEmail(e.target.value)}
-                      className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Inter'] text-[#1C1917] placeholder:text-stone-400 focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
-                    />
-                  </div>
+              <div className="flex items-center justify-between pt-1">
+                <label className="flex items-center gap-2 cursor-pointer text-xs text-stone-600">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="rounded border-stone-300 text-[var(--brand-electric)] focus:ring-0"
+                  />
+                  <span>Remember me</span>
+                </label>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full mt-2 py-2.5 px-4 rounded-xl bg-[var(--brand-electric)] hover:bg-[#0A6FE8] active:scale-[0.99] text-white text-xs font-bold shadow-sm transition flex items-center justify-center gap-2"
+              >
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <span>Sign In</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </form>
+          )}
+
+          {/* TAB 2: REGISTER */}
+          {activeTab === 'register' && (
+            <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
+              {/* Role Selection */}
+              <div>
+                <label className="block text-xs font-bold text-stone-700 mb-1.5">
+                  I am a
+                </label>
+                <div className="grid grid-cols-2 gap-2 bg-[#F4F1EB] p-1 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setRole('TEACHER')}
+                    className={`flex items-center justify-center gap-1.5 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                      role === 'TEACHER'
+                        ? 'bg-white text-[var(--brand-electric)] shadow-sm'
+                        : 'text-stone-600 hover:text-stone-900'
+                    }`}
+                  >
+                    <GraduationCap className="w-3.5 h-3.5" />
+                    <span>Teacher</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setRole('TUITION_OWNER')}
+                    className={`flex items-center justify-center gap-1.5 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                      role === 'TUITION_OWNER'
+                        ? 'bg-white text-[var(--brand-electric)] shadow-sm'
+                        : 'text-stone-600 hover:text-stone-900'
+                    }`}
+                  >
+                    <Building2 className="w-3.5 h-3.5" />
+                    <span>Tuition Owner</span>
+                  </button>
                 </div>
+              </div>
 
+              {/* Name */}
+              <div>
+                <label className="block text-xs font-bold text-stone-700 mb-1">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Alok Verma"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="w-full px-3.5 py-2 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-medium text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
+                />
+              </div>
+
+              {/* Email */}
+              <div>
+                <label className="block text-xs font-bold text-stone-700 mb-1">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="name@example.com"
+                  value={registerEmail}
+                  onChange={(e) => setRegisterEmail(e.target.value)}
+                  className="w-full px-3.5 py-2 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Inter'] text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
+                />
+              </div>
+
+              {/* Conditional Fields */}
+              {role === 'TUITION_OWNER' ? (
                 <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="text-[11px] font-['Raleway'] font-bold uppercase tracking-wider text-stone-600">
-                      Password *
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveTab('forgot');
-                        setForgotEmail(loginEmail);
-                        setErrorMsg('');
-                        setSuccessMsg('');
-                      }}
-                      className="text-[11px] text-[var(--brand-electric)] hover:underline font-semibold"
-                    >
-                      Forgot Password?
-                    </button>
-                  </div>
-                  <div className="relative">
-                    <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
-                    <input
-                      type={showLoginPassword ? 'text' : 'password'}
-                      required
-                      placeholder="Enter your password"
-                      value={loginPassword}
-                      onChange={(e) => setLoginPassword(e.target.value)}
-                      className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Inter'] text-[#1C1917] placeholder:text-stone-400 focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowLoginPassword(!showLoginPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-800 transition"
-                    >
-                      {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between pt-1">
-                  <label className="flex items-center gap-2 cursor-pointer text-xs font-['Raleway'] text-stone-600">
-                    <input
-                      type="checkbox"
-                      checked={rememberMe}
-                      onChange={(e) => setRememberMe(e.target.checked)}
-                      className="rounded border-stone-300 text-[var(--brand-electric)] focus:ring-0"
-                    />
-                    <span>Remember me</span>
-                  </label>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full mt-2 py-3 px-4 rounded-xl bg-[var(--brand-electric)] hover:bg-[#0A6FE8] active:scale-[0.99] text-white text-xs font-['Raleway'] font-bold shadow-[0_4px_12px_rgba(22,119,255,0.25)] transition flex items-center justify-center gap-2"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Signing in...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Sign In</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </>
-                  )}
-                </button>
-              </form>
-            )}
-
-            {/* TAB 2: REGISTER */}
-            {activeTab === 'register' && (
-              <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
-                {/* Role Switcher Pill */}
-                <div>
-                  <label className="block text-[11px] font-['Raleway'] font-bold uppercase tracking-wider text-stone-600 mb-1.5">
-                    I am a *
-                  </label>
-                  <div className="grid grid-cols-2 gap-2 bg-[#F4F1EB] p-1 rounded-xl">
-                    <button
-                      type="button"
-                      onClick={() => setRole('TEACHER')}
-                      className={`flex items-center justify-center gap-1.5 py-1.5 text-xs font-['Raleway'] font-bold rounded-lg transition-all ${
-                        role === 'TEACHER'
-                          ? 'bg-white text-[var(--brand-electric)] shadow-sm'
-                          : 'text-stone-600 hover:text-stone-900'
-                      }`}
-                    >
-                      <GraduationCap className="w-3.5 h-3.5" />
-                      <span>Teacher</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setRole('TUITION_OWNER')}
-                      className={`flex items-center justify-center gap-1.5 py-1.5 text-xs font-['Raleway'] font-bold rounded-lg transition-all ${
-                        role === 'TUITION_OWNER'
-                          ? 'bg-white text-[var(--brand-electric)] shadow-sm'
-                          : 'text-stone-600 hover:text-stone-900'
-                      }`}
-                    >
-                      <Building2 className="w-3.5 h-3.5" />
-                      <span>Tuition Owner</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Name */}
-                <div>
-                  <label className="block text-[11px] font-['Raleway'] font-bold uppercase tracking-wider text-stone-600 mb-1">
-                    Full Name *
+                  <label className="block text-xs font-bold text-stone-700 mb-1">
+                    Academy / Coaching Name
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Alok Verma"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Raleway'] font-bold text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
+                    placeholder="e.g. Zenith Academy"
+                    value={instituteName}
+                    onChange={(e) => setInstituteName(e.target.value)}
+                    className="w-full px-3.5 py-2 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-medium text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
                   />
                 </div>
-
-                {/* Email */}
+              ) : (
                 <div>
-                  <label className="block text-[11px] font-['Raleway'] font-bold uppercase tracking-wider text-stone-600 mb-1">
-                    Email Address *
+                  <label className="block text-xs font-bold text-stone-700 mb-1">
+                    Subject
                   </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Mathematics"
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                    className="w-full px-3.5 py-2 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-medium text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
+                  />
+                </div>
+              )}
+
+              {/* Password */}
+              <div>
+                <label className="block text-xs font-bold text-stone-700 mb-1">
+                  Password (min 6 characters)
+                </label>
+                <div className="relative">
+                  <input
+                    type={showRegisterPassword ? 'text' : 'password'}
+                    required
+                    minLength={6}
+                    placeholder="••••••••"
+                    value={registerPassword}
+                    onChange={(e) => setRegisterPassword(e.target.value)}
+                    className="w-full px-3.5 py-2 pr-9 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Inter'] text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowRegisterPassword(!showRegisterPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-800 transition"
+                  >
+                    {showRegisterPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+
+                {/* Password Strength Indicator */}
+                {registerPassword && (
+                  <div className="flex gap-1.5 mt-1.5">
+                    {[1, 2, 3, 4].map((step) => (
+                      <div
+                        key={step}
+                        className={`h-1 flex-1 rounded-full transition-colors duration-200 ${
+                          strengthScore >= step
+                            ? strengthScore <= 2
+                              ? 'bg-amber-400'
+                              : 'bg-emerald-500'
+                            : 'bg-stone-200'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Confirm Password */}
+              <div>
+                <label className="block text-xs font-bold text-stone-700 mb-1">
+                  Confirm Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  placeholder="Re-enter password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className={`w-full px-3.5 py-2 rounded-xl border bg-[#FAF8F5] text-xs font-['Inter'] text-[#1C1917] focus:outline-none focus:bg-white transition ${
+                    confirmPassword && confirmPassword !== registerPassword
+                      ? 'border-rose-400'
+                      : 'border-[#DDD8D2] focus:border-[var(--brand-electric)]'
+                  }`}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full mt-2 py-2.5 px-4 rounded-xl bg-[var(--brand-electric)] hover:bg-[#0A6FE8] active:scale-[0.99] text-white text-xs font-bold shadow-sm transition flex items-center justify-center gap-2"
+              >
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <span>Create Account</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </form>
+          )}
+
+          {/* TAB 3: FORGOT PASSWORD */}
+          {activeTab === 'forgot' && (
+            <form onSubmit={handleForgotSubmit} className="space-y-4">
+              <p className="text-xs text-stone-600 leading-relaxed">
+                Enter your email address and we will send you a password reset code.
+              </p>
+
+              <div>
+                <label className="block text-xs font-bold text-stone-700 mb-1">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
                   <input
                     type="email"
                     required
-                    placeholder="teacher@example.com"
-                    value={registerEmail}
-                    onChange={(e) => setRegisterEmail(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Inter'] text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
+                    placeholder="name@example.com"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Inter'] text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
                   />
                 </div>
+              </div>
 
-                {/* Conditional Fields */}
-                {role === 'TUITION_OWNER' ? (
-                  <div>
-                    <label className="block text-[11px] font-['Raleway'] font-bold uppercase tracking-wider text-stone-600 mb-1">
-                      Coaching / Academy Name *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Zenith Academy"
-                      value={instituteName}
-                      onChange={(e) => setInstituteName(e.target.value)}
-                      className="w-full px-3.5 py-2 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Raleway'] font-bold text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
-                    />
-                  </div>
-                ) : (
-                  <div>
-                    <label className="block text-[11px] font-['Raleway'] font-bold uppercase tracking-wider text-stone-600 mb-1">
-                      Subject (e.g. Math, Physics)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Mathematics"
-                      value={subject}
-                      onChange={(e) => setSubject(e.target.value)}
-                      className="w-full px-3.5 py-2 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Raleway'] text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
-                    />
-                  </div>
-                )}
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-2.5 px-4 rounded-xl bg-[var(--brand-electric)] hover:bg-[#0A6FE8] text-white text-xs font-bold shadow-sm transition flex items-center justify-center gap-2"
+              >
+                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Send Reset Code</span>}
+              </button>
 
-                {/* Password & Confirm */}
-                <div>
-                  <label className="block text-[11px] font-['Raleway'] font-bold uppercase tracking-wider text-stone-600 mb-1">
-                    Password (min 6 characters) *
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showRegisterPassword ? 'text' : 'password'}
-                      required
-                      minLength={6}
-                      placeholder="••••••••"
-                      value={registerPassword}
-                      onChange={(e) => setRegisterPassword(e.target.value)}
-                      className="w-full px-3.5 py-2 pr-9 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Inter'] text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowRegisterPassword(!showRegisterPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-800 transition"
-                    >
-                      {showRegisterPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                    </button>
-                  </div>
-
-                  {/* Micro Strength Bars */}
-                  {registerPassword && (
-                    <div className="flex gap-1.5 mt-1.5">
-                      {[1, 2, 3, 4].map((step) => (
-                        <div
-                          key={step}
-                          className={`h-1 flex-1 rounded-full transition-colors duration-200 ${
-                            strengthScore >= step
-                              ? strengthScore <= 2
-                                ? 'bg-amber-400'
-                                : 'bg-emerald-500'
-                              : 'bg-stone-200'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-['Raleway'] font-bold uppercase tracking-wider text-stone-600 mb-1">
-                    Confirm Password *
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    placeholder="Re-enter password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className={`w-full px-3.5 py-2 rounded-xl border bg-[#FAF8F5] text-xs font-['Inter'] text-[#1C1917] focus:outline-none focus:bg-white transition ${
-                      confirmPassword && confirmPassword !== registerPassword
-                        ? 'border-rose-400'
-                        : 'border-[#DDD8D2] focus:border-[var(--brand-electric)]'
-                    }`}
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full mt-2 py-3 px-4 rounded-xl bg-[var(--brand-electric)] hover:bg-[#0A6FE8] active:scale-[0.99] text-white text-xs font-['Raleway'] font-bold shadow-[0_4px_12px_rgba(22,119,255,0.25)] transition flex items-center justify-center gap-2"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Creating account...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Create Account</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </>
-                  )}
-                </button>
-              </form>
-            )}
-
-            {/* TAB 3: FORGOT PASSWORD */}
-            {activeTab === 'forgot' && (
-              <form onSubmit={handleForgotSubmit} className="space-y-4">
-                <p className="text-xs text-stone-600 leading-relaxed font-['Raleway']">
-                  Enter your email address and we will send you a password reset code.
-                </p>
-
-                <div>
-                  <label className="block text-[11px] font-['Raleway'] font-bold uppercase tracking-wider text-stone-600 mb-1">
-                    Email Address *
-                  </label>
-                  <div className="relative">
-                    <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
-                    <input
-                      type="email"
-                      required
-                      placeholder="teacher@example.com"
-                      value={forgotEmail}
-                      onChange={(e) => setForgotEmail(e.target.value)}
-                      className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Inter'] text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full py-2.5 px-4 rounded-xl bg-[var(--brand-electric)] hover:bg-[#0A6FE8] text-white text-xs font-['Raleway'] font-bold shadow-sm transition flex items-center justify-center gap-2"
-                >
-                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Send Reset Code</span>}
-                </button>
-
-                <div className="text-center pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('login')}
-                    className="text-xs text-stone-600 hover:text-stone-900 font-bold transition"
-                  >
-                    ← Back to Sign In
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {/* TAB 4: RESET PASSWORD */}
-            {activeTab === 'reset' && (
-              <form onSubmit={handleResetSubmit} className="space-y-4">
-                <p className="text-xs text-stone-600 leading-relaxed font-['Raleway']">
-                  Enter the reset code sent to your email to choose a new password.
-                </p>
-
-                <div>
-                  <label className="block text-[11px] font-['Raleway'] font-bold uppercase tracking-wider text-stone-600 mb-1">
-                    Reset Code *
-                  </label>
-                  <div className="relative">
-                    <KeyRound className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
-                    <input
-                      type="text"
-                      required
-                      placeholder="Enter reset code"
-                      value={resetToken}
-                      onChange={(e) => setResetToken(e.target.value)}
-                      className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Inter'] font-mono text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-['Raleway'] font-bold uppercase tracking-wider text-stone-600 mb-1">
-                    New Password (min 6 chars) *
-                  </label>
-                  <div className="relative">
-                    <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
-                    <input
-                      type={showResetPassword ? 'text' : 'password'}
-                      required
-                      minLength={6}
-                      placeholder="••••••••"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Inter'] text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowResetPassword(!showResetPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-800 transition"
-                    >
-                      {showResetPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full py-2.5 px-4 rounded-xl bg-[var(--brand-electric)] hover:bg-[#0A6FE8] text-white text-xs font-['Raleway'] font-bold shadow-sm transition flex items-center justify-center gap-2"
-                >
-                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Save New Password</span>}
-                </button>
-
-                <div className="text-center pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('login')}
-                    className="text-xs text-stone-600 hover:text-stone-900 font-bold transition"
-                  >
-                    ← Back to Sign In
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {/* Quick 1-Click Sandbox Test Bar */}
-            <div className="mt-6 pt-4 border-t border-[#F0ECE6] flex items-center justify-between text-xs text-stone-400">
-              <span className="font-['Raleway'] font-bold flex items-center gap-1 text-stone-600">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                <span>Demo Accounts:</span>
-              </span>
-              <div className="flex items-center gap-2 text-stone-600 font-semibold text-[11px]">
+              <div className="text-center pt-2">
                 <button
                   type="button"
-                  onClick={() => handleQuickDemo('TEACHER')}
-                  disabled={isLoading}
-                  className="hover:text-[var(--brand-electric)] hover:underline"
+                  onClick={() => setActiveTab('login')}
+                  className="text-xs text-stone-600 hover:text-stone-900 font-bold transition"
                 >
-                  Teacher
-                </button>
-                <span>•</span>
-                <button
-                  type="button"
-                  onClick={() => handleQuickDemo('TUITION_OWNER')}
-                  disabled={isLoading}
-                  className="hover:text-[var(--brand-electric)] hover:underline"
-                >
-                  Tuition Owner
-                </button>
-                <span>•</span>
-                <button
-                  type="button"
-                  onClick={() => handleQuickDemo('SUPER_ADMIN')}
-                  disabled={isLoading}
-                  className="hover:text-[var(--brand-electric)] hover:underline"
-                >
-                  Admin
+                  ← Back to Sign In
                 </button>
               </div>
+            </form>
+          )}
+
+          {/* TAB 4: RESET PASSWORD */}
+          {activeTab === 'reset' && (
+            <form onSubmit={handleResetSubmit} className="space-y-4">
+              <p className="text-xs text-stone-600 leading-relaxed">
+                Enter the reset code sent to your email to choose a new password.
+              </p>
+
+              <div>
+                <label className="block text-xs font-bold text-stone-700 mb-1">
+                  Reset Code
+                </label>
+                <div className="relative">
+                  <KeyRound className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
+                  <input
+                    type="text"
+                    required
+                    placeholder="Enter reset code"
+                    value={resetToken}
+                    onChange={(e) => setResetToken(e.target.value)}
+                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Inter'] font-mono text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-stone-700 mb-1">
+                  New Password (min 6 characters)
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
+                  <input
+                    type={showResetPassword ? 'text' : 'password'}
+                    required
+                    minLength={6}
+                    placeholder="••••••••"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Inter'] text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowResetPassword(!showResetPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-800 transition"
+                  >
+                    {showResetPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-2.5 px-4 rounded-xl bg-[var(--brand-electric)] hover:bg-[#0A6FE8] text-white text-xs font-bold shadow-sm transition flex items-center justify-center gap-2"
+              >
+                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Save New Password</span>}
+              </button>
+
+              <div className="text-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('login')}
+                  className="text-xs text-stone-600 hover:text-stone-900 font-bold transition"
+                >
+                  ← Back to Sign In
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Quick 1-Click Sandbox Test Bar */}
+          <div className="mt-6 pt-4 border-t border-[#F0ECE6] flex items-center justify-between text-xs text-stone-400">
+            <span className="font-semibold text-stone-600 flex items-center gap-1">
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              <span>Demo Accounts:</span>
+            </span>
+            <div className="flex items-center gap-2 text-stone-600 font-medium text-xs">
+              <button
+                type="button"
+                onClick={() => handleQuickDemo('TEACHER')}
+                disabled={isLoading}
+                className="hover:text-[var(--brand-electric)] hover:underline"
+              >
+                Teacher
+              </button>
+              <span>•</span>
+              <button
+                type="button"
+                onClick={() => handleQuickDemo('TUITION_OWNER')}
+                disabled={isLoading}
+                className="hover:text-[var(--brand-electric)] hover:underline"
+              >
+                Tuition Owner
+              </button>
+              <span>•</span>
+              <button
+                type="button"
+                onClick={() => handleQuickDemo('SUPER_ADMIN')}
+                disabled={isLoading}
+                className="hover:text-[var(--brand-electric)] hover:underline"
+              >
+                Admin
+              </button>
             </div>
-
-          </div>
-        </div>
-
-        {/* RIGHT FLANK: Framed Wooden Corkboard with Tangible Sticky Notes */}
-        <div className="lg:col-span-3 hidden lg:flex flex-col items-center gap-5 animate-in fade-in slide-in-from-right-4 duration-300">
-          
-          {/* Porcelain Coffee Cup top down */}
-          <div className="self-end mr-4">
-            <CoffeeCup />
-          </div>
-
-          {/* Framed Corkboard with 3 realistic sticky notes */}
-          <Corkboard title="Noticeboard" className="w-full max-w-xs">
-            <div className="space-y-4 pt-1">
-              {/* Yellow Note */}
-              <StickyNote
-                color="yellow"
-                pinColor="blue"
-                rotation={1.5}
-                title="Class 12 - Mathematics"
-              >
-                <p className="text-[11px] font-['Raleway'] font-medium leading-relaxed">
-                  Today's attendance completed: 38 present, 2 absent.
-                </p>
-                <div className="mt-1.5 text-[9px] font-bold font-['Inter'] text-amber-800">
-                  Daily Attendance
-                </div>
-              </StickyNote>
-
-              {/* Mint Note */}
-              <StickyNote
-                color="mint"
-                pinColor="red"
-                rotation={-2}
-                title="Weekly Physics Test"
-              >
-                <p className="text-[11px] font-['Raleway'] font-medium leading-relaxed">
-                  Marks submitted for Batch A. Average score: 74/100.
-                </p>
-                <div className="mt-1.5 text-[9px] font-bold font-['Inter'] text-emerald-800">
-                  Marks Graded
-                </div>
-              </StickyNote>
-
-              {/* Pink Note */}
-              <StickyNote
-                color="pink"
-                pinColor="green"
-                rotation={1.2}
-                title="Fee Reminders"
-              >
-                <p className="text-[11px] font-['Raleway'] font-medium leading-relaxed">
-                  Monthly fee reminder sent to 8 students with dues.
-                </p>
-                <div className="mt-1.5 text-[9px] font-bold font-['Inter'] text-rose-800">
-                  Fee Notices
-                </div>
-              </StickyNote>
-            </div>
-          </Corkboard>
-
-          {/* Yellow Drafting Pencil resting on desk */}
-          <div className="self-start ml-2 mt-2">
-            <YellowPencil rotation={-15} />
           </div>
 
         </div>
-
       </main>
 
-      {/* 3. BOTTOM DESK FOOTER */}
-      <footer className="max-w-7xl w-full mx-auto flex flex-col sm:flex-row items-center justify-between py-3 border-t border-[#E3DFD9] text-[11px] text-stone-500 font-['Raleway']">
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-emerald-600" />
-          <span>PadhaiPilot • Academic Session 2026–27</span>
-        </div>
-        <div className="mt-2 sm:mt-0">
-          <DeskPetPill />
-        </div>
+      {/* 3. FOOTER */}
+      <footer className="w-full max-w-4xl mx-auto py-3 text-center text-xs text-stone-400">
+        <span>PadhaiPilot • Session 2026–27</span>
       </footer>
 
     </div>

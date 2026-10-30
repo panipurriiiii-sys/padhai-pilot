@@ -24,7 +24,6 @@ import { StudentFeeAlertView } from '../components/StudentFeeAlertView';
 import { TuitionBrandingView } from '../components/TuitionBrandingView';
 import { AuthModal } from '../components/AuthModal';
 import { AuthWelcomeScreen } from '../components/AuthWelcomeScreen';
-import { DeskPetPill } from '../components/ui';
 import { teacherApi, getAuthToken, clearAuthToken } from '../lib/api';
 import type {
   TeacherDashboardMetrics,
@@ -444,10 +443,7 @@ export default function TeacherApp() {
         </div>
       </main>
 
-      {/* Floating Desk Pet / Status Pill */}
-      <div className="fixed bottom-5 right-6 z-40 hidden sm:block">
-        <DeskPetPill />
-      </div>
+
 
       {/* Authentication & Profile Modal */}
       <AuthModal

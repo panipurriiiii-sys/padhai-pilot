@@ -27,15 +27,6 @@ import {
 import type { BatchSummary, AttendanceStatus } from '@padhai-pilot/shared';
 import {
   CountUp,
-  ShinyText,
-  BlurText,
-  MagnetButton,
-  PushPin,
-  StickyNote,
-  Corkboard,
-  CoffeeCup,
-  YellowPencil,
-  PolaroidCard,
 } from './ui';
 
 interface AttendanceRecordState {
@@ -338,131 +329,78 @@ export function AttendanceView({
             Mark attendance for your batches, check daily stats, and send absence alerts.
           </p>
         </div>
-
-        {/* Desk Accents: Coffee & Pencil */}
-        <div className="hidden lg:flex items-center gap-6 select-none">
-          <YellowPencil rotation={-15} />
-          <CoffeeCup />
-        </div>
       </div>
 
-      {/* TOP SECTION: The Corkboard with 3D Pushpins and Colorful Pastel Sticky Notes */}
-      <Corkboard title="Live Roll Call Pinboard">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Note 1: Batch & Quorum (Pastel Sunny Yellow) */}
-          <StickyNote
-            color="yellow"
-            pinColor="blue"
-            rotation={-1.5}
-            title={currentBatch?.name || 'Class Batch'}
-            badge="QUORUM"
-            footer={
-              <div className="flex items-center justify-between text-[11px] font-['Inter']">
-                <span>Room: {currentBatch?.room || 'General Room'}</span>
-                <span className="font-semibold">{currentBatch?.code || 'BATCH'}</span>
-              </div>
-            }
-          >
-            <p className="font-['Raleway'] font-medium text-xs">
-              Subject: <strong className="font-bold">{currentBatch?.subject || 'Class Subject'}</strong>
-            </p>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-2xl font-bold font-['Inter'] text-[#713F12]">
-                <CountUp to={metrics.total} duration={1} />
-              </span>
-              <span className="text-xs text-[#A16207]">Enrolled Candidates</span>
+      {/* Attendance Metrics Row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="kpi-card">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-stone-500 font-['Raleway']">
+              Total Enrolled
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-[var(--brand-electric)]">
+              <Users className="w-4 h-4" />
             </div>
-          </StickyNote>
-
-          {/* Note 2: Present Today (Pastel Sage Mint Green) */}
-          <StickyNote
-            color="mint"
-            pinColor="green"
-            rotation={1.2}
-            title="Present in Hall"
-            badge="ACTIVE"
-            footer={
-              <div className="flex items-center justify-between text-[11px] font-['Inter'] text-[#15803D]">
-                <span>Rate: {metrics.rate}%</span>
-                <span className="font-bold">✓ Quorum Met</span>
-              </div>
-            }
-          >
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-extrabold font-['Inter'] text-[#14532D]">
-                <CountUp to={metrics.present} duration={1} />
-              </span>
-              <span className="text-xs font-semibold text-[#166534]">
-                of {metrics.total} verified
-              </span>
-            </div>
-            <p className="text-[11px] text-[#15803D] mt-1">
-              Biometric & physical headcount synchronized.
-            </p>
-          </StickyNote>
-
-          {/* Note 3: Absentees Alert (Pastel Blush Pink) */}
-          <StickyNote
-            color="pink"
-            pinColor="red"
-            rotation={-0.8}
-            title="Absentees"
-            badge="SMS QUEUED"
-            footer={
-              <div className="flex items-center justify-between text-[11px] font-['Inter'] text-[#BE185D]">
-                <span>SMS Alert: Auto</span>
-                <span className="font-bold">09:15 AM</span>
-              </div>
-            }
-          >
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-extrabold font-['Inter'] text-[#831843]">
-                <CountUp to={metrics.absent} duration={1} />
-              </span>
-              <span className="text-xs font-semibold text-[#9D174D]">
-                unexcused absent
-              </span>
-            </div>
-            <p className="text-[11px] text-[#BE185D] mt-1">
-              Automated parent SMS alert ready to dispatch upon ledger seal.
-            </p>
-          </StickyNote>
-
-          {/* Note 4: Late & Excused (AK Pastel Tech Blue) */}
-          <StickyNote
-            color="blue"
-            pinColor="blue"
-            rotation={1.8}
-            title="Late & Sanctions"
-            badge="LEAVE SLIP"
-            footer={
-              <div className="flex items-center justify-between text-[11px] font-['Inter'] text-[#0369A1]">
-                <span>Sanction: Signed</span>
-                <span className="font-bold">Dean Validated</span>
-              </div>
-            }
-          >
-            <div className="flex items-baseline gap-3">
-              <div>
-                <span className="text-2xl font-bold font-['Inter'] text-[#0C4A6E]">
-                  <CountUp to={metrics.late} duration={1} />
-                </span>
-                <span className="text-[11px] ml-1 font-semibold text-[#0369A1]">Late</span>
-              </div>
-              <span className="text-stone-300">/</span>
-              <div>
-                <span className="text-2xl font-bold font-['Inter'] text-[#0C4A6E]">
-                  <CountUp to={metrics.excused} duration={1} />
-                </span>
-                <span className="text-[11px] ml-1 font-semibold text-[#0369A1]">Excused</span>
-              </div>
-            </div>
-            <p className="text-[11px] text-[#0284C7] mt-1">
-              Official medical slips or bus delay notes recorded.
-            </p>
-          </StickyNote>
+          </div>
+          <div className="font-['Inter'] text-2xl font-bold text-stone-900">
+            <CountUp to={metrics.total} duration={0.8} />
+          </div>
+          <span className="text-[11px] text-stone-500 mt-1 block">
+            {currentBatch?.name || 'Class Batch'}
+          </span>
         </div>
-      </Corkboard>
+
+        <div className="kpi-card">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-stone-500 font-['Raleway']">
+              Present Today
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
+              <Check className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="font-['Inter'] text-2xl font-bold text-emerald-700">
+            <CountUp to={metrics.present} duration={0.8} />
+          </div>
+          <span className="text-[11px] text-emerald-600 mt-1 block font-semibold">
+            {metrics.rate}% attendance rate
+          </span>
+        </div>
+
+        <div className="kpi-card">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-stone-500 font-['Raleway']">
+              Absent
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600">
+              <AlertCircle className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="font-['Inter'] text-2xl font-bold text-rose-700">
+            <CountUp to={metrics.absent} duration={0.8} />
+          </div>
+          <span className="text-[11px] text-rose-600 mt-1 block">
+            Parent alert ready
+          </span>
+        </div>
+
+        <div className="kpi-card">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-stone-500 font-['Raleway']">
+              Late / Excused
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
+              <Clock className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="font-['Inter'] text-2xl font-bold text-amber-800">
+            {metrics.late + metrics.excused}
+          </div>
+          <span className="text-[11px] text-stone-500 mt-1 block">
+            {metrics.late} late · {metrics.excused} excused
+          </span>
+        </div>
+      </div>
 
       {/* Save Success Alert Banner */}
       {saveSuccessMsg && (
@@ -474,18 +412,8 @@ export function AttendanceView({
         </div>
       )}
 
-      {/* MAIN PIECE: The Master Academic Ledger / Physical Clipboard */}
-      <div className="relative paper-card overflow-hidden">
-        {/* Realistic Brass Clipboard Clamp at the top */}
-        <div className="w-full flex justify-center -mt-3.5 mb-2 pointer-events-none select-none">
-          <div className="relative px-8 py-2 rounded-b-xl bg-gradient-to-b from-[#D4AF37] via-[#F3E5AB] to-[#AA771C] border border-[#996515] shadow-md flex items-center gap-3">
-            <div className="w-2.5 h-2.5 rounded-full bg-[#5C4033] border border-amber-900/60 shadow-inner" />
-            <span className="font-['Inter'] text-[10px] uppercase font-bold tracking-widest text-[#4A2F0F]">
-              PADHAIPILOT ACADEMIC LEDGER • OFFICIAL REGISTER
-            </span>
-            <div className="w-2.5 h-2.5 rounded-full bg-[#5C4033] border border-amber-900/60 shadow-inner" />
-          </div>
-        </div>
+      {/* Attendance Register Card */}
+      <div className="paper-card overflow-hidden">
 
         {/* Register Toolbar: Batch Picker, Date, Search, Quick Stamps */}
         <div className="p-6 border-b border-[var(--border-paper)] bg-[var(--bg-paper-warm)] space-y-4">
