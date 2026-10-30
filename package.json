@@ -7,6 +7,7 @@
     "apps/admin",
     "apps/teacher",
     "apps/student",
+    "apps/mobile",
     "apps/api",
     "packages/shared"
   ],
