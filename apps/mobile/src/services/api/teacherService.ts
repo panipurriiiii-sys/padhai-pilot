@@ -242,3 +242,4 @@ export const teacherService = {
     return apiClient.post<DailyTeachingDiaryItem>('/tuition/diary', dto);
   },
 };
+

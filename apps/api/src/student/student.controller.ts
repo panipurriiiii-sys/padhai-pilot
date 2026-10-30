@@ -49,3 +49,4 @@ export class StudentController {
     return this.studentService.getAnnouncements(user);
   }
 }
+

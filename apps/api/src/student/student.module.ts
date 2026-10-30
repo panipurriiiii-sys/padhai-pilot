@@ -11,3 +11,4 @@ import { TuitionModule } from '../tuition/tuition.module.js';
   exports: [StudentService],
 })
 export class StudentModule {}
+
