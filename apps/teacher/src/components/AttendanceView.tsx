@@ -297,14 +297,14 @@ export function AttendanceView({
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pt-2">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100/80 border border-amber-300 text-amber-900 text-xs font-['Raleway'] font-bold tracking-wider mb-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse" />
-              OFFICIAL ACADEMIC REGISTRY
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
+              DAILY ATTENDANCE
             </div>
             <h1 className="text-3xl md:text-4xl font-['Playfair_Display'] font-bold text-stone-900 tracking-tight">
-              Daily Attendance Register
+              Attendance Register
             </h1>
             <p className="text-sm font-['Raleway'] text-stone-600 mt-1 max-w-xl">
-              Tangible roll call management with instantaneous attendance statistics, parent SMS triggers, and audited correction slips.
+              Mark attendance for your batches, check daily stats, and send absence alerts.
             </p>
           </div>
         </div>
@@ -328,14 +328,14 @@ export function AttendanceView({
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pt-2">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100/80 border border-amber-300 text-amber-900 text-xs font-['Raleway'] font-bold tracking-wider mb-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse" />
-            OFFICIAL ACADEMIC REGISTRY
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
+            DAILY ATTENDANCE
           </div>
           <h1 className="text-3xl md:text-4xl font-['Playfair_Display'] font-bold text-stone-900 tracking-tight">
-            Daily Attendance Register
+            Attendance Register
           </h1>
           <p className="text-sm font-['Raleway'] text-stone-600 mt-1 max-w-xl">
-            Tangible roll call management with instantaneous attendance statistics, parent SMS triggers, and audited correction slips.
+            Mark attendance for your batches, check daily stats, and send absence alerts.
           </p>
         </div>
 
@@ -786,7 +786,7 @@ export function AttendanceView({
         <div className="p-6 border-t border-[var(--border-paper)] bg-[var(--bg-paper-warm)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-xs font-['Raleway'] text-[var(--ink-muted)]">
             <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0" />
-            <span>Audited & verified against institutional coaching roll standards.</span>
+            <span>Attendance records are saved securely.</span>
           </div>
 
           <div className="flex items-center gap-3">

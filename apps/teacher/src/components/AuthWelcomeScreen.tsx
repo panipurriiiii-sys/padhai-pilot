@@ -123,7 +123,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
         subject: role === 'TEACHER' ? subject.trim() : undefined,
       });
 
-      setSuccessMsg('Account registered! Launching your studio...');
+      setSuccessMsg('Account created successfully.');
       onAuthSuccess(res.user);
     } catch (err: any) {
       setErrorMsg(err.message || 'Registration failed. Please check your details.');
@@ -142,13 +142,13 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
 
     try {
       const res = await teacherApi.requestPasswordReset(forgotEmail.trim());
-      setSuccessMsg(res.message || 'Reset token generated.');
+      setSuccessMsg(res.message || 'Reset code sent to your email.');
       if (res.debugToken) {
         setResetToken(res.debugToken);
         setActiveTab('reset');
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Unable to process reset request.');
+      setErrorMsg(err.message || 'Unable to send reset code.');
     } finally {
       setIsLoading(false);
     }
@@ -164,7 +164,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
 
     try {
       const res = await teacherApi.resetPassword(resetToken.trim(), newPassword);
-      setSuccessMsg(res.message || 'Password successfully updated.');
+      setSuccessMsg(res.message || 'Password updated successfully.');
       setActiveTab('login');
       setLoginPassword('');
     } catch (err: any) {
@@ -188,16 +188,16 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
       }
       onAuthSuccess(res.user);
     } catch (err: any) {
-      setErrorMsg(err.message || 'Demo access unavailable.');
+      setErrorMsg(err.message || 'Demo login failed.');
     } finally {
       setIsLoading(false);
     }
   };
 
   // Dynamic preview text for lanyard badge
-  const previewName = activeTab === 'register' ? fullName || 'New Faculty' : 'Faculty Member';
+  const previewName = activeTab === 'register' ? fullName || 'Teacher' : 'Faculty Member';
   const previewAcademy = activeTab === 'register' ? (instituteName || 'PadhaiPilot Academy') : 'PadhaiPilot Academy';
-  const previewRole = role === 'TUITION_OWNER' ? 'Tuition Director' : 'Senior Faculty';
+  const previewRole = role === 'TUITION_OWNER' ? 'Tuition Owner' : 'Teacher';
 
   return (
     <div className="min-h-screen ak-desk-surface flex flex-col justify-between p-4 sm:p-6 md:p-8 select-none relative overflow-x-hidden font-['Raleway']">
@@ -214,7 +214,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                 PadhaiPilot
               </span>
               <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-blue-50 text-[var(--brand-electric)] border border-blue-100 hidden sm:inline-block">
-                Faculty Studio
+                Teacher Portal
               </span>
             </div>
           </div>
@@ -224,17 +224,17 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
         <div className="flex items-center gap-4 text-xs font-semibold">
           <span className="hidden md:inline-flex items-center gap-1.5 text-stone-600 font-['Inter'] text-[11px]">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            Academic Session 2026–27
+            Session 2026–27
           </span>
           <div className="h-4 w-[1px] bg-stone-300 hidden md:block" />
           <button
             type="button"
             onClick={() => setIsVinylPlaying(!isVinylPlaying)}
             className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-700 text-[11px] transition"
-            title="Toggle focus ambience"
+            title="Toggle background music"
           >
             <Disc3 className={`w-3.5 h-3.5 text-[var(--brand-electric)] ${isVinylPlaying ? 'animate-spin' : ''}`} />
-            <span>{isVinylPlaying ? 'Sound On' : 'Sound Off'}</span>
+            <span>{isVinylPlaying ? 'Music On' : 'Music Off'}</span>
           </button>
         </div>
       </header>
@@ -312,7 +312,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
           <div className="w-56 bg-white p-3.5 rounded-2xl border border-[#E3DFD9] shadow-[0_8px_24px_rgba(60,52,40,0.08)] relative">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[10px] font-['Raleway'] font-bold uppercase tracking-wider text-stone-600">
-                Focus Vinyl
+                Desk Music
               </span>
               <button
                 type="button"
@@ -336,12 +336,12 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                   isVinylPlaying ? 'animate-[spin_4s_linear_infinite]' : ''
                 }`}
               >
-                <span>STUDIO</span>
-                <span className="text-[6px] font-['Inter'] font-normal opacity-80">2026–27</span>
+                <span>PADHAI</span>
+                <span className="text-[6px] font-['Inter'] font-normal opacity-80">PILOT</span>
               </div>
             </div>
             <p className="text-[10px] text-stone-500 font-['Raleway'] text-center mt-2 font-medium">
-              {isVinylPlaying ? 'Now Playing: Academic Flow' : 'Click to play ambient focus'}
+              {isVinylPlaying ? 'Playing Lo-Fi Beats' : 'Click to play study music'}
             </p>
           </div>
 
@@ -359,14 +359,11 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
 
             {/* Ledger Editorial Title */}
             <div className="text-center pt-2 pb-5 border-b border-[#F0ECE6]">
-              <span className="text-[10px] font-['Raleway'] font-bold uppercase tracking-widest text-[var(--brand-electric)] block mb-1">
-                Institutional Workspace Access
-              </span>
-              <h2 className="font-['Playfair_Display'] text-2xl sm:text-3xl font-extrabold text-[#1C1917] tracking-tight">
-                Faculty Studio Ledger
+              <h2 className="font-['Playfair_Display'] text-2xl sm:text-3xl font-bold text-[#1C1917] tracking-tight">
+                Teacher & Tuition Portal
               </h2>
-              <p className="text-xs text-stone-500 mt-1 font-['Raleway'] font-medium">
-                Where dedicated teachers manage classrooms, attendance & grading.
+              <p className="text-xs text-stone-500 mt-1 font-['Raleway']">
+                Sign in to manage batches, attendance, and student marks.
               </p>
             </div>
 
@@ -385,7 +382,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                     : 'text-stone-500 hover:text-stone-900'
                 }`}
               >
-                Sign In to Studio
+                Sign In
               </button>
               <button
                 type="button"
@@ -400,7 +397,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                     : 'text-stone-500 hover:text-stone-900'
                 }`}
               >
-                Register Account
+                Create Account
               </button>
             </div>
 
@@ -424,14 +421,14 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
               <form onSubmit={handleLoginSubmit} className="space-y-4">
                 <div>
                   <label className="block text-[11px] font-['Raleway'] font-bold uppercase tracking-wider text-stone-600 mb-1">
-                    Institutional Email *
+                    Email Address *
                   </label>
                   <div className="relative">
                     <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
                     <input
                       type="email"
                       required
-                      placeholder="faculty@academy.edu"
+                      placeholder="teacher@example.com"
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
                       className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Inter'] text-[#1C1917] placeholder:text-stone-400 focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
@@ -462,7 +459,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                     <input
                       type={showLoginPassword ? 'text' : 'password'}
                       required
-                      placeholder="Enter workstation password"
+                      placeholder="Enter your password"
                       value={loginPassword}
                       onChange={(e) => setLoginPassword(e.target.value)}
                       className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Inter'] text-[#1C1917] placeholder:text-stone-400 focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
@@ -485,7 +482,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                       onChange={(e) => setRememberMe(e.target.checked)}
                       className="rounded border-stone-300 text-[var(--brand-electric)] focus:ring-0"
                     />
-                    <span>Remember workstation session</span>
+                    <span>Remember me</span>
                   </label>
                 </div>
 
@@ -497,11 +494,11 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                   {isLoading ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Verifying Session...</span>
+                      <span>Signing in...</span>
                     </>
                   ) : (
                     <>
-                      <span>Enter Faculty Studio</span>
+                      <span>Sign In</span>
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}
@@ -515,7 +512,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                 {/* Role Switcher Pill */}
                 <div>
                   <label className="block text-[11px] font-['Raleway'] font-bold uppercase tracking-wider text-stone-600 mb-1.5">
-                    Account Category *
+                    I am a *
                   </label>
                   <div className="grid grid-cols-2 gap-2 bg-[#F4F1EB] p-1 rounded-xl">
                     <button
@@ -528,7 +525,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                       }`}
                     >
                       <GraduationCap className="w-3.5 h-3.5" />
-                      <span>Faculty Member</span>
+                      <span>Teacher</span>
                     </button>
 
                     <button
@@ -554,7 +551,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Dr. Alok Verma"
+                    placeholder="e.g. Alok Verma"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     className="w-full px-3.5 py-2 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Raleway'] font-bold text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
@@ -564,12 +561,12 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                 {/* Email */}
                 <div>
                   <label className="block text-[11px] font-['Raleway'] font-bold uppercase tracking-wider text-stone-600 mb-1">
-                    Institutional Email *
+                    Email Address *
                   </label>
                   <input
                     type="email"
                     required
-                    placeholder="alok.verma@academy.edu"
+                    placeholder="teacher@example.com"
                     value={registerEmail}
                     onChange={(e) => setRegisterEmail(e.target.value)}
                     className="w-full px-3.5 py-2 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Inter'] text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
@@ -580,12 +577,12 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                 {role === 'TUITION_OWNER' ? (
                   <div>
                     <label className="block text-[11px] font-['Raleway'] font-bold uppercase tracking-wider text-stone-600 mb-1">
-                      Coaching / Tuition Academy Name *
+                      Coaching / Academy Name *
                     </label>
                     <input
                       type="text"
                       required
-                      placeholder="e.g. Zenith IIT-JEE Academy"
+                      placeholder="e.g. Zenith Academy"
                       value={instituteName}
                       onChange={(e) => setInstituteName(e.target.value)}
                       className="w-full px-3.5 py-2 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Raleway'] font-bold text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
@@ -594,11 +591,11 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                 ) : (
                   <div>
                     <label className="block text-[11px] font-['Raleway'] font-bold uppercase tracking-wider text-stone-600 mb-1">
-                      Subject Specialization
+                      Subject (e.g. Math, Physics)
                     </label>
                     <input
                       type="text"
-                      placeholder="e.g. Higher Mathematics, Mechanics"
+                      placeholder="e.g. Mathematics"
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
                       className="w-full px-3.5 py-2 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Raleway'] text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
@@ -675,11 +672,11 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                   {isLoading ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Creating Account...</span>
+                      <span>Creating account...</span>
                     </>
                   ) : (
                     <>
-                      <span>Complete Registration</span>
+                      <span>Create Account</span>
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}
@@ -691,19 +688,19 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
             {activeTab === 'forgot' && (
               <form onSubmit={handleForgotSubmit} className="space-y-4">
                 <p className="text-xs text-stone-600 leading-relaxed font-['Raleway']">
-                  Enter your registered institutional email. We will generate password recovery instructions for your workstation.
+                  Enter your email address and we will send you a password reset code.
                 </p>
 
                 <div>
                   <label className="block text-[11px] font-['Raleway'] font-bold uppercase tracking-wider text-stone-600 mb-1">
-                    Email *
+                    Email Address *
                   </label>
                   <div className="relative">
                     <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
                     <input
                       type="email"
                       required
-                      placeholder="faculty@academy.edu"
+                      placeholder="teacher@example.com"
                       value={forgotEmail}
                       onChange={(e) => setForgotEmail(e.target.value)}
                       className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Inter'] text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
@@ -716,7 +713,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                   disabled={isLoading}
                   className="w-full py-2.5 px-4 rounded-xl bg-[var(--brand-electric)] hover:bg-[#0A6FE8] text-white text-xs font-['Raleway'] font-bold shadow-sm transition flex items-center justify-center gap-2"
                 >
-                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Dispatch Reset Token</span>}
+                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Send Reset Code</span>}
                 </button>
 
                 <div className="text-center pt-2">
@@ -735,19 +732,19 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
             {activeTab === 'reset' && (
               <form onSubmit={handleResetSubmit} className="space-y-4">
                 <p className="text-xs text-stone-600 leading-relaxed font-['Raleway']">
-                  Paste the verification token to configure your new password.
+                  Enter the reset code sent to your email to choose a new password.
                 </p>
 
                 <div>
                   <label className="block text-[11px] font-['Raleway'] font-bold uppercase tracking-wider text-stone-600 mb-1">
-                    Reset Token *
+                    Reset Code *
                   </label>
                   <div className="relative">
                     <KeyRound className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
                     <input
                       type="text"
                       required
-                      placeholder="Paste reset token string"
+                      placeholder="Enter reset code"
                       value={resetToken}
                       onChange={(e) => setResetToken(e.target.value)}
                       className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Inter'] font-mono text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
@@ -785,7 +782,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                   disabled={isLoading}
                   className="w-full py-2.5 px-4 rounded-xl bg-[var(--brand-electric)] hover:bg-[#0A6FE8] text-white text-xs font-['Raleway'] font-bold shadow-sm transition flex items-center justify-center gap-2"
                 >
-                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Update Password</span>}
+                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Save New Password</span>}
                 </button>
 
                 <div className="text-center pt-2">
@@ -804,7 +801,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
             <div className="mt-6 pt-4 border-t border-[#F0ECE6] flex items-center justify-between text-xs text-stone-400">
               <span className="font-['Raleway'] font-bold flex items-center gap-1 text-stone-600">
                 <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                <span>Instant Demo:</span>
+                <span>Demo Accounts:</span>
               </span>
               <div className="flex items-center gap-2 text-stone-600 font-semibold text-[11px]">
                 <button
@@ -813,7 +810,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                   disabled={isLoading}
                   className="hover:text-[var(--brand-electric)] hover:underline"
                 >
-                  Faculty
+                  Teacher
                 </button>
                 <span>•</span>
                 <button
@@ -822,7 +819,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                   disabled={isLoading}
                   className="hover:text-[var(--brand-electric)] hover:underline"
                 >
-                  Owner
+                  Tuition Owner
                 </button>
                 <span>•</span>
                 <button
@@ -848,20 +845,20 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
           </div>
 
           {/* Framed Corkboard with 3 realistic sticky notes */}
-          <Corkboard title="Live Academy Noticeboard" className="w-full max-w-xs">
+          <Corkboard title="Noticeboard" className="w-full max-w-xs">
             <div className="space-y-4 pt-1">
               {/* Yellow Note */}
               <StickyNote
                 color="yellow"
                 pinColor="blue"
                 rotation={1.5}
-                title="Class 12 Adv Calculus"
+                title="Class 12 - Mathematics"
               >
                 <p className="text-[11px] font-['Raleway'] font-medium leading-relaxed">
-                  42 students marked present. Automatic SMS triggered to absent guardians.
+                  Today's attendance completed: 38 present, 2 absent.
                 </p>
                 <div className="mt-1.5 text-[9px] font-bold font-['Inter'] text-amber-800">
-                  ● Batch Roll Call Done
+                  Daily Attendance
                 </div>
               </StickyNote>
 
@@ -870,13 +867,13 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                 color="mint"
                 pinColor="red"
                 rotation={-2}
-                title="Bulk Marks Evaluation"
+                title="Weekly Physics Test"
               >
                 <p className="text-[11px] font-['Raleway'] font-medium leading-relaxed">
-                  Physics Mock #4 evaluated in 4 mins. Full batch ranks published.
+                  Marks submitted for Batch A. Average score: 74/100.
                 </p>
                 <div className="mt-1.5 text-[9px] font-bold font-['Inter'] text-emerald-800">
-                  ● 100% Graded
+                  Marks Graded
                 </div>
               </StickyNote>
 
@@ -885,13 +882,13 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                 color="pink"
                 pinColor="green"
                 rotation={1.2}
-                title="White-Label Identity"
+                title="Fee Reminders"
               >
                 <p className="text-[11px] font-['Raleway'] font-medium leading-relaxed">
-                  Tenant-isolated PostgreSQL & Upstash Redis caching layer active.
+                  Monthly fee reminder sent to 8 students with dues.
                 </p>
                 <div className="mt-1.5 text-[9px] font-bold font-['Inter'] text-rose-800">
-                  ● Zero Cross-Academy Leaks
+                  Fee Notices
                 </div>
               </StickyNote>
             </div>
@@ -910,7 +907,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
       <footer className="max-w-7xl w-full mx-auto flex flex-col sm:flex-row items-center justify-between py-3 border-t border-[#E3DFD9] text-[11px] text-stone-500 font-['Raleway']">
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-emerald-600" />
-          <span>Tenant-Isolated Database • Upstash Redis Realtime • Session 2026–27</span>
+          <span>PadhaiPilot • Academic Session 2026–27</span>
         </div>
         <div className="mt-2 sm:mt-0">
           <DeskPetPill />
