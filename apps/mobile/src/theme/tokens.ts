@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 export interface ThemeColors {
   background: string;
   surface: string;
@@ -12,6 +14,8 @@ export interface ThemeColors {
   primary: string;
   primarySubtle: string;
   primaryContrast: string;
+  accent: string;
+  accentSubtle: string;
   success: string;
   successSubtle: string;
   warning: string;
@@ -22,20 +26,23 @@ export interface ThemeColors {
   tabBarBorder: string;
 }
 
+// Light Luxury Educational Palette
 export const lightColors: ThemeColors = {
-  background: '#F9FAFB',
+  background: '#F8FAFC',
   surface: '#FFFFFF',
-  surfaceSubtle: '#F3F4F6',
+  surfaceSubtle: '#F1F5F9',
   surfaceElevated: '#FFFFFF',
-  border: '#E5E7EB',
-  borderSubtle: '#F3F4F6',
-  borderStrong: '#D1D5DB',
-  textPrimary: '#111827',
-  textSecondary: '#4B5563',
-  textMuted: '#9CA3AF',
-  primary: '#1D4ED8',
+  border: '#E2E8F0',
+  borderSubtle: '#F1F5F9',
+  borderStrong: '#CBD5E1',
+  textPrimary: '#0F172A',
+  textSecondary: '#475569',
+  textMuted: '#94A3B8',
+  primary: '#1677FF',
   primarySubtle: '#EFF6FF',
   primaryContrast: '#FFFFFF',
+  accent: '#D97706',
+  accentSubtle: '#FEF3C7',
   success: '#10B981',
   successSubtle: '#ECFDF5',
   warning: '#F59E0B',
@@ -43,31 +50,34 @@ export const lightColors: ThemeColors = {
   error: '#EF4444',
   errorSubtle: '#FEF2F2',
   tabBarBackground: '#FFFFFF',
-  tabBarBorder: '#E5E7EB',
+  tabBarBorder: '#E2E8F0',
 };
 
+// Dark Luxury Control Plane Palette (Aditya Kashid Aesthetic)
 export const darkColors: ThemeColors = {
-  background: '#090A0F',
-  surface: '#11131A',
-  surfaceSubtle: '#181B24',
-  surfaceElevated: '#1F2330',
-  border: '#232733',
-  borderSubtle: '#1C1F2B',
-  borderStrong: '#32384A',
-  textPrimary: '#F3F4F6',
-  textSecondary: '#9CA3AF',
-  textMuted: '#6B7280',
-  primary: '#3B82F6',
-  primarySubtle: '#1E293B',
+  background: '#07090E',
+  surface: '#0D111A',
+  surfaceSubtle: '#131826',
+  surfaceElevated: '#181E30',
+  border: '#1E2536',
+  borderSubtle: '#151A28',
+  borderStrong: '#2B344C',
+  textPrimary: '#F8FAFC',
+  textSecondary: '#94A3B8',
+  textMuted: '#64748B',
+  primary: '#1677FF',
+  primarySubtle: '#0F1E36',
   primaryContrast: '#FFFFFF',
+  accent: '#F59E0B',
+  accentSubtle: '#2A1F0D',
   success: '#10B981',
   successSubtle: '#064E3B',
   warning: '#F59E0B',
   warningSubtle: '#78350F',
   error: '#EF4444',
   errorSubtle: '#7F1D1D',
-  tabBarBackground: '#11131A',
-  tabBarBorder: '#232733',
+  tabBarBackground: '#0D111A',
+  tabBarBorder: '#1E2536',
 };
 
 export const spacing = {
@@ -94,6 +104,31 @@ export const radii = {
 } as const;
 
 export const typography = {
+  fonts: {
+    // 1. Playfair Display — for premium headings and titles
+    display: Platform.select({
+      ios: 'Playfair Display',
+      android: 'serif',
+      default: 'serif',
+    }),
+    // 2. Raleway — for primary interface, labels, buttons, navigation
+    ui: Platform.select({
+      ios: 'Raleway',
+      android: 'sans-serif',
+      default: 'sans-serif',
+    }),
+    uiBold: Platform.select({
+      ios: 'Raleway-Bold',
+      android: 'sans-serif-medium',
+      default: 'sans-serif',
+    }),
+    // 3. Inter — for data, numbers, marks, tables, and compact metadata
+    data: Platform.select({
+      ios: 'Inter',
+      android: 'sans-serif',
+      default: 'monospace',
+    }),
+  },
   sizes: {
     xs: 11,
     sm: 13,
@@ -108,6 +143,7 @@ export const typography = {
     medium: '500' as const,
     semibold: '600' as const,
     bold: '700' as const,
+    heavy: '800' as const,
   },
   lineHeights: {
     xs: 15,
@@ -125,4 +161,3 @@ export const hitSlop = {
   medium: { top: 12, bottom: 12, left: 12, right: 12 },
   large: { top: 16, bottom: 16, left: 16, right: 16 },
 } as const;
-

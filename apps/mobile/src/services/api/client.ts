@@ -60,11 +60,18 @@ class ApiClient {
       headers['Authorization'] = `Bearer ${this.authToken}`;
     }
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+    }, 2500);
+
     try {
       const response = await fetch(url, {
         ...options,
         headers,
+        signal: options.signal || controller.signal,
       });
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         let errorMsg = `Server returned HTTP ${response.status}`;
@@ -88,6 +95,7 @@ class ApiClient {
 
       return (await response.json()) as T;
     } catch (err: unknown) {
+      clearTimeout(timeoutId);
       if (err instanceof ApiError) {
         throw err;
       }

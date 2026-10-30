@@ -13,19 +13,19 @@ interface TabItem {
 
 const TEACHER_TABS: TabItem[] = [
   { key: 'teacher_dashboard', label: 'Home', iconSymbol: '⌂' },
-  { key: 'teacher_marks', label: 'Marks', iconSymbol: '✎' },
-  { key: 'teacher_materials', label: 'Vault', iconSymbol: '▤' },
-  { key: 'teacher_diary', label: 'Diary', iconSymbol: '📓' },
-  { key: 'teacher_profile', label: 'Profile', iconSymbol: '●' },
+  { key: 'teacher_classes', label: 'Classes', iconSymbol: '👥' },
+  { key: 'teacher_attendance', label: 'Attendance', iconSymbol: '✓' },
+  { key: 'teacher_marks', label: 'Marks', iconSymbol: '📊' },
+  { key: 'teacher_learning', label: 'Vault', iconSymbol: '📓' },
+  { key: 'teacher_more', label: 'More', iconSymbol: '⚙' },
 ];
 
 const STUDENT_TABS: TabItem[] = [
   { key: 'student_dashboard', label: 'Home', iconSymbol: '⌂' },
+  { key: 'student_diary', label: 'Vault', iconSymbol: '📓' },
+  { key: 'student_academics', label: 'Tests', iconSymbol: '📝' },
   { key: 'student_results', label: 'Results', iconSymbol: '★' },
-  { key: 'student_materials', label: 'Vault', iconSymbol: '▤' },
-  { key: 'student_attendance', label: 'Attendance', iconSymbol: '✓' },
-  { key: 'student_fees', label: 'Fees', iconSymbol: '₹' },
-  { key: 'student_profile', label: 'Profile', iconSymbol: '●' },
+  { key: 'student_more', label: 'More', iconSymbol: '⚙' },
 ];
 
 export const BottomTabBar: React.FC = () => {
@@ -34,7 +34,7 @@ export const BottomTabBar: React.FC = () => {
   const { session } = useAuthStore();
   const insets = useSafeAreaInsets();
 
-  const isTeacher = session?.user?.role === 'TEACHER' || session?.user?.role === 'TUITION_OWNER';
+  const isTeacher = session?.user?.role === 'TEACHER' || session?.user?.role === 'TUITION_OWNER' || session?.user?.role === 'FACULTY';
   const tabs = isTeacher ? TEACHER_TABS : STUDENT_TABS;
 
   return (
@@ -44,17 +44,19 @@ export const BottomTabBar: React.FC = () => {
         {
           backgroundColor: colors.tabBarBackground,
           borderTopColor: colors.tabBarBorder,
-          paddingBottom: Math.max(insets.bottom, 12),
+          paddingBottom: Math.max(insets.bottom, 10),
         },
       ]}
     >
       {tabs.map((tab) => {
         const isActive =
           currentTab === tab.key ||
+          (tab.key === 'teacher_learning' && (currentTab === 'teacher_diary' || currentTab === 'teacher_materials')) ||
+          (tab.key === 'teacher_more' && currentTab === 'teacher_profile') ||
           (tab.key === 'student_dashboard' && currentTab === 'dashboard') ||
-          (tab.key === 'student_results' && currentTab === 'results') ||
-          (tab.key === 'student_attendance' && currentTab === 'attendance') ||
-          (tab.key === 'student_profile' && currentTab === 'profile');
+          (tab.key === 'student_diary' && currentTab === 'student_materials') ||
+          (tab.key === 'student_results' && (currentTab === 'results' || currentTab === 'student_attendance' || currentTab === 'attendance')) ||
+          (tab.key === 'student_more' && (currentTab === 'student_fees' || currentTab === 'student_profile' || currentTab === 'profile'));
 
         const color = isActive ? colors.primary : colors.textMuted;
 
@@ -71,18 +73,27 @@ export const BottomTabBar: React.FC = () => {
               { opacity: pressed ? 0.7 : 1 },
             ]}
           >
-            <Text
+            <View
               style={[
-                styles.icon,
-                {
-                  color,
-                  fontSize: 16,
-                  fontWeight: isActive ? '700' : '400',
+                styles.iconContainer,
+                isActive && {
+                  backgroundColor: colors.primarySubtle,
+                  borderRadius: 12,
                 },
               ]}
             >
-              {tab.iconSymbol}
-            </Text>
+              <Text
+                style={[
+                  styles.icon,
+                  {
+                    color,
+                    fontSize: 16,
+                  },
+                ]}
+              >
+                {tab.iconSymbol}
+              </Text>
+            </View>
             <Text
               style={[
                 styles.label,
@@ -90,6 +101,7 @@ export const BottomTabBar: React.FC = () => {
                   color,
                   fontSize: 10,
                   fontWeight: isActive ? '700' : '500',
+                  fontFamily: typography.fonts.ui,
                 },
               ]}
             >
@@ -105,21 +117,32 @@ export const BottomTabBar: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    borderTopWidth: 1,
-    paddingTop: 8,
-    minHeight: 56,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: 6,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
   },
   tabButton: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
-    minHeight: 44,
+    paddingVertical: 2,
+  },
+  iconContainer: {
+    width: 32,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
   },
   icon: {
     textAlign: 'center',
   },
   label: {
     textAlign: 'center',
+    letterSpacing: 0.2,
   },
 });

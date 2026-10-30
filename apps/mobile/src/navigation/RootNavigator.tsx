@@ -3,18 +3,21 @@ import { View, StyleSheet } from 'react-native';
 import { useAuthStore } from '../store/useAuthStore';
 import { useNavigationStore } from '../store/useNavigationStore';
 import { LoginScreen } from '../features/auth/screens/LoginScreen';
-import { DashboardScreen } from '../features/dashboard/screens/DashboardScreen';
-import { AttendanceScreen } from '../features/attendance/screens/AttendanceScreen';
-import { ResultsScreen } from '../features/results/screens/ResultsScreen';
-import { ProfileScreen } from '../features/profile/screens/ProfileScreen';
-import { StudyMaterialScreen } from '../features/student/StudyMaterialScreen';
-import { FeesScreen } from '../features/student/FeesScreen';
 
+// Teacher Screens
 import { TeacherDashboardScreen } from '../features/teacher/TeacherDashboardScreen';
+import { TeacherClassesScreen } from '../features/teacher/TeacherClassesScreen';
+import { TeacherAttendanceScreen } from '../features/teacher/TeacherAttendanceScreen';
 import { BulkMarksEntryScreen } from '../features/teacher/BulkMarksEntryScreen';
-import { TeacherStudyMaterialScreen } from '../features/teacher/TeacherStudyMaterialScreen';
 import { TeachingDiaryScreen } from '../features/teacher/TeachingDiaryScreen';
-import { TeacherProfileScreen } from '../features/teacher/TeacherProfileScreen';
+import { TeacherMoreScreen } from '../features/teacher/TeacherMoreScreen';
+
+// Student Screens
+import { DashboardScreen } from '../features/dashboard/screens/DashboardScreen';
+import { StudentDiaryScreen } from '../features/student/StudentDiaryScreen';
+import { StudentAcademicsScreen } from '../features/student/StudentAcademicsScreen';
+import { ResultsScreen } from '../features/results/screens/ResultsScreen';
+import { StudentMoreScreen } from '../features/student/StudentMoreScreen';
 
 import { BottomTabBar } from './BottomTabBar';
 import { useTheme } from '../theme/ThemeContext';
@@ -24,7 +27,11 @@ export const RootNavigator: React.FC = () => {
   const { isAuthenticated, session } = useAuthStore();
   const { currentTab, setTab } = useNavigationStore();
 
-  const isTeacher = session?.user?.role === 'TEACHER' || session?.user?.role === 'TUITION_OWNER';
+  const isTeacher =
+    session?.user?.role === 'TEACHER' ||
+    session?.user?.role === 'TUITION_OWNER' ||
+    session?.user?.role === 'FACULTY' ||
+    session?.user?.role === 'INSTITUTE_MANAGER';
 
   // Automatically ensure initial tab aligns with user role
   useEffect(() => {
@@ -42,41 +49,53 @@ export const RootNavigator: React.FC = () => {
   }
 
   const renderActiveScreen = () => {
+    // ------------------------------------------------------------------------
+    // TEACHER / FACULTY MOBILE EXPERIENCE
+    // ------------------------------------------------------------------------
     if (isTeacher) {
       switch (currentTab) {
         case 'teacher_dashboard':
           return <TeacherDashboardScreen />;
+        case 'teacher_classes':
+          return <TeacherClassesScreen />;
+        case 'teacher_attendance':
+          return <TeacherAttendanceScreen />;
         case 'teacher_marks':
           return <BulkMarksEntryScreen />;
-        case 'teacher_materials':
-          return <TeacherStudyMaterialScreen />;
+        case 'teacher_learning':
         case 'teacher_diary':
+        case 'teacher_materials':
           return <TeachingDiaryScreen />;
+        case 'teacher_more':
         case 'teacher_profile':
-          return <TeacherProfileScreen />;
+          return <TeacherMoreScreen />;
         default:
           return <TeacherDashboardScreen />;
       }
     }
 
-    // Student Portal
+    // ------------------------------------------------------------------------
+    // STUDENT MOBILE EXPERIENCE
+    // ------------------------------------------------------------------------
     switch (currentTab) {
       case 'student_dashboard':
       case 'dashboard':
         return <DashboardScreen />;
+      case 'student_diary':
+      case 'student_materials':
+        return <StudentDiaryScreen />;
+      case 'student_academics':
+        return <StudentAcademicsScreen />;
       case 'student_results':
       case 'results':
-        return <ResultsScreen />;
-      case 'student_materials':
-        return <StudyMaterialScreen />;
       case 'student_attendance':
       case 'attendance':
-        return <AttendanceScreen />;
+        return <ResultsScreen />;
+      case 'student_more':
       case 'student_fees':
-        return <FeesScreen />;
       case 'student_profile':
       case 'profile':
-        return <ProfileScreen />;
+        return <StudentMoreScreen />;
       default:
         return <DashboardScreen />;
     }

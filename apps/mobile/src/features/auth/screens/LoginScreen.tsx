@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   View,
+  Text,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
@@ -18,35 +19,99 @@ import { useNavigationStore } from '../../../store/useNavigationStore';
 import { useTheme } from '../../../theme/ThemeContext';
 
 type ActiveRole = 'STUDENT' | 'TEACHER';
+type AuthMode = 'SIGN_IN' | 'REGISTER' | 'FORGOT_PASSWORD';
 
 export const LoginScreen: React.FC = () => {
-  const { colors, spacing, radii } = useTheme();
-  const { login, loginDemo, loginDemoTeacher, isLoading, error, clearError } = useAuthStore();
+  const { colors, spacing, radii, typography } = useTheme();
+  const {
+    login,
+    registerStudent,
+    registerTeacher,
+    forgotPassword,
+    loginDemo,
+    loginDemoTeacher,
+    isLoading,
+    error,
+    clearError,
+  } = useAuthStore();
   const { setTab } = useNavigationStore();
 
   const [activeRole, setActiveRole] = useState<ActiveRole>('STUDENT');
-  const [identifier, setIdentifier] = useState('');
-  const [password, setPassword] = useState('');
-  const [formError, setFormError] = useState<string | null>(null);
+  const [authMode, setAuthMode] = useState<AuthMode>('SIGN_IN');
 
-  const handleLogin = async () => {
+  // Form Fields
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [invitationCode, setInvitationCode] = useState('');
+  const [subject, setSubject] = useState('');
+
+  const [formError, setFormError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  const handleSubmit = async () => {
     setFormError(null);
+    setSuccessMsg(null);
     clearError();
 
-    const cleanId = identifier.trim();
-    if (!cleanId) {
-      setFormError('Please enter your email or registered phone number.');
-      return;
-    }
-    if (!password) {
-      setFormError('Please enter your password.');
+    const cleanEmail = email.trim();
+    if (!cleanEmail) {
+      setFormError('Email address is required.');
       return;
     }
 
+    if (authMode === 'FORGOT_PASSWORD') {
+      try {
+        const res = await forgotPassword(cleanEmail);
+        setSuccessMsg(res.message || 'Password reset link sent to your registered email.');
+      } catch {
+        // error stored in zustand
+      }
+      return;
+    }
+
+    if (!password) {
+      setFormError('Password is required.');
+      return;
+    }
+
+    if (authMode === 'REGISTER') {
+      if (!fullName.trim()) {
+        setFormError('Full name is required.');
+        return;
+      }
+
+      if (activeRole === 'STUDENT') {
+        try {
+          await registerStudent({
+            fullName: fullName.trim(),
+            email: cleanEmail,
+            password,
+            phone: phone.trim() || undefined,
+            invitationCode: invitationCode.trim() || undefined,
+          });
+          setTab('student_dashboard');
+        } catch {}
+      } else {
+        try {
+          await registerTeacher({
+            fullName: fullName.trim(),
+            email: cleanEmail,
+            password,
+            phone: phone.trim() || undefined,
+            subject: subject.trim() || 'General Faculty',
+          });
+          setTab('teacher_dashboard');
+        } catch {}
+      }
+      return;
+    }
+
+    // SIGN_IN mode
     try {
       await login({
-        email: cleanId.includes('@') ? cleanId : undefined,
-        phone: !cleanId.includes('@') ? cleanId : undefined,
+        email: cleanEmail,
         password,
       });
 
@@ -62,24 +127,22 @@ export const LoginScreen: React.FC = () => {
 
   const handleDemoStudentLogin = async () => {
     setFormError(null);
+    setSuccessMsg(null);
     clearError();
     try {
       await loginDemo();
       setTab('student_dashboard');
-    } catch {
-      // Error handled
-    }
+    } catch {}
   };
 
   const handleDemoTeacherLogin = async () => {
     setFormError(null);
+    setSuccessMsg(null);
     clearError();
     try {
       await loginDemoTeacher();
       setTab('teacher_dashboard');
-    } catch {
-      // Error handled
-    }
+    } catch {}
   };
 
   return (
@@ -100,49 +163,47 @@ export const LoginScreen: React.FC = () => {
                 { backgroundColor: colors.primary, borderRadius: radii.md },
               ]}
             >
-              <Label style={{ color: colors.primaryContrast, fontSize: 18, fontWeight: 'bold' }}>
-                P
-              </Label>
+              <Text style={[styles.brandLogoText, { fontFamily: typography.fonts.display }]}>P</Text>
             </View>
-            <Title style={{ marginTop: spacing.sm, marginBottom: spacing.xxs }}>PadhaiPilot</Title>
-            <Caption>
-              {activeRole === 'STUDENT'
-                ? 'Student Academic Portal'
-                : 'Faculty & Teacher Administration'}
+            <Title style={{ fontFamily: typography.fonts.display, textAlign: 'center' }}>
+              PadhaiPilot
+            </Title>
+            <Caption style={{ textAlign: 'center', color: colors.textMuted, marginTop: spacing.xs }}>
+              Unified Tuition & Academic Mobile Suite
             </Caption>
           </View>
 
-          {/* Role Segmented Selector */}
+          {/* Role Selector Tabs */}
           <View
             style={[
-              styles.segmentedContainer,
+              styles.roleSelector,
               {
                 backgroundColor: colors.surfaceSubtle,
-                borderColor: colors.border,
                 borderRadius: radii.lg,
-                marginBottom: spacing.xl,
+                padding: spacing.xs,
+                marginBottom: spacing.lg,
               },
             ]}
           >
             <Pressable
               onPress={() => {
                 setActiveRole('STUDENT');
-                setIdentifier('');
-                setPassword('');
+                clearError();
                 setFormError(null);
               }}
               style={[
-                styles.segmentedBtn,
+                styles.roleTab,
                 {
-                  backgroundColor: activeRole === 'STUDENT' ? colors.primary : 'transparent',
                   borderRadius: radii.md,
+                  backgroundColor: activeRole === 'STUDENT' ? colors.surface : 'transparent',
                 },
               ]}
             >
               <Label
                 style={{
-                  color: activeRole === 'STUDENT' ? colors.primaryContrast : colors.textSecondary,
-                  fontSize: 12,
+                  color: activeRole === 'STUDENT' ? colors.primary : colors.textMuted,
+                  fontWeight: activeRole === 'STUDENT' ? '700' : '500',
+                  fontFamily: typography.fonts.ui,
                 }}
               >
                 Student Portal
@@ -152,100 +213,227 @@ export const LoginScreen: React.FC = () => {
             <Pressable
               onPress={() => {
                 setActiveRole('TEACHER');
-                setIdentifier('');
-                setPassword('');
+                clearError();
                 setFormError(null);
               }}
               style={[
-                styles.segmentedBtn,
+                styles.roleTab,
                 {
-                  backgroundColor: activeRole === 'TEACHER' ? colors.primary : 'transparent',
                   borderRadius: radii.md,
+                  backgroundColor: activeRole === 'TEACHER' ? colors.surface : 'transparent',
                 },
               ]}
             >
               <Label
                 style={{
-                  color: activeRole === 'TEACHER' ? colors.primaryContrast : colors.textSecondary,
-                  fontSize: 12,
+                  color: activeRole === 'TEACHER' ? colors.primary : colors.textMuted,
+                  fontWeight: activeRole === 'TEACHER' ? '700' : '500',
+                  fontFamily: typography.fonts.ui,
                 }}
               >
-                Faculty Portal
+                Teacher / Faculty
               </Label>
             </Pressable>
           </View>
 
-          {/* Form */}
-          <View style={[styles.form, { marginBottom: spacing.xl }]}>
-            <Input
-              label={activeRole === 'STUDENT' ? 'Student Email or Mobile' : 'Faculty Work Email'}
-              placeholder={
-                activeRole === 'STUDENT'
-                  ? 'e.g. student@padhaipilot.com'
-                  : 'e.g. teacher@padhaipilot.com'
-              }
-              value={identifier}
-              onChangeText={(text) => {
-                setIdentifier(text);
-                if (formError) setFormError(null);
-              }}
-              autoCapitalize="none"
-              keyboardType="email-address"
-            />
+          {/* Authentication Card */}
+          <Card style={[styles.formCard, { padding: spacing.xl, borderRadius: radii.xl }]}>
+            <View style={styles.cardHeader}>
+              <Subtitle style={{ fontFamily: typography.fonts.display, fontSize: typography.sizes.lg }}>
+                {authMode === 'SIGN_IN' && `Sign In as ${activeRole === 'STUDENT' ? 'Student' : 'Faculty'}`}
+                {authMode === 'REGISTER' && `New ${activeRole === 'STUDENT' ? 'Student' : 'Faculty'} Account`}
+                {authMode === 'FORGOT_PASSWORD' && 'Reset Password'}
+              </Subtitle>
+              <Badge
+                variant={activeRole === 'STUDENT' ? 'primary' : 'warning'}
+                label={activeRole === 'STUDENT' ? 'Classroom' : 'Faculty Pass'}
+              />
+            </View>
 
-            <Input
-              label="Password"
-              placeholder="Enter your account password"
-              value={password}
-              onChangeText={(text) => {
-                setPassword(text);
-                if (formError) setFormError(null);
-              }}
-              secureTextEntry
-            />
-
+            {/* Error or Success Alert */}
             {(formError || error) && (
-              <Caption color={colors.error} style={{ marginBottom: spacing.md }}>
-                {formError || error}
-              </Caption>
+              <View
+                style={[
+                  styles.alertBox,
+                  { backgroundColor: colors.errorSubtle, borderRadius: radii.md },
+                ]}
+              >
+                <Caption style={{ color: colors.error, fontWeight: '600' }}>
+                  {formError || error}
+                </Caption>
+              </View>
             )}
 
+            {successMsg && (
+              <View
+                style={[
+                  styles.alertBox,
+                  { backgroundColor: colors.successSubtle, borderRadius: radii.md },
+                ]}
+              >
+                <Caption style={{ color: colors.success, fontWeight: '600' }}>
+                  {successMsg}
+                </Caption>
+              </View>
+            )}
+
+            {/* Registration Fields */}
+            {authMode === 'REGISTER' && (
+              <View style={[styles.inputGroup, { marginBottom: spacing.md }]}>
+                <Input
+                  label="Full Name"
+                  placeholder="e.g. Aarav Patel"
+                  value={fullName}
+                  onChangeText={setFullName}
+                  autoCapitalize="words"
+                />
+              </View>
+            )}
+
+            {/* Universal Email Input */}
+            <View style={[styles.inputGroup, { marginBottom: spacing.md }]}>
+              <Input
+                label="Registered Email"
+                placeholder={activeRole === 'STUDENT' ? 'student@padhaipilot.com' : 'teacher@padhaipilot.com'}
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+
+            {/* Phone (optional during registration) */}
+            {authMode === 'REGISTER' && (
+              <View style={[styles.inputGroup, { marginBottom: spacing.md }]}>
+                <Input
+                  label="Contact Phone (Optional)"
+                  placeholder="+91 98765 43210"
+                  value={phone}
+                  onChangeText={setPhone}
+                  keyboardType="phone-pad"
+                />
+              </View>
+            )}
+
+            {/* Invitation Code (Students) or Subject (Teachers) */}
+            {authMode === 'REGISTER' && activeRole === 'STUDENT' && (
+              <View style={[styles.inputGroup, { marginBottom: spacing.md }]}>
+                <Input
+                  label="Tuition Invitation Code (Optional)"
+                  placeholder="e.g. APEX-JEE-2026"
+                  value={invitationCode}
+                  onChangeText={setInvitationCode}
+                  autoCapitalize="characters"
+                />
+              </View>
+            )}
+
+            {authMode === 'REGISTER' && activeRole === 'TEACHER' && (
+              <View style={[styles.inputGroup, { marginBottom: spacing.md }]}>
+                <Input
+                  label="Primary Teaching Subject"
+                  placeholder="e.g. Mathematics / Physics"
+                  value={subject}
+                  onChangeText={setSubject}
+                />
+              </View>
+            )}
+
+            {/* Password Field (except in forgot password mode) */}
+            {authMode !== 'FORGOT_PASSWORD' && (
+              <View style={[styles.inputGroup, { marginBottom: spacing.md }]}>
+                <Input
+                  label="Password"
+                  placeholder="••••••••••••"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                />
+              </View>
+            )}
+
+            {/* Action Button */}
             <Button
-              title={activeRole === 'STUDENT' ? 'Sign In as Student' : 'Sign In as Faculty'}
-              onPress={handleLogin}
+              title={
+                isLoading
+                  ? 'Verifying...'
+                  : authMode === 'SIGN_IN'
+                  ? 'Sign In to Workspace'
+                  : authMode === 'REGISTER'
+                  ? 'Create Verified Account'
+                  : 'Send Reset Link'
+              }
+              onPress={handleSubmit}
               loading={isLoading}
-              size="lg"
-              style={{ marginTop: spacing.xs }}
+              variant="primary"
+              style={{ marginTop: spacing.sm }}
             />
-          </View>
 
-          {/* 1-Tap Quick Demo Access */}
-          <View
-            style={[
-              styles.demoContainer,
-              { borderColor: colors.borderSubtle, paddingTop: spacing.lg },
-            ]}
-          >
-            {activeRole === 'STUDENT' ? (
-              <Button
-                title="Try Demo Student Account"
-                variant="secondary"
-                onPress={handleDemoStudentLogin}
-                loading={isLoading}
-                size="md"
-              />
-            ) : (
-              <Button
-                title="Try Demo Faculty Account"
-                variant="secondary"
-                onPress={handleDemoTeacherLogin}
-                loading={isLoading}
-                size="md"
-              />
-            )}
-            <Caption align="center" style={{ marginTop: spacing.xs }}>
-              Instant one-tap preview with real academic test evaluations
+            {/* Toggles between Sign In, Register, Forgot Password */}
+            <View style={[styles.toggleContainer, { marginTop: spacing.lg }]}>
+              {authMode === 'SIGN_IN' ? (
+                <>
+                  <Pressable
+                    onPress={() => {
+                      setAuthMode('FORGOT_PASSWORD');
+                      setFormError(null);
+                      setSuccessMsg(null);
+                    }}
+                  >
+                    <Caption style={{ color: colors.primary, fontWeight: '600' }}>
+                      Forgot Password?
+                    </Caption>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => {
+                      setAuthMode('REGISTER');
+                      setFormError(null);
+                      setSuccessMsg(null);
+                    }}
+                  >
+                    <Caption style={{ color: colors.primary, fontWeight: '600' }}>
+                      New user? Register here
+                    </Caption>
+                  </Pressable>
+                </>
+              ) : (
+                <Pressable
+                  onPress={() => {
+                    setAuthMode('SIGN_IN');
+                    setFormError(null);
+                    setSuccessMsg(null);
+                  }}
+                  style={{ alignSelf: 'center' }}
+                >
+                  <Caption style={{ color: colors.primary, fontWeight: '600' }}>
+                    Already have an account? Sign In
+                  </Caption>
+                </Pressable>
+              )}
+            </View>
+          </Card>
+
+          {/* Quick Demo Access Bar */}
+          <View style={[styles.demoSection, { marginTop: spacing.xl }]}>
+            <Caption style={{ textAlign: 'center', color: colors.textMuted, marginBottom: spacing.sm }}>
+              Instant Demo Access for Testing
             </Caption>
+            <View style={styles.demoButtonsRow}>
+              <Button
+                title="⚡ Demo Student (Aarav)"
+                variant="outline"
+                size="small"
+                onPress={handleDemoStudentLogin}
+                style={{ flex: 1, marginRight: spacing.xs }}
+              />
+              <Button
+                title="⚡ Demo Faculty (Prof. Sharma)"
+                variant="outline"
+                size="small"
+                onPress={handleDemoTeacherLogin}
+                style={{ flex: 1, marginLeft: spacing.xs }}
+              />
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -265,27 +453,56 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   brandLogo: {
-    width: 44,
-    height: 44,
+    width: 52,
+    height: 52,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 8,
+    elevation: 4,
+    shadowColor: '#1677FF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
-  segmentedContainer: {
+  brandLogoText: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  roleSelector: {
     flexDirection: 'row',
-    padding: 4,
-    borderWidth: 1,
   },
-  segmentedBtn: {
+  roleTab: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  form: {
+  formCard: {
+    elevation: 2,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  alertBox: {
+    padding: 10,
+    marginBottom: 12,
+  },
+  inputGroup: {
     width: '100%',
   },
-  demoContainer: {
+  toggleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  demoSection: {
     width: '100%',
-    borderTopWidth: 1,
+  },
+  demoButtonsRow: {
+    flexDirection: 'row',
   },
 });
