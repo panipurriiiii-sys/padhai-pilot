@@ -78,7 +78,7 @@ export function SettingsView({ user, onUpdateUser, onLogout }: SettingsViewProps
             Faculty Account & Settings
           </h1>
           <p className="text-xs sm:text-sm text-stone-500 mt-1 font-['Raleway']">
-            Manage your personal profile, institutional credentials, security settings, and notifications.
+            Manage your profile, login credentials, and account settings.
           </p>
         </div>
 

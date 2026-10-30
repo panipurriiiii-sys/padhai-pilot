@@ -524,7 +524,7 @@ export function DailyTeachingDiaryView({
                 {previewEntry.referenceLinks && previewEntry.referenceLinks.length > 0 && (
                   <div>
                     <span className="text-[10px] font-['Raleway'] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
-                      Curated Study References
+                      Study Material & Notes
                     </span>
                     <div className="mt-1.5 space-y-1">
                       {previewEntry.referenceLinks.map((link, idx) => (

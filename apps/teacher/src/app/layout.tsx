@@ -24,8 +24,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'PadhaiPilot — Faculty Studio & Teacher Portal',
-  description: 'Tactile Academic Workspace for Educators and Coaching Academies',
+  title: 'PadhaiPilot — Teacher Portal',
+  description: 'PadhaiPilot — Portal for Teachers and Coaching Institutes',
 };
 
 export default function RootLayout({

@@ -150,7 +150,7 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
           </h2>
           <p className="text-[var(--ink-secondary)] text-[11px] mt-0.5 font-['Raleway']">
             {mode === 'login' && 'Sign in to access your academy, faculty records, or classroom'}
-            {mode === 'register' && 'Create your teacher profile or join with an institutional code'}
+            {mode === 'register' && 'Create your teacher profile or join your coaching academy'}
             {mode === 'forgot' && 'Reset your account password securely'}
             {mode === 'reset' && 'Enter your authorization token and set a new password'}
           </p>

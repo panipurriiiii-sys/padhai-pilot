@@ -6,7 +6,7 @@ import React from 'react';
 export function Corkboard({
   children,
   className = '',
-  title = 'Faculty Pinboard',
+  title = 'Noticeboard',
 }: {
   children: React.ReactNode;
   className?: string;
@@ -156,9 +156,9 @@ export function DeskPetPill({ className = '' }: { className?: string }) {
       className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/95 backdrop-blur-md border border-[#E3DFD9] shadow-[0_2px_8px_rgba(60,52,40,0.08)] select-none text-xs font-['Raleway'] font-semibold text-stone-700 transition-all hover:shadow-md ${className}`}
     >
       <span className="w-2 h-2 rounded-full bg-[#1677FF] animate-pulse" />
-      <span className="font-['Inter'] font-semibold text-stone-800">Faculty Studio</span>
+      <span className="font-['Inter'] font-semibold text-stone-800">PadhaiPilot</span>
       <span className="text-stone-300 font-normal">·</span>
-      <span className="text-stone-500 text-[11px]">Desk Online ☕</span>
+      <span className="text-stone-500 text-[11px]">Online</span>
     </div>
   );
 }

@@ -138,7 +138,7 @@ export function Sidebar({
               </span>
             </div>
             <p className="text-[10px] font-['Raleway'] font-bold text-[var(--brand-electric)] uppercase tracking-widest">
-              Tuition & Faculty OS
+              Teacher Portal
             </p>
           </div>
         </div>

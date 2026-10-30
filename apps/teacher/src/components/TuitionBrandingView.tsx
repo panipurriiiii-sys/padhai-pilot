@@ -80,7 +80,7 @@ export function TuitionBrandingView() {
         <div>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-['Raleway'] font-bold uppercase tracking-widest text-[var(--brand-electric)]">
-              Tuition Owner • Institutional Identity & White-label Settings
+              Tuition Owner • Academy Branding & Information
             </span>
             <span className="badge-code font-['Inter'] text-[10px]">BRANDING ENGINE</span>
           </div>
