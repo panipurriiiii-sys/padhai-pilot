@@ -2,6 +2,7 @@ import {
   StudentAssessmentResult,
   InAppNotification,
   UserSession,
+  StudyMaterialItem,
 } from '@padhai-pilot/shared';
 
 function getCleanApiBaseUrl(): string {
@@ -145,6 +146,25 @@ export const studentApi = {
       await request(`/assessment/student/notifications/${id}/read`, { method: 'PUT' });
     } catch {
       // Ignored
+    }
+  },
+
+  // 3. Study Materials & Notes (Served directly from Cloudflare Media Host CDN)
+  async getStudyMaterials(batchId?: string, category?: string): Promise<StudyMaterialItem[]> {
+    try {
+      const params = new URLSearchParams();
+      if (batchId && batchId !== 'ALL') params.set('batchId', batchId);
+      if (category && category !== 'ALL') params.set('category', category);
+      const query = params.toString() ? `?${params.toString()}` : '';
+      return await request<StudyMaterialItem[]>(`/assessment/student/materials${query}`);
+    } catch {
+      // Fallback try tuition endpoint
+      try {
+        const query = batchId && batchId !== 'ALL' ? `?batchId=${batchId}` : '';
+        return await request<StudyMaterialItem[]>(`/tuition/materials${query}`);
+      } catch {
+        return [];
+      }
     }
   },
 };

@@ -1252,6 +1252,68 @@ export class TuitionService {
     }));
   }
 
+  async getStudentStudyMaterials(
+    user: AuthenticatedUser,
+    batchId?: string,
+  ): Promise<StudyMaterialItem[]> {
+    if (!this.prisma.isConnected) {
+      return this.memMaterials.filter((m) => {
+        if (!m.isStudentVisible || m.status !== 'PUBLISHED') return false;
+        if (batchId && m.batchId !== batchId) return false;
+        return true;
+      });
+    }
+
+    const enrollments = await this.prisma.enrollment.findMany({
+      where: {
+        studentId: user.id,
+        instituteId: user.instituteId,
+      },
+      select: { batchId: true },
+    });
+    const enrolledBatchIds = enrollments.map((e) => e.batchId);
+
+    const materials = await this.prisma.studyMaterial.findMany({
+      where: {
+        instituteId: user.instituteId,
+        isStudentVisible: true,
+        status: 'PUBLISHED',
+        ...(batchId
+          ? { batchId }
+          : enrolledBatchIds.length > 0
+            ? { batchId: { in: enrolledBatchIds } }
+            : {}),
+      },
+      include: {
+        batch: { select: { id: true, name: true } },
+        faculty: { select: { id: true, fullName: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return materials.map((m) => ({
+      id: m.id,
+      instituteId: m.instituteId,
+      batchId: m.batchId,
+      batchName: m.batch.name,
+      facultyId: m.facultyId,
+      facultyName: m.faculty.fullName,
+      title: m.title,
+      category: m.category as any,
+      subject: m.subject,
+      chapter: m.chapter || undefined,
+      content: m.content || undefined,
+      fileUrl: m.fileUrl || undefined,
+      fileName: m.fileName || undefined,
+      fileSize: m.fileSize || undefined,
+      status: m.status as any,
+      isStudentVisible: m.isStudentVisible,
+      downloadCount: m.downloadCount,
+      createdAt: m.createdAt.toISOString(),
+      updatedAt: m.updatedAt.toISOString(),
+    }));
+  }
+
   async createStudyMaterial(
     instituteId: string,
     facultyUserId: string,

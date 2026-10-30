@@ -1124,6 +1124,92 @@ export class AssessmentService {
     return { success: true };
   }
 
+  async getStudentStudyMaterials(
+    studentUser: AuthenticatedUser,
+    batchId?: string,
+    category?: string,
+  ): Promise<any[]> {
+    if (this.prisma.isConnected) {
+      const enrollments = await this.prisma.enrollment.findMany({
+        where: { studentId: studentUser.id, instituteId: studentUser.instituteId },
+        select: { batchId: true },
+      });
+      const enrolledBatchIds = enrollments.map((e) => e.batchId);
+
+      const materials = await this.prisma.studyMaterial.findMany({
+        where: {
+          instituteId: studentUser.instituteId,
+          isStudentVisible: true,
+          status: 'PUBLISHED',
+          ...(batchId
+            ? { batchId }
+            : enrolledBatchIds.length > 0
+              ? { batchId: { in: enrolledBatchIds } }
+              : {}),
+          ...(category && category !== 'ALL' ? { category: category as any } : {}),
+        },
+        include: {
+          batch: { select: { id: true, name: true } },
+          faculty: { select: { id: true, fullName: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      return materials.map((m) => ({
+        id: m.id,
+        instituteId: m.instituteId,
+        batchId: m.batchId,
+        batchName: m.batch.name,
+        facultyId: m.facultyId,
+        facultyName: m.faculty.fullName,
+        title: m.title,
+        category: m.category,
+        subject: m.subject,
+        chapter: m.chapter || undefined,
+        content: m.content || undefined,
+        fileUrl: m.fileUrl || undefined,
+        fileName: m.fileName || undefined,
+        fileSize: m.fileSize || undefined,
+        status: m.status,
+        isStudentVisible: m.isStudentVisible,
+        downloadCount: m.downloadCount,
+        createdAt: m.createdAt.toISOString(),
+        updatedAt: m.updatedAt.toISOString(),
+      }));
+    }
+
+    // Memory Store fallback
+    const list = [
+      {
+        id: 'mat_01',
+        instituteId: 'inst_apex_academy',
+        batchId: 'btc_jee_math_adv',
+        batchName: 'JEE Advanced — Mathematics Alpha',
+        facultyId: 'usr_teacher_sharma',
+        facultyName: 'Prof. Rajesh Sharma',
+        title: 'Definite Integrals — Comprehensive Theory & 50 Solved JEE Advanced Models',
+        category: 'CHAPTER_NOTES',
+        subject: 'Mathematics',
+        chapter: 'Definite Integration',
+        content: 'Complete analytical notes covering King property, Leibniz integral rule, and Walli formula.',
+        fileUrl: 'https://media-hosting.dhyeyp254.workers.dev/1793335828256.json',
+        fileName: 'Definite_Integrals_JEE_Adv_Notes.pdf',
+        fileSize: '3.8 MB',
+        status: 'PUBLISHED',
+        isStudentVisible: true,
+        downloadCount: 68,
+        createdAt: '2026-10-28T10:00:00.000Z',
+        updatedAt: '2026-10-28T10:00:00.000Z',
+      },
+    ];
+
+    return list.filter((m) => {
+      if (batchId && m.batchId !== batchId) return false;
+      if (category && category !== 'ALL' && m.category !== category) return false;
+      return true;
+    });
+  }
+
   // -------------------------------------------------------------
   // HELPER METHODS & PERMISSION CHECKS
   // -------------------------------------------------------------

@@ -120,6 +120,15 @@ export class AssessmentController {
     return this.assessmentService.getStudentNotifications(user);
   }
 
+  @Get('student/materials')
+  async getStudentMaterials(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('batchId') batchId?: string,
+    @Query('category') category?: string,
+  ) {
+    return this.assessmentService.getStudentStudyMaterials(user, batchId, category);
+  }
+
   @Put('student/notifications/:id/read')
   async markNotificationRead(
     @Param('id') id: string,

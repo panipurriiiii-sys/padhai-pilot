@@ -48,6 +48,19 @@ export interface FeeReceiptItem {
   receiptNumber?: string;
 }
 
+export interface MobileStudyMaterialItem {
+  id: string;
+  title: string;
+  category: string;
+  subject: string;
+  chapter?: string;
+  content?: string;
+  fileUrl?: string;
+  fileName?: string;
+  fileSize?: string;
+  createdAt: string;
+}
+
 export const studentService = {
   async getAttendance(): Promise<AttendanceSummary> {
     try {
@@ -83,6 +96,20 @@ export const studentService = {
       return Array.isArray(res) ? res : [];
     } catch {
       return [];
+    }
+  },
+
+  async getMaterials(): Promise<MobileStudyMaterialItem[]> {
+    try {
+      const res = await apiClient.get<MobileStudyMaterialItem[]>('/assessment/student/materials');
+      return Array.isArray(res) ? res : [];
+    } catch {
+      try {
+        const fallback = await apiClient.get<MobileStudyMaterialItem[]>('/tuition/materials');
+        return Array.isArray(fallback) ? fallback : [];
+      } catch {
+        return [];
+      }
     }
   },
 };

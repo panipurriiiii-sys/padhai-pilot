@@ -188,6 +188,9 @@ export class TuitionController {
     @CurrentUser() user: AuthenticatedUser,
     @Query('batchId') batchId?: string,
   ) {
+    if (user.role === 'STUDENT') {
+      return this.tuitionService.getStudentStudyMaterials(user, batchId);
+    }
     return this.tuitionService.getStudyMaterials(user.instituteId, batchId);
   }
 

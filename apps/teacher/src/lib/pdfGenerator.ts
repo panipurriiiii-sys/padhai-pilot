@@ -243,3 +243,4 @@ export function downloadAssessmentResultPdf(options: GeneratePdfOptions, filenam
   const finalName = filename || `Result_Sheet_${cleanTitle}.pdf`;
   doc.save(finalName);
 }
+
