@@ -14,10 +14,7 @@ async function bootstrapServer(): Promise<Express> {
     const app = await NestFactory.create(AppModule, new ExpressAdapter(server));
     app.use(cookieParser());
     app.enableCors({
-      origin: (_origin, callback) => {
-        // Allow all requesting origins dynamically (including Vercel preview URLs)
-        callback(null, true);
-      },
+      origin: true,
       credentials: true,
       methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
       allowedHeaders: [
