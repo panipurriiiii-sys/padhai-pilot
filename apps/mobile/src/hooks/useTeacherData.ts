@@ -12,6 +12,8 @@ export const teacherKeys = {
   assignments: ['teacher', 'assignments'] as const,
   submissions: (id: string) => ['teacher', 'submissions', id] as const,
   invitations: ['teacher', 'invitations'] as const,
+  tests: ['teacher', 'tests'] as const,
+  lessonPlans: ['teacher', 'lessonPlans'] as const,
   timetable: ['teacher', 'timetable'] as const,
   announcements: ['teacher', 'announcements'] as const,
   diaries: ['teacher', 'diaries'] as const,
@@ -154,4 +156,26 @@ export const useApplyLeave = () => {
     mutationFn: teacherService.applyLeave,
     onSuccess: () => qc.invalidateQueries({ queryKey: teacherKeys.leaves }),
   });
+};
+
+export const useTeacherTests = () =>
+  useQuery({ queryKey: teacherKeys.tests, queryFn: teacherService.getTests, staleTime: 2 * MIN });
+export const useLessonPlans = () =>
+  useQuery({ queryKey: teacherKeys.lessonPlans, queryFn: teacherService.getLessonPlans, staleTime: 5 * MIN });
+
+export const useToggleTestResults = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: teacherService.toggleTestResults,
+    onSuccess: () => qc.invalidateQueries({ queryKey: teacherKeys.tests }),
+  });
+};
+
+export const useLessonPlanMutations = () => {
+  const qc = useQueryClient();
+  const refresh = () => qc.invalidateQueries({ queryKey: teacherKeys.lessonPlans });
+  return {
+    create: useMutation({ mutationFn: teacherService.createLessonPlan, onSuccess: refresh }),
+    toggle: useMutation({ mutationFn: teacherService.toggleLessonPlan, onSuccess: refresh }),
+  };
 };

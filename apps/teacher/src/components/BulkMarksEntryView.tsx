@@ -733,9 +733,9 @@ export function BulkMarksEntryView({
   if (batches.length === 0) {
     return (
       <div className="space-y-6">
-        <div className="bg-white p-6 rounded-2xl border border-[#E3DFD9] shadow-sm">
+        <div className="bg-white p-6 rounded-2xl border border-border-paper shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#1677FF]/10 flex items-center justify-center text-[#1677FF] border border-[#1677FF]/20">
+            <div className="w-10 h-10 rounded-xl bg-electric/10 flex items-center justify-center text-electric border border-electric/20">
               <FileSpreadsheet className="w-5 h-5" />
             </div>
             <div>
@@ -767,10 +767,10 @@ export function BulkMarksEntryView({
       {/* ------------------------------------------------------------- */}
       {/* HEADER: TITLE & CORE CONTROLS                                 */}
       {/* ------------------------------------------------------------- */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-[#E3DFD9] shadow-xl">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-border-paper shadow-xl">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <div className="w-10 h-10 rounded-xl bg-[#1677FF]/10 flex items-center justify-center text-[#1677FF] border border-[#1677FF]/20 shadow-[0_0_12px_rgba(22,119,255,0.2)]">
+            <div className="w-10 h-10 rounded-xl bg-electric/10 flex items-center justify-center text-electric border border-electric/20 shadow-[0_0_12px_rgba(22,119,255,0.2)]">
               <FileSpreadsheet className="w-5 h-5" />
             </div>
             <div>
@@ -788,7 +788,7 @@ export function BulkMarksEntryView({
         <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={handleStartNewAssessment}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-stone-100 text-stone-900 border border-[#E3DFD9] transition-all cursor-pointer"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-stone-100 text-stone-900 border border-border-paper transition-all cursor-pointer"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             New Assessment
@@ -805,15 +805,15 @@ export function BulkMarksEntryView({
 
           <button
             onClick={handleExportCsv}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-stone-100 text-stone-900 border border-[#E3DFD9] transition-all cursor-pointer"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-stone-100 text-stone-900 border border-border-paper transition-all cursor-pointer"
           >
-            <Download className="w-3.5 h-3.5 text-[#1677FF]" />
+            <Download className="w-3.5 h-3.5 text-electric" />
             Export CSV
           </button>
 
           <button
             onClick={handlePrintSheet}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-stone-100 text-stone-900 border border-[#E3DFD9] transition-all cursor-pointer"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-stone-100 text-stone-900 border border-border-paper transition-all cursor-pointer"
           >
             <Printer className="w-3.5 h-3.5 text-stone-500" />
             Print Sheet
@@ -822,7 +822,7 @@ export function BulkMarksEntryView({
           <button
             onClick={handleSaveDraft}
             disabled={isLoading}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-[#1677FF]/20 hover:bg-[#1677FF]/30 text-[#1677FF] border border-[#1677FF]/40 transition-all cursor-pointer disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-electric/20 hover:bg-electric/30 text-electric border border-electric/40 transition-all cursor-pointer disabled:opacity-50"
           >
             <Save className="w-3.5 h-3.5" />
             Save Draft
@@ -831,7 +831,7 @@ export function BulkMarksEntryView({
           <button
             onClick={() => setShowReviewModal(true)}
             disabled={isLoading}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-[#1677FF] hover:bg-[#1465dc] text-white shadow-[0_0_15px_rgba(22,119,255,0.4)] transition-all cursor-pointer disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-electric hover:bg-[#1465dc] text-white shadow-[0_0_15px_rgba(22,119,255,0.4)] transition-all cursor-pointer disabled:opacity-50"
           >
             <Send className="w-3.5 h-3.5" />
             Review & Publish
@@ -844,7 +844,7 @@ export function BulkMarksEntryView({
         <div
           className={`p-4 rounded-xl text-xs font-medium flex items-center gap-3 border transition-all ${
             saveMessage.type === 'success'
-              ? 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/30'
+              ? 'bg-status-success/10 text-status-success border-status-success/30'
               : 'bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/30'
           }`}
         >
@@ -859,9 +859,9 @@ export function BulkMarksEntryView({
 
       {/* Publish Celebration Banner */}
       {publishSuccessData && (
-        <div className="p-5 rounded-2xl bg-gradient-to-r from-[#10B981]/15 via-[#10B981]/10 to-transparent border border-[#10B981]/30 flex items-center justify-between shadow-lg">
+        <div className="p-5 rounded-2xl bg-gradient-to-r from-status-success/15 via-status-success/10 to-transparent border border-status-success/30 flex items-center justify-between shadow-lg">
           <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-full bg-[#10B981]/20 flex items-center justify-center text-[#10B981] border border-[#10B981]/40">
+            <div className="w-10 h-10 rounded-full bg-status-success/20 flex items-center justify-center text-status-success border border-status-success/40">
               <Award className="w-5 h-5" />
             </div>
             <div>
@@ -885,7 +885,7 @@ export function BulkMarksEntryView({
       {/* ------------------------------------------------------------- */}
       {/* ASSESSMENT CONFIGURATION BAR                                 */}
       {/* ------------------------------------------------------------- */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 bg-white p-5 rounded-2xl border border-[#E3DFD9]">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 bg-white p-5 rounded-2xl border border-border-paper">
         {/* Batch Selection */}
         <div className="lg:col-span-2">
           <label className="block text-[11px] font-semibold text-stone-500 uppercase tracking-wider mb-1.5 font-['Raleway']">
@@ -894,7 +894,7 @@ export function BulkMarksEntryView({
           <select
             value={selectedBatchId}
             onChange={(e) => setSelectedBatchId(e.target.value)}
-            className="w-full bg-[#FAF8F5] border border-[#E3DFD9] rounded-xl px-3 py-2 text-xs font-medium text-stone-900 focus:outline-none focus:border-[#1677FF]"
+            className="w-full bg-paper-warm border border-border-paper rounded-xl px-3 py-2 text-xs font-medium text-stone-900 focus:outline-none focus:border-electric"
           >
             {batches.map((b) => (
               <option key={b.id} value={b.id}>
@@ -912,7 +912,7 @@ export function BulkMarksEntryView({
           <select
             value={currentAssessmentId}
             onChange={(e) => handleSelectExistingAssessment(e.target.value)}
-            className="w-full bg-[#FAF8F5] border border-[#E3DFD9] rounded-xl px-3 py-2 text-xs font-medium text-stone-900 focus:outline-none focus:border-[#1677FF]"
+            className="w-full bg-paper-warm border border-border-paper rounded-xl px-3 py-2 text-xs font-medium text-stone-900 focus:outline-none focus:border-electric"
           >
             <option value="">-- Create New Blank Assessment --</option>
             {assessmentList.map((a) => (
@@ -931,7 +931,7 @@ export function BulkMarksEntryView({
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value as AssessmentType)}
-            className="w-full bg-[#FAF8F5] border border-[#E3DFD9] rounded-xl px-3 py-2 text-xs font-medium text-stone-900 focus:outline-none focus:border-[#1677FF]"
+            className="w-full bg-paper-warm border border-border-paper rounded-xl px-3 py-2 text-xs font-medium text-stone-900 focus:outline-none focus:border-electric"
           >
             <option value="UNIT_TEST">Unit Test</option>
             <option value="MONTHLY_EXAM">Monthly Exam</option>
@@ -951,7 +951,7 @@ export function BulkMarksEntryView({
             type="date"
             value={assessmentDate}
             onChange={(e) => setAssessmentDate(e.target.value)}
-            className="w-full bg-[#FAF8F5] border border-[#E3DFD9] rounded-xl px-3 py-2 text-xs font-medium text-stone-900 focus:outline-none focus:border-[#1677FF]"
+            className="w-full bg-paper-warm border border-border-paper rounded-xl px-3 py-2 text-xs font-medium text-stone-900 focus:outline-none focus:border-electric"
           />
         </div>
 
@@ -965,7 +965,7 @@ export function BulkMarksEntryView({
             value={assessmentTitle}
             onChange={(e) => setAssessmentTitle(e.target.value)}
             placeholder="e.g. Unit Test 1 — Differential Calculus"
-            className="w-full bg-[#FAF8F5] border border-[#E3DFD9] rounded-xl px-3 py-2 text-xs font-medium text-stone-900 focus:outline-none focus:border-[#1677FF]"
+            className="w-full bg-paper-warm border border-border-paper rounded-xl px-3 py-2 text-xs font-medium text-stone-900 focus:outline-none focus:border-electric"
           />
         </div>
 
@@ -979,7 +979,7 @@ export function BulkMarksEntryView({
               type="text"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
-              className="w-full bg-[#FAF8F5] border border-[#E3DFD9] rounded-xl px-3 py-2 text-xs font-medium text-stone-900 focus:outline-none focus:border-[#1677FF]"
+              className="w-full bg-paper-warm border border-border-paper rounded-xl px-3 py-2 text-xs font-medium text-stone-900 focus:outline-none focus:border-electric"
             />
           </div>
         ) : (
@@ -987,9 +987,9 @@ export function BulkMarksEntryView({
             <label className="block text-[11px] font-semibold text-stone-500 uppercase tracking-wider mb-1.5 font-['Raleway']">
               Subjects Included
             </label>
-            <div className="w-full bg-[#FAF8F5] border border-[#E3DFD9] rounded-xl px-3 py-2 text-xs font-semibold text-[#1677FF] flex items-center justify-between">
+            <div className="w-full bg-paper-warm border border-border-paper rounded-xl px-3 py-2 text-xs font-semibold text-electric flex items-center justify-between">
               <span>{subjects.length} Subjects</span>
-              <BookOpen className="w-3.5 h-3.5 text-[#1677FF]" />
+              <BookOpen className="w-3.5 h-3.5 text-electric" />
             </div>
           </div>
         )}
@@ -1005,7 +1005,7 @@ export function BulkMarksEntryView({
             value={maxMarks}
             readOnly={isMultiSubject}
             onChange={(e) => !isMultiSubject && setMaxMarks(Number(e.target.value) || 0)}
-            className={`w-full bg-[#FAF8F5] border border-[#E3DFD9] rounded-xl px-3 py-2 text-xs font-medium text-stone-900 focus:outline-none focus:border-[#1677FF] font-mono ${
+            className={`w-full bg-paper-warm border border-border-paper rounded-xl px-3 py-2 text-xs font-medium text-stone-900 focus:outline-none focus:border-electric font-mono ${
               isMultiSubject ? 'bg-stone-100/70 text-stone-600 cursor-not-allowed' : ''
             }`}
           />
@@ -1013,13 +1013,13 @@ export function BulkMarksEntryView({
 
         {/* Status Badge */}
         <div className="flex flex-col justify-end">
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#FAF8F5] border border-[#E3DFD9] h-[38px]">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-paper-warm border border-border-paper h-[38px]">
             <span className="text-[11px] font-semibold text-stone-500">Lifecycle:</span>
             <span
               className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                 assessmentStatus === 'PUBLISHED'
-                  ? 'bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/30'
-                  : 'bg-[#F59E0B]/20 text-[#F59E0B] border border-[#F59E0B]/30'
+                  ? 'bg-status-success/20 text-status-success border border-status-success/30'
+                  : 'bg-status-warning/20 text-status-warning border border-status-warning/30'
               }`}
             >
               {assessmentStatus}
@@ -1028,7 +1028,7 @@ export function BulkMarksEntryView({
         </div>
 
         {/* Assessment Evaluation Mode Switcher */}
-        <div className="lg:col-span-6 bg-[#FAF8F5] p-3 rounded-xl border border-[#E3DFD9] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="lg:col-span-6 bg-paper-warm p-3 rounded-xl border border-border-paper flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-stone-700 font-['Raleway']">Subject Mode:</span>
             <div className="inline-flex rounded-lg p-0.5 bg-stone-200/70 border border-stone-300">
@@ -1055,7 +1055,7 @@ export function BulkMarksEntryView({
                 }}
                 className={`px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                   isMultiSubject
-                    ? 'bg-[#1677FF] text-white shadow-sm'
+                    ? 'bg-electric text-white shadow-sm'
                     : 'text-stone-600 hover:text-stone-900'
                 }`}
               >
@@ -1067,14 +1067,14 @@ export function BulkMarksEntryView({
           {isMultiSubject && (
             <div className="flex items-center gap-2 text-xs">
               <span className="text-stone-500 font-mono">
-                {subjects.length} Subjects • Total Max: <strong className="text-[#1677FF]">{maxMarks}</strong>
+                {subjects.length} Subjects • Total Max: <strong className="text-electric">{maxMarks}</strong>
               </span>
               <button
                 type="button"
                 onClick={handleAddSubject}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-[#E3DFD9] hover:bg-stone-50 text-stone-800 font-semibold text-[11px] shadow-sm cursor-pointer"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-border-paper hover:bg-stone-50 text-stone-800 font-semibold text-[11px] shadow-sm cursor-pointer"
               >
-                <Plus className="w-3 h-3 text-[#1677FF]" /> Add Subject
+                <Plus className="w-3 h-3 text-electric" /> Add Subject
               </button>
             </div>
           )}
@@ -1125,7 +1125,7 @@ export function BulkMarksEntryView({
       {/* ------------------------------------------------------------- */}
       {/* BULK SELECTION & ATTENDANCE ACTIONS BAR                       */}
       {/* ------------------------------------------------------------- */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-[#E3DFD9]">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-border-paper">
         {/* Roster Filters */}
         <div className="flex flex-wrap items-center gap-3">
           {/* Search Box */}
@@ -1136,19 +1136,19 @@ export function BulkMarksEntryView({
               placeholder="Search student or roll no..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#FAF8F5] border border-[#E3DFD9] rounded-xl pl-8 pr-3 py-1.5 text-xs text-stone-900 placeholder-[#929BAA] focus:outline-none focus:border-[#1677FF]"
+              className="w-full bg-paper-warm border border-border-paper rounded-xl pl-8 pr-3 py-1.5 text-xs text-stone-900 placeholder-[#929BAA] focus:outline-none focus:border-electric"
             />
           </div>
 
           {/* Attendance Filter Pills */}
-          <div className="flex items-center gap-1 bg-[#FAF8F5] p-1 rounded-xl border border-[#E3DFD9]">
+          <div className="flex items-center gap-1 bg-paper-warm p-1 rounded-xl border border-border-paper">
             {(['ALL', 'PRESENT', 'ABSENT'] as const).map((status) => (
               <button
                 key={status}
                 onClick={() => setAttendanceFilter(status)}
                 className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
                   attendanceFilter === status
-                    ? 'bg-[#1677FF] text-white shadow-sm'
+                    ? 'bg-electric text-white shadow-sm'
                     : 'text-stone-500 hover:text-stone-900'
                 }`}
               >
@@ -1163,7 +1163,7 @@ export function BulkMarksEntryView({
           <span className="text-[11px] font-medium text-stone-500 mr-1 hidden sm:inline">Bulk Attendance:</span>
           <button
             onClick={() => handleMarkAllAttendance('PRESENT')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#10B981]/10 hover:bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/30 transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-status-success/10 hover:bg-status-success/20 text-status-success border border-status-success/30 transition-all cursor-pointer"
           >
             <UserCheck className="w-3.5 h-3.5" />
             Mark All Present
@@ -1181,18 +1181,18 @@ export function BulkMarksEntryView({
       {/* ------------------------------------------------------------- */}
       {/* SPREADSHEET-LIKE MARKS ENTRY TABLE                            */}
       {/* ------------------------------------------------------------- */}
-      <div className="bg-white rounded-2xl border border-[#E3DFD9] overflow-hidden shadow-2xl">
+      <div className="bg-white rounded-2xl border border-border-paper overflow-hidden shadow-2xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-[#FAF8F5] border-b border-[#E3DFD9] text-[11px] uppercase font-bold text-stone-500 tracking-wider select-none">
+              <tr className="bg-paper-warm border-b border-border-paper text-[11px] uppercase font-bold text-stone-500 tracking-wider select-none">
                 <th className="py-3.5 px-4 w-12 text-center">
                   <button
                     onClick={() => handleToggleSelectAll(!roster.every((r) => r.isEligible !== false))}
                     className="p-1 hover:text-stone-900 text-stone-500 cursor-pointer"
                   >
                     {roster.every((r) => r.isEligible !== false) ? (
-                      <CheckSquare className="w-4 h-4 text-[#1677FF]" />
+                      <CheckSquare className="w-4 h-4 text-electric" />
                     ) : (
                       <Square className="w-4 h-4" />
                     )}
@@ -1250,7 +1250,7 @@ export function BulkMarksEntryView({
                         className="p-1 text-stone-500 hover:text-stone-900 cursor-pointer"
                       >
                         {isSelected ? (
-                          <CheckSquare className="w-4 h-4 text-[#1677FF]" />
+                          <CheckSquare className="w-4 h-4 text-electric" />
                         ) : (
                           <Square className="w-4 h-4" />
                         )}
@@ -1258,7 +1258,7 @@ export function BulkMarksEntryView({
                     </td>
 
                     {/* Student Roll */}
-                    <td className="py-3 px-4 font-mono text-[11px] font-semibold text-[#1677FF]">
+                    <td className="py-3 px-4 font-mono text-[11px] font-semibold text-electric">
                       {row.rollNumber}
                     </td>
 
@@ -1270,7 +1270,7 @@ export function BulkMarksEntryView({
 
                     {/* Attendance Status Selector */}
                     <td className="py-3 px-4">
-                      <div className="flex items-center gap-1 bg-[#FAF8F5] p-1 rounded-xl border border-[#E3DFD9] w-fit">
+                      <div className="flex items-center gap-1 bg-paper-warm p-1 rounded-xl border border-border-paper w-fit">
                         {(['PRESENT', 'ABSENT', 'LATE', 'EXCUSED'] as AttendanceStatus[]).map((st) => {
                           const isActive = row.attendanceStatus === st;
                           return (
@@ -1281,10 +1281,10 @@ export function BulkMarksEntryView({
                               className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
                                 isActive
                                   ? st === 'PRESENT'
-                                    ? 'bg-[#10B981] text-white shadow-sm'
+                                    ? 'bg-status-success text-white shadow-sm'
                                     : st === 'ABSENT'
                                     ? 'bg-[#EF4444] text-white shadow-sm'
-                                    : 'bg-[#F59E0B] text-white shadow-sm'
+                                    : 'bg-status-warning text-white shadow-sm'
                                   : 'text-stone-500 hover:text-stone-900'
                               }`}
                             >
@@ -1326,10 +1326,10 @@ export function BulkMarksEntryView({
                                     }
                                     onKeyDown={(e) => handleMultiSubjectKeyDown(e, idx, sIdx)}
                                     placeholder="0"
-                                    className={`w-16 bg-[#FAF8F5] border rounded-lg px-2 py-1 text-center font-mono text-xs font-semibold focus:outline-none transition-all ${
+                                    className={`w-16 bg-paper-warm border rounded-lg px-2 py-1 text-center font-mono text-xs font-semibold focus:outline-none transition-all ${
                                       isSubInvalid
                                         ? 'border-red-500 bg-red-50 text-red-700'
-                                        : 'border-[#E3DFD9] text-stone-900 focus:border-[#1677FF]'
+                                        : 'border-border-paper text-stone-900 focus:border-electric'
                                     }`}
                                   />
                                 </div>
@@ -1337,7 +1337,7 @@ export function BulkMarksEntryView({
                             </td>
                           );
                         })}
-                        <td className="py-3 px-3 text-center font-mono font-bold text-[#1677FF]">
+                        <td className="py-3 px-3 text-center font-mono font-bold text-electric">
                           {isAbsent
                             ? '—'
                             : row.obtainedMarks !== null && row.obtainedMarks !== undefined
@@ -1377,10 +1377,10 @@ export function BulkMarksEntryView({
                                 onChange={(e) => handleMarksChange(row.studentId, e.target.value)}
                                 onKeyDown={(e) => handleKeyDown(e, idx)}
                                 placeholder="Enter marks"
-                                className={`w-full bg-[#FAF8F5] border rounded-xl px-3 py-1.5 text-xs font-mono font-semibold text-stone-900 focus:outline-none ${
+                                className={`w-full bg-paper-warm border rounded-xl px-3 py-1.5 text-xs font-mono font-semibold text-stone-900 focus:outline-none ${
                                   isInvalid
                                     ? 'border-[#EF4444] focus:border-[#EF4444] shadow-[0_0_8px_rgba(239,68,68,0.3)]'
-                                    : 'border-[#E3DFD9] focus:border-[#1677FF]'
+                                    : 'border-border-paper focus:border-electric'
                                 }`}
                               />
                               {isInvalid && (
@@ -1405,11 +1405,11 @@ export function BulkMarksEntryView({
                         <span
                           className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                             row.grade.startsWith('A')
-                              ? 'bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30'
+                              ? 'bg-status-success/15 text-status-success border border-status-success/30'
                               : row.grade.startsWith('B')
-                              ? 'bg-[#1677FF]/15 text-[#1677FF] border border-[#1677FF]/30'
+                              ? 'bg-electric/15 text-electric border border-electric/30'
                               : row.grade.startsWith('C')
-                              ? 'bg-[#F59E0B]/15 text-[#F59E0B] border border-[#F59E0B]/30'
+                              ? 'bg-status-warning/15 text-status-warning border border-status-warning/30'
                               : 'bg-[#EF4444]/15 text-[#EF4444] border border-[#EF4444]/30'
                           }`}
                         >
@@ -1425,7 +1425,7 @@ export function BulkMarksEntryView({
                       <span
                         className={`px-2 py-0.5 rounded-md text-[10px] font-semibold ${
                           row.resultStatus === 'SCORED'
-                            ? 'bg-[#10B981]/10 text-[#10B981]'
+                            ? 'bg-status-success/10 text-status-success'
                             : row.resultStatus === 'ABSENT'
                             ? 'bg-[#EF4444]/10 text-[#EF4444]'
                             : 'bg-[#929BAA]/10 text-stone-500'
@@ -1449,7 +1449,7 @@ export function BulkMarksEntryView({
                           );
                         }}
                         placeholder="Optional remarks..."
-                        className="w-full bg-transparent border-b border-[#E3DFD9] focus:border-[#1677FF] px-1 py-1 text-xs text-stone-500 focus:text-stone-900 focus:outline-none transition-colors"
+                        className="w-full bg-transparent border-b border-border-paper focus:border-electric px-1 py-1 text-xs text-stone-500 focus:text-stone-900 focus:outline-none transition-colors"
                       />
                     </td>
 
@@ -1459,7 +1459,7 @@ export function BulkMarksEntryView({
                         <button
                           onClick={() => handleOpenCorrection(row)}
                           title="Correct and republish with audit reason"
-                          className="flex items-center gap-1 text-[11px] font-semibold text-[#1677FF] hover:underline cursor-pointer"
+                          className="flex items-center gap-1 text-[11px] font-semibold text-electric hover:underline cursor-pointer"
                         >
                           <Edit3 className="w-3 h-3" />
                           Revise
@@ -1476,7 +1476,7 @@ export function BulkMarksEntryView({
         {/* ------------------------------------------------------------- */}
         {/* SUMMARY STATS FOOTER BAR                                     */}
         {/* ------------------------------------------------------------- */}
-        <div className="bg-[#FAF8F5] px-6 py-4 border-t border-[#E3DFD9] flex flex-wrap items-center justify-between gap-4 text-xs font-['Raleway']">
+        <div className="bg-paper-warm px-6 py-4 border-t border-border-paper flex flex-wrap items-center justify-between gap-4 text-xs font-['Raleway']">
           <div className="flex flex-wrap items-center gap-6">
             <div className="flex items-center gap-2">
               <span className="text-stone-500">Included:</span>
@@ -1484,7 +1484,7 @@ export function BulkMarksEntryView({
             </div>
             <div className="flex items-center gap-2">
               <span className="text-stone-500">Present:</span>
-              <span className="font-mono font-bold text-[#10B981]">{summary.present}</span>
+              <span className="font-mono font-bold text-status-success">{summary.present}</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-stone-500">Absent:</span>
@@ -1492,11 +1492,11 @@ export function BulkMarksEntryView({
             </div>
             <div className="flex items-center gap-2">
               <span className="text-stone-500">Scored:</span>
-              <span className="font-mono font-bold text-[#1677FF]">{summary.scored}</span>
+              <span className="font-mono font-bold text-electric">{summary.scored}</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-stone-500">Pending:</span>
-              <span className="font-mono font-bold text-[#F59E0B]">{summary.pending}</span>
+              <span className="font-mono font-bold text-status-warning">{summary.pending}</span>
             </div>
             {summary.invalidCount > 0 && (
               <div className="flex items-center gap-1.5 text-[#EF4444] font-semibold">
@@ -1505,7 +1505,7 @@ export function BulkMarksEntryView({
               </div>
             )}
             {summary.unmarkedCount > 0 && (
-              <div className="flex items-center gap-1.5 text-[#F59E0B] font-semibold">
+              <div className="flex items-center gap-1.5 text-status-warning font-semibold">
                 <AlertTriangle className="w-3.5 h-3.5" />
                 <span>{summary.unmarkedCount} present students without marks</span>
               </div>
@@ -1515,13 +1515,13 @@ export function BulkMarksEntryView({
           <div className="flex items-center gap-3">
             <button
               onClick={handleSaveDraft}
-              className="px-4 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-stone-100 text-stone-900 border border-[#E3DFD9] cursor-pointer"
+              className="px-4 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-stone-100 text-stone-900 border border-border-paper cursor-pointer"
             >
               Save Draft
             </button>
             <button
               onClick={() => setShowReviewModal(true)}
-              className="px-4 py-2 rounded-xl text-xs font-semibold bg-[#1677FF] hover:bg-[#1465dc] text-white shadow-lg cursor-pointer"
+              className="px-4 py-2 rounded-xl text-xs font-semibold bg-electric hover:bg-[#1465dc] text-white shadow-lg cursor-pointer"
             >
               Review & Publish All Eligible Results
             </button>
@@ -1534,10 +1534,10 @@ export function BulkMarksEntryView({
       {/* ------------------------------------------------------------- */}
       {showReviewModal && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-[#E3DFD9] rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between border-b border-[#E3DFD9] pb-4">
+          <div className="bg-white border border-border-paper rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-border-paper pb-4">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-[#1677FF]/15 flex items-center justify-center text-[#1677FF]">
+                <div className="w-9 h-9 rounded-xl bg-electric/15 flex items-center justify-center text-electric">
                   <Send className="w-4 h-4" />
                 </div>
                 <div>
@@ -1556,7 +1556,7 @@ export function BulkMarksEntryView({
             </div>
 
             {/* Assessment Meta Box */}
-            <div className="bg-[#FAF8F5] p-4 rounded-xl border border-[#E3DFD9] space-y-2 text-xs font-['Raleway']">
+            <div className="bg-paper-warm p-4 rounded-xl border border-border-paper space-y-2 text-xs font-['Raleway']">
               <div className="flex justify-between">
                 <span className="text-stone-500">Assessment:</span>
                 <span className="font-semibold text-stone-900">{assessmentTitle}</span>
@@ -1573,27 +1573,27 @@ export function BulkMarksEntryView({
               </div>
               <div className="flex justify-between">
                 <span className="text-stone-500">Total Maximum Marks:</span>
-                <span className="font-mono font-semibold text-[#1677FF]">{maxMarks} Marks</span>
+                <span className="font-mono font-semibold text-electric">{maxMarks} Marks</span>
               </div>
             </div>
 
             {/* Breakdown Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-              <div className="bg-[#FAF8F5] p-3 rounded-xl border border-[#E3DFD9]">
+              <div className="bg-paper-warm p-3 rounded-xl border border-border-paper">
                 <div className="text-[10px] text-stone-500 uppercase font-bold">Included</div>
                 <div className="text-lg font-mono font-bold text-stone-900">{summary.total}</div>
               </div>
-              <div className="bg-[#FAF8F5] p-3 rounded-xl border border-[#E3DFD9]">
+              <div className="bg-paper-warm p-3 rounded-xl border border-border-paper">
                 <div className="text-[10px] text-stone-500 uppercase font-bold">Present</div>
-                <div className="text-lg font-mono font-bold text-[#10B981]">{summary.present}</div>
+                <div className="text-lg font-mono font-bold text-status-success">{summary.present}</div>
               </div>
-              <div className="bg-[#FAF8F5] p-3 rounded-xl border border-[#E3DFD9]">
+              <div className="bg-paper-warm p-3 rounded-xl border border-border-paper">
                 <div className="text-[10px] text-stone-500 uppercase font-bold">Absent</div>
                 <div className="text-lg font-mono font-bold text-[#EF4444]">{summary.absent}</div>
               </div>
-              <div className="bg-[#FAF8F5] p-3 rounded-xl border border-[#E3DFD9]">
+              <div className="bg-paper-warm p-3 rounded-xl border border-border-paper">
                 <div className="text-[10px] text-stone-500 uppercase font-bold">Scored</div>
-                <div className="text-lg font-mono font-bold text-[#1677FF]">{summary.scored}</div>
+                <div className="text-lg font-mono font-bold text-electric">{summary.scored}</div>
               </div>
             </div>
 
@@ -1606,14 +1606,14 @@ export function BulkMarksEntryView({
                 </span>
               </div>
             ) : summary.unmarkedCount > 0 ? (
-              <div className="p-3.5 rounded-xl bg-[#F59E0B]/10 border border-[#F59E0B]/30 text-[#F59E0B] text-xs flex items-center gap-2">
+              <div className="p-3.5 rounded-xl bg-status-warning/10 border border-status-warning/30 text-status-warning text-xs flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 shrink-0" />
                 <span>
                   Notice: {summary.unmarkedCount} students are marked Present but have no marks entered. They will remain in PENDING status.
                 </span>
               </div>
             ) : (
-              <div className="p-3.5 rounded-xl bg-[#10B981]/10 border border-[#10B981]/30 text-[#10B981] text-xs flex items-center gap-2">
+              <div className="p-3.5 rounded-xl bg-status-success/10 border border-status-success/30 text-status-success text-xs flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 shrink-0" />
                 <span>All verification checks passed. Results are eligible for instant student publishing.</span>
               </div>
@@ -1623,14 +1623,14 @@ export function BulkMarksEntryView({
             <div className="flex items-center justify-end gap-3 pt-2">
               <button
                 onClick={() => setShowReviewModal(false)}
-                className="px-4 py-2.5 rounded-xl text-xs font-semibold bg-white text-stone-500 hover:text-stone-900 border border-[#E3DFD9]"
+                className="px-4 py-2.5 rounded-xl text-xs font-semibold bg-white text-stone-500 hover:text-stone-900 border border-border-paper"
               >
                 Back to Edit
               </button>
               <button
                 onClick={handleConfirmPublish}
                 disabled={isPublishing || summary.invalidCount > 0}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold bg-[#1677FF] hover:bg-[#1465dc] text-white shadow-[0_0_20px_rgba(22,119,255,0.4)] disabled:opacity-50 cursor-pointer"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold bg-electric hover:bg-[#1465dc] text-white shadow-[0_0_20px_rgba(22,119,255,0.4)] disabled:opacity-50 cursor-pointer"
               >
                 <Send className="w-3.5 h-3.5" />
                 {isPublishing ? 'Publishing...' : 'Confirm & Publish All Results'}
@@ -1645,10 +1645,10 @@ export function BulkMarksEntryView({
       {/* ------------------------------------------------------------- */}
       {correctionTarget && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-[#E3DFD9] rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-[#E3DFD9] pb-3">
+          <div className="bg-white border border-border-paper rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-border-paper pb-3">
               <div className="flex items-center gap-2">
-                <History className="w-4 h-4 text-[#1677FF]" />
+                <History className="w-4 h-4 text-electric" />
                 <h3 className="font-['Playfair_Display'] text-base font-bold text-stone-900">
                   Revise Student Result
                 </h3>
@@ -1670,7 +1670,7 @@ export function BulkMarksEntryView({
               </div>
               <div>
                 Current Score:{' '}
-                <span className="font-mono font-semibold text-[#1677FF]">
+                <span className="font-mono font-semibold text-electric">
                   {correctionTarget.obtainedMarks ?? 'N/A'} / {maxMarks}
                 </span>
               </div>
@@ -1687,7 +1687,7 @@ export function BulkMarksEntryView({
                 max={maxMarks}
                 value={correctionNewMarks}
                 onChange={(e) => setCorrectionNewMarks(e.target.value)}
-                className="w-full bg-[#FAF8F5] border border-[#E3DFD9] rounded-xl px-3 py-2 text-xs font-mono font-semibold text-stone-900 focus:outline-none focus:border-[#1677FF]"
+                className="w-full bg-paper-warm border border-border-paper rounded-xl px-3 py-2 text-xs font-mono font-semibold text-stone-900 focus:outline-none focus:border-electric"
               />
             </div>
 
@@ -1700,7 +1700,7 @@ export function BulkMarksEntryView({
                 value={correctionReason}
                 onChange={(e) => setCorrectionReason(e.target.value)}
                 placeholder="e.g. Recounting error in section B resolved during student doubt clearance."
-                className="w-full bg-[#FAF8F5] border border-[#E3DFD9] rounded-xl px-3 py-2 text-xs text-stone-900 focus:outline-none focus:border-[#1677FF]"
+                className="w-full bg-paper-warm border border-border-paper rounded-xl px-3 py-2 text-xs text-stone-900 focus:outline-none focus:border-electric"
               />
             </div>
 
@@ -1714,7 +1714,7 @@ export function BulkMarksEntryView({
               <button
                 onClick={handleSubmitCorrection}
                 disabled={isCorrecting}
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-[#1677FF] text-white hover:bg-[#1465dc] disabled:opacity-50 cursor-pointer"
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-electric text-white hover:bg-[#1465dc] disabled:opacity-50 cursor-pointer"
               >
                 {isCorrecting ? 'Saving Revision...' : 'Save & Notify Student'}
               </button>

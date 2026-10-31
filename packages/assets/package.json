@@ -1,0 +1,40 @@
+{
+  "name": "@padhai-pilot/assets",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Canonical PadhaiPilot SVG library: one set of sources, rendered by web (react-dom) and native (react-native-svg) adapters.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./web": "./src/web.tsx",
+    "./native": "./src/native.tsx",
+    "./palette": "./src/palette.ts",
+    "./styles.css": "./src/assets.css"
+  },
+  "sideEffects": [
+    "*.css"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "node scripts/build.mjs --check",
+    "test": "node --test test/svg.test.mjs"
+  },
+  "peerDependencies": {
+    "react": ">=19",
+    "react-native": ">=0.80",
+    "react-native-svg": ">=15"
+  },
+  "peerDependenciesMeta": {
+    "react-native": {
+      "optional": true
+    },
+    "react-native-svg": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "svgo": "^4.0.0"
+  }
+}

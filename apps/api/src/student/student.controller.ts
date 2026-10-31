@@ -77,8 +77,9 @@ export class StudentController {
     @CurrentUser() user: AuthenticatedUser,
     @Query('subject') subject?: string,
     @Query('search') search?: string,
+    @Query('limit') limit?: string,
   ) {
-    return this.studentService.getTeachingDiaries(user, { subject, search });
+    return this.studentService.getTeachingDiaries(user, { subject, search, limit });
   }
 
   // 5. Timetable & Academic Calendar

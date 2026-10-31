@@ -38,8 +38,9 @@ import type {
   UserSession,
 } from '@padhai-pilot/shared';
 import { Loader2 } from 'lucide-react';
+import { MotionProvider, ToastProvider } from '@padhai-pilot/ui';
 
-export default function TeacherApp() {
+function TeacherApp() {
   const [currentTab, setCurrentTab] = useState<NavTab>('dashboard');
   const [user, setUser] = useState<UserSession | null>(null);
   const [metrics, setMetrics] = useState<TeacherDashboardMetrics | null>(null);
@@ -304,6 +305,7 @@ export default function TeacherApp() {
           {currentTab === 'dashboard' && metrics && (
             <DashboardView
               metrics={metrics}
+              reports={reports}
               onNavigate={setCurrentTab}
               onQuickAttendance={handleQuickAttendance}
             />
@@ -333,6 +335,7 @@ export default function TeacherApp() {
               selectedBatchId={selectedBatchId}
               onSaveAttendance={handleSaveAttendance}
               loadSession={(bId, date) => teacherApi.getAttendanceSession(bId, date)}
+              trends={reports?.attendanceTrends}
             />
           )}
 
@@ -447,5 +450,16 @@ export default function TeacherApp() {
         onAuthSuccess={handleAuthSuccess}
       />
     </div>
+  );
+}
+
+/** Shared motion + toast context (reduced-motion aware). */
+export default function TeacherPortalRoot() {
+  return (
+    <MotionProvider>
+      <ToastProvider>
+        <TeacherApp />
+      </ToastProvider>
+    </MotionProvider>
   );
 }

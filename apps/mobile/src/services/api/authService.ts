@@ -1,4 +1,5 @@
 import { apiClient } from './client';
+import { tokenStorage } from '../storage/secureStorage';
 
 export interface MobileUserSession {
   token: string;
@@ -48,9 +49,11 @@ const MOBILE_ROLES = ['STUDENT', 'TEACHER', 'FACULTY', 'TUITION_OWNER', 'INSTITU
 function acceptSession(data: MobileUserSession): MobileUserSession {
   if (!data?.token || !MOBILE_ROLES.includes(data.user?.role)) {
     apiClient.setAuthToken(null);
+    void tokenStorage.clearSession().catch(() => {});
     throw new Error('This app is for students and faculty. Platform administration is available on the web.');
   }
   apiClient.setAuthToken(data.token);
+  void tokenStorage.setSession(data).catch(() => {});
   return data;
 }
 
@@ -98,7 +101,24 @@ export const authService = {
     return apiClient.get<MobileUserSession['user']>('/auth/me');
   },
 
+  async restoreStoredSession(): Promise<MobileUserSession | null> {
+    try {
+      const stored = await tokenStorage.getSession();
+      if (!stored?.token || !MOBILE_ROLES.includes(stored.user?.role)) {
+        apiClient.setAuthToken(null);
+        await tokenStorage.clearSession();
+        return null;
+      }
+      apiClient.setAuthToken(stored.token);
+      return stored;
+    } catch {
+      apiClient.setAuthToken(null);
+      return null;
+    }
+  },
+
   logout(): void {
     apiClient.setAuthToken(null);
+    void tokenStorage.clearSession().catch(() => {});
   },
 };

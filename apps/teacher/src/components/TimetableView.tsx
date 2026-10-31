@@ -25,7 +25,7 @@ export function TimetableView({ slots }: TimetableViewProps) {
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E3DFD9]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border-paper">
         <div>
           <h1 className="font-['Playfair_Display'] text-2xl sm:text-3xl font-bold text-stone-900">
             Weekly Teaching Timetable
@@ -35,8 +35,8 @@ export function TimetableView({ slots }: TimetableViewProps) {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#F3EFE9] border border-[#E3DFD9] text-stone-700">
-          <Calendar className="w-3.5 h-3.5 text-[#1677FF]" />
+        <div className="flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-lg bg-surface-subtle border border-border-paper text-stone-700">
+          <Calendar className="w-3.5 h-3.5 text-electric" />
           <span>Today: {currentDayName}</span>
         </div>
       </div>

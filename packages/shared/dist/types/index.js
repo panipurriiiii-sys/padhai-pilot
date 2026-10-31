@@ -1,3 +1,4 @@
+export * from './analytics.js';
 export function calculateGradeAndPercentage(obtainedMarks, maxMarks) {
     if (obtainedMarks === null || obtainedMarks === undefined || maxMarks <= 0) {
         return { percentage: null, grade: null };
@@ -23,3 +24,4 @@ export function calculateGradeAndPercentage(obtainedMarks, maxMarks) {
 export * from './features.js';
 export * from './tuition.js';
 export * from './student.js';
+export * from './analytics.js';

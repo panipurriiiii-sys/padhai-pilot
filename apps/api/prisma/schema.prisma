@@ -4,7 +4,9 @@ datasource db {
 }
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // `native` for local/CI; `rhel-openssl-3.0.x` is the Vercel (Amazon Linux 2023, Node 24) runtime.
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 enum Role {
@@ -51,15 +53,15 @@ enum Priority {
 }
 
 model Institute {
-  id           String   @id @default(cuid())
+  id           String  @id @default(cuid())
   name         String
-  slug         String   @unique
+  slug         String  @unique
   logoUrl      String?
-  primaryColor String?  @default("#1677FF")
-  isActive     Boolean  @default(true)
-  plan         String   @default("STANDARD")
+  primaryColor String? @default("#1677FF")
+  isActive     Boolean @default(true)
+  plan         String  @default("STANDARD")
   features     Json?
-  
+
   // Tuition Branding & Identity
   address        String?
   contactPhone   String?
@@ -69,22 +71,32 @@ model Institute {
   footerText     String?
   signatoryName  String?
   signatoryTitle String?
-  academicYear   String?  @default("2026-2027")
+  academicYear   String? @default("2026-2027")
   ownerId        String?
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  // Tenant lifecycle & white-label (managed by the Platform Super Admin). `isActive` stays the
+  // enforcement flag used by login; `status` carries the richer label (ACTIVE / TRIAL / SUSPENDED).
+  status        String  @default("ACTIVE")
+  subdomain     String? @unique
+  customDomain  String? @unique
+  isWhiteLabel  Boolean @default(false)
+  isDedicatedDb Boolean @default(false)
+  maxStudents   Int?
+  maxTeachers   Int?
 
-  memberships        InstituteMembership[]
-  batches            Batch[]
-  invitations        InvitationCode[]
-  attendanceSessions AttendanceSession[]
-  assignments        Assignment[]
-  tests              TestQuiz[]
-  lessonPlans        LessonPlan[]
-  timetableSlots     TimetableSlot[]
-  announcements      Announcement[]
-  enrollments        Enrollment[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships          InstituteMembership[]
+  batches              Batch[]
+  invitations          InvitationCode[]
+  attendanceSessions   AttendanceSession[]
+  assignments          Assignment[]
+  tests                TestQuiz[]
+  lessonPlans          LessonPlan[]
+  timetableSlots       TimetableSlot[]
+  announcements        Announcement[]
+  enrollments          Enrollment[]
   classroomAssessments ClassroomAssessment[]
   notifications        Notification[]
   featureConfigs       InstituteFeatureConfig[]
@@ -96,56 +108,82 @@ model Institute {
   studyMaterials       StudyMaterial[]
   studentFeeRecords    StudentFeeRecord[]
 
+  // Back-relations for the T-03 additions (see section at the end of this file)
+  batchFaculty          BatchFaculty[]
+  attendanceCorrections AttendanceCorrectionRequest[]
+  academicQueries       AcademicQuery[]
+  studyTasks            StudyTask[]
+  supportRequests       SupportRequest[]
+  studentDocuments      StudentDocument[]
+  facultyInvitations    FacultyInvitation[]
+  outboxMessages        NotificationOutbox[]
+
   @@index([slug])
   @@index([ownerId])
+  @@index([status])
 }
 
 model User {
-  id                  String    @id @default(cuid())
-  email               String    @unique
-  passwordHash        String
-  fullName            String
-  phone               String?
-  avatarUrl           String?
-  role                Role      @default(TEACHER)
-  isActive            Boolean   @default(true)
-  isEmailVerified     Boolean   @default(false)
-  resetPasswordToken  String?
-  resetPasswordExpiry DateTime?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  id                      String    @id @default(cuid())
+  email                   String    @unique
+  passwordHash            String
+  fullName                String
+  phone                   String?
+  avatarUrl               String?
+  role                    Role      @default(TEACHER)
+  isActive                Boolean   @default(true)
+  isEmailVerified         Boolean   @default(false)
+  resetPasswordToken      String?
+  resetPasswordExpiry     DateTime?
+  // Bumped to invalidate every outstanding JWT for this user (password change, "sign out everywhere").
+  tokenVersion            Int       @default(0)
+  notificationPreferences Json?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
 
   memberships           InstituteMembership[]
-  teacherBatches        Batch[]               @relation("TeacherBatches")
-  enrollments           Enrollment[]          @relation("StudentEnrollments")
+  teacherBatches        Batch[]                   @relation("TeacherBatches")
+  enrollments           Enrollment[]              @relation("StudentEnrollments")
   attendanceRecords     AttendanceRecord[]
   submissions           AssignmentSubmission[]
   testAttempts          TestAttempt[]
-  createdInvitations    InvitationCode[]      @relation("CreatedInvitations")
+  createdInvitations    InvitationCode[]          @relation("CreatedInvitations")
   authoredAnnouncements Announcement[]
   timetableSlots        TimetableSlot[]
-  createdAssessments    ClassroomAssessment[] @relation("CreatedClassroomAssessments")
-  studentMarks          AssessmentMark[]      @relation("StudentAssessmentMarks")
+  createdAssessments    ClassroomAssessment[]     @relation("CreatedClassroomAssessments")
+  studentMarks          AssessmentMark[]          @relation("StudentAssessmentMarks")
   notifications         Notification[]
   facultyProfiles       FacultyProfile[]
-  salaryRecords         SalaryRecord[]        @relation("FacultySalaryRecords")
+  salaryRecords         SalaryRecord[]            @relation("FacultySalaryRecords")
   leaveApplications     FacultyLeaveApplication[] @relation("FacultyLeaveApplications")
   reviewedLeaves        FacultyLeaveApplication[] @relation("ReviewerLeaveApplications")
-  teachingDiaries       DailyTeachingDiary[]  @relation("FacultyTeachingDiaries")
-  studyMaterials        StudyMaterial[]       @relation("FacultyStudyMaterials")
-  studentFeeRecords     StudentFeeRecord[]    @relation("StudentFeeRecords")
+  teachingDiaries       DailyTeachingDiary[]      @relation("FacultyTeachingDiaries")
+  studyMaterials        StudyMaterial[]           @relation("FacultyStudyMaterials")
+  studentFeeRecords     StudentFeeRecord[]        @relation("StudentFeeRecords")
+
+  // Back-relations for the T-03 additions
+  batchAssignments      BatchFaculty[]
+  attendanceCorrections AttendanceCorrectionRequest[]
+  academicQueries       AcademicQuery[]
+  studyTasks            StudyTask[]
+  supportRequests       SupportRequest[]
+  studentDocuments      StudentDocument[]
+  testAttemptAnswers    TestAttemptAnswer[]
 
   @@index([email])
   @@index([resetPasswordToken])
 }
 
 model InstituteMembership {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   instituteId String
   userId      String
   role        Role
-  status      String   @default("ACTIVE") // ACTIVE, PENDING_APPROVAL, SUSPENDED
-  createdAt   DateTime @default(now())
+  status      String    @default("ACTIVE") // ACTIVE, PENDING_APPROVAL, SUSPENDED, REVOKED
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now()) @updatedAt
+  revokedAt   DateTime?
+  revokedById String?
 
   institute Institute @relation(fields: [instituteId], references: [id], onDelete: Cascade)
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -168,23 +206,27 @@ model Batch {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  institute          Institute           @relation(fields: [instituteId], references: [id], onDelete: Cascade)
-  teacher            User                @relation("TeacherBatches", fields: [teacherId], references: [id])
-  enrollments        Enrollment[]
-  attendanceSessions AttendanceSession[]
-  assignments        Assignment[]
-  tests              TestQuiz[]
-  lessonPlans        LessonPlan[]
-  timetableSlots     TimetableSlot[]
-  invitations        InvitationCode[]
-  announcements      Announcement[]
-  classroomAssessments ClassroomAssessment[]
-  teachingDiaries      DailyTeachingDiary[]
-  studyMaterials       StudyMaterial[]
-  studentFeeRecords    StudentFeeRecord[]
+  institute             Institute                     @relation(fields: [instituteId], references: [id], onDelete: Cascade)
+  teacher               User                          @relation("TeacherBatches", fields: [teacherId], references: [id])
+  enrollments           Enrollment[]
+  attendanceSessions    AttendanceSession[]
+  assignments           Assignment[]
+  tests                 TestQuiz[]
+  lessonPlans           LessonPlan[]
+  timetableSlots        TimetableSlot[]
+  invitations           InvitationCode[]
+  announcements         Announcement[]
+  classroomAssessments  ClassroomAssessment[]
+  teachingDiaries       DailyTeachingDiary[]
+  studyMaterials        StudyMaterial[]
+  studentFeeRecords     StudentFeeRecord[]
+  facultyAssignments    BatchFaculty[]
+  attendanceCorrections AttendanceCorrectionRequest[]
+  academicQueries       AcademicQuery[]
 
   @@index([instituteId])
   @@index([teacherId])
+  @@index([instituteId, isActive])
 }
 
 model Enrollment {
@@ -201,9 +243,11 @@ model Enrollment {
   student   User      @relation("StudentEnrollments", fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([batchId, studentId])
+  @@unique([batchId, rollNumber])
   @@index([instituteId])
   @@index([batchId])
   @@index([studentId])
+  @@index([studentId, status])
 }
 
 model InvitationCode {
@@ -238,9 +282,10 @@ model AttendanceSession {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  institute Institute          @relation(fields: [instituteId], references: [id], onDelete: Cascade)
-  batch     Batch              @relation(fields: [batchId], references: [id], onDelete: Cascade)
-  records   AttendanceRecord[]
+  institute   Institute                     @relation(fields: [instituteId], references: [id], onDelete: Cascade)
+  batch       Batch                         @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  records     AttendanceRecord[]
+  corrections AttendanceCorrectionRequest[]
 
   @@unique([batchId, date])
   @@index([instituteId])
@@ -265,6 +310,7 @@ model AttendanceRecord {
   @@unique([sessionId, studentId])
   @@index([sessionId])
   @@index([studentId])
+  @@index([studentId, createdAt])
 }
 
 model Assignment {
@@ -289,6 +335,7 @@ model Assignment {
   @@index([instituteId])
   @@index([batchId])
   @@index([teacherId])
+  @@index([batchId, dueDate])
 }
 
 model AssignmentSubmission {
@@ -310,6 +357,7 @@ model AssignmentSubmission {
   @@unique([assignmentId, studentId])
   @@index([assignmentId])
   @@index([studentId])
+  @@index([studentId, submittedAt])
 }
 
 model TestQuiz {
@@ -323,19 +371,24 @@ model TestQuiz {
   durationMinutes Int        @default(60)
   totalMarks      Int        @default(100)
   status          TestStatus @default(PUBLISHED)
-  questions       Json // Array of { id, text, type: 'MCQ'|'TEXT', options?: string[], correctOptionIndex?: number, marks: number }
+  // DEPRECATED: legacy inline question blob. Questions and answer keys now live in TestQuestion
+  // (server-side only). Kept so the column set of the existing production table is unchanged.
+  questions       Json       @default("[]")
   resultsReleased Boolean    @default(false)
   scheduledDate   DateTime
+  closesAt        DateTime?
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 
-  institute Institute     @relation(fields: [instituteId], references: [id], onDelete: Cascade)
-  batch     Batch         @relation(fields: [batchId], references: [id], onDelete: Cascade)
-  attempts  TestAttempt[]
+  institute    Institute      @relation(fields: [instituteId], references: [id], onDelete: Cascade)
+  batch        Batch          @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  attempts     TestAttempt[]
+  questionRows TestQuestion[]
 
   @@index([instituteId])
   @@index([batchId])
   @@index([teacherId])
+  @@index([batchId, scheduledDate])
 }
 
 model TestAttempt {
@@ -343,14 +396,16 @@ model TestAttempt {
   testId      String
   studentId   String
   submittedAt DateTime  @default(now())
-  answers     Json // Array of { questionId, selectedOptionIndex?, textAnswer? }
+  answers     Json // Array of { questionId, selectedOptionIndex?, textAnswer? } as submitted
   score       Float?
-  status      String    @default("SUBMITTED") // SUBMITTED, GRADED
+  totalMarks  Float?
+  status      String    @default("SUBMITTED") // SUBMITTED (needs manual grading), GRADED
   feedback    String?
   gradedAt    DateTime?
 
-  test    TestQuiz @relation(fields: [testId], references: [id], onDelete: Cascade)
-  student User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  test       TestQuiz            @relation(fields: [testId], references: [id], onDelete: Cascade)
+  student    User                @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  answerRows TestAttemptAnswer[]
 
   @@unique([testId, studentId])
   @@index([testId])
@@ -427,10 +482,16 @@ model AuditLog {
   resourceType String
   resourceId   String?
   metadata     Json?
+  actorEmail   String?
+  details      String?
+  status       String   @default("SUCCESS") // SUCCESS, FAILURE, WARNING
   createdAt    DateTime @default(now())
 
   @@index([instituteId])
   @@index([action])
+  @@index([createdAt])
+  @@index([instituteId, createdAt])
+  @@index([resourceType, resourceId])
 }
 
 // -------------------------------------------------------------
@@ -475,6 +536,8 @@ model ClassroomAssessment {
   publishedAt      DateTime?
   publishedBy      String?
   gradingPrecision Int                       @default(1)
+  isMultiSubject   Boolean                   @default(false)
+  subjects         Json? // Array of { name, maxMarks, passingMarks? } when isMultiSubject
   createdAt        DateTime                  @default(now())
   updatedAt        DateTime                  @updatedAt
 
@@ -488,6 +551,7 @@ model ClassroomAssessment {
   @@index([batchId])
   @@index([teacherId])
   @@index([assessmentDate])
+  @@index([batchId, assessmentDate])
 }
 
 model AssessmentMark {
@@ -500,6 +564,7 @@ model AssessmentMark {
   grade            String?
   resultStatus     ResultStatus     @default(PENDING)
   feedback         String?
+  subjectMarks     Json? // { [subjectName]: number | null } for multi-subject assessments
   isPublished      Boolean          @default(false)
   correctionReason String?
   lastEditedBy     String?
@@ -513,6 +578,7 @@ model AssessmentMark {
   @@unique([assessmentId, studentId])
   @@index([assessmentId])
   @@index([studentId])
+  @@index([studentId, isPublished])
 }
 
 model AssessmentMarkHistory {
@@ -536,6 +602,7 @@ model AssessmentAudit {
   assessmentId String
   action       String // CREATED, DRAFT_SAVED, PUBLISHED, REPUBLISHED, MARKS_CORRECTED
   userId       String
+  reason       String?
   metadata     Json?
   createdAt    DateTime @default(now())
 
@@ -553,11 +620,14 @@ model Notification {
   type        String   @default("RESULT_PUBLISHED")
   link        String?
   isRead      Boolean  @default(false)
+  dedupeKey   String?
   createdAt   DateTime @default(now())
 
   institute Institute @relation(fields: [instituteId], references: [id], onDelete: Cascade)
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, dedupeKey])
+  @@index([userId, createdAt])
   @@index([userId])
   @@index([instituteId])
   @@index([isRead])
@@ -641,21 +711,21 @@ model InstituteUsageCounter {
 }
 
 model FacultyProfile {
-  id                   String    @id @default(cuid())
+  id                   String   @id @default(cuid())
   instituteId          String
   userId               String
-  staffId              String    // e.g. "FAC-101"
-  designation          String    // e.g. "Senior Physics Faculty"
-  employmentStatus     String    @default("ACTIVE") // ACTIVE, ON_LEAVE, PROBATION, INACTIVE, RESIGNED
-  compensationType     String    @default("FIXED_MONTHLY") // FIXED_MONTHLY, HOURLY_PER_CLASS, HYBRID
-  baseSalary           Float     @default(0)
-  hourlyRate           Float     @default(0)
-  joiningDate          DateTime  @default(now())
+  staffId              String // e.g. "FAC-101"
+  designation          String // e.g. "Senior Physics Faculty"
+  employmentStatus     String   @default("ACTIVE") // ACTIVE, ON_LEAVE, PROBATION, INACTIVE, RESIGNED
+  compensationType     String   @default("FIXED_MONTHLY") // FIXED_MONTHLY, HOURLY_PER_CLASS, HYBRID
+  baseSalary           Float    @default(0)
+  hourlyRate           Float    @default(0)
+  joiningDate          DateTime @default(now())
   assignedSubjects     String[]
-  delegatedPermissions String[]  // MANAGE_ATTENDANCE, MANAGE_MARKS, VIEW_FEES, MANAGE_TIMETABLE, PUBLISH_DIARY
+  delegatedPermissions String[] // MANAGE_ATTENDANCE, MANAGE_MARKS, VIEW_FEES, MANAGE_TIMETABLE, PUBLISH_DIARY
   emergencyContact     String?
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   institute Institute @relation(fields: [instituteId], references: [id], onDelete: Cascade)
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -667,24 +737,24 @@ model FacultyProfile {
 }
 
 model SalaryRecord {
-  id                 String    @id @default(cuid())
-  instituteId        String
-  facultyId          String
-  payPeriod          String    // YYYY-MM e.g. "2026-10"
-  compensationModel  String    @default("FIXED_MONTHLY") // FIXED_MONTHLY, HOURLY_PER_CLASS
-  classesConducted   Int       @default(0)
-  baseAmount         Float     @default(0)
-  additions          Float     @default(0)
-  deductions         Float     @default(0)
-  advances           Float     @default(0)
-  netPayable         Float     @default(0)
-  status             String    @default("DRAFT") // DRAFT, REVIEWED, APPROVED, PARTIALLY_PAID, PAID
-  paymentDate        DateTime?
-  paymentMethod      String?   // BANK_TRANSFER, UPI, CASH, CHEQUE
-  paymentReference   String?   // UTR/Transaction number
-  remarks            String?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  id                String    @id @default(cuid())
+  instituteId       String
+  facultyId         String
+  payPeriod         String // YYYY-MM e.g. "2026-10"
+  compensationModel String    @default("FIXED_MONTHLY") // FIXED_MONTHLY, HOURLY_PER_CLASS
+  classesConducted  Int       @default(0)
+  baseAmount        Float     @default(0)
+  additions         Float     @default(0)
+  deductions        Float     @default(0)
+  advances          Float     @default(0)
+  netPayable        Float     @default(0)
+  status            String    @default("DRAFT") // DRAFT, REVIEWED, APPROVED, PARTIALLY_PAID, PAID
+  paymentDate       DateTime?
+  paymentMethod     String? // BANK_TRANSFER, UPI, CASH, CHEQUE
+  paymentReference  String? // UTR/Transaction number
+  remarks           String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   institute Institute @relation(fields: [instituteId], references: [id], onDelete: Cascade)
   faculty   User      @relation("FacultySalaryRecords", fields: [facultyId], references: [id], onDelete: Cascade)
@@ -699,7 +769,7 @@ model FacultyLeaveApplication {
   id                  String    @id @default(cuid())
   instituteId         String
   facultyId           String
-  leaveType           String    // CASUAL, SICK, ACADEMIC_DUTY, EMERGENCY, UNPAID
+  leaveType           String // CASUAL, SICK, ACADEMIC_DUTY, EMERGENCY, UNPAID
   startDate           DateTime
   endDate             DateTime
   totalDays           Float     @default(1.0)
@@ -723,27 +793,27 @@ model FacultyLeaveApplication {
 }
 
 model DailyTeachingDiary {
-  id                 String    @id @default(cuid())
+  id                 String   @id @default(cuid())
   instituteId        String
   batchId            String
   facultyId          String
   lessonDate         DateTime
-  sessionTime        String?   // e.g. "09:00 - 10:30"
+  sessionTime        String? // e.g. "09:00 - 10:30"
   subject            String
   chapterTitle       String
   conceptsTaught     String
   learningObjectives String?
-  teachingMethods    String?   // LECTURE, PROBLEM_SOLVING, DISCUSSION, LAB, QUIZ
-  durationMinutes    Int       @default(60)
+  teachingMethods    String? // LECTURE, PROBLEM_SOLVING, DISCUSSION, LAB, QUIZ
+  durationMinutes    Int      @default(60)
   homeworkAssigned   String?
   referenceLinks     String[]
   attachmentUrl      String?
   followUpPlan       String?
-  status             String    @default("PUBLISHED") // DRAFT, PUBLISHED, ARCHIVED
-  audience           String    @default("BATCH") // PRIVATE_DRAFT, OWNER_ONLY, BATCH
-  isCovered          Boolean   @default(true)
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  status             String   @default("PUBLISHED") // DRAFT, PUBLISHED, ARCHIVED
+  audience           String   @default("BATCH") // PRIVATE_DRAFT, OWNER_ONLY, BATCH
+  isCovered          Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   institute Institute @relation(fields: [instituteId], references: [id], onDelete: Cascade)
   batch     Batch     @relation(fields: [batchId], references: [id], onDelete: Cascade)
@@ -756,23 +826,23 @@ model DailyTeachingDiary {
 }
 
 model StudyMaterial {
-  id               String    @id @default(cuid())
+  id               String   @id @default(cuid())
   instituteId      String
   batchId          String
   facultyId        String
   title            String
-  category         String    @default("CHAPTER_NOTES") // CHAPTER_NOTES, HANDOUT, WORKSHEET, FORMULA_SHEET, REVISION_GUIDE, PRACTICE_PAPER
+  category         String   @default("CHAPTER_NOTES") // CHAPTER_NOTES, HANDOUT, WORKSHEET, FORMULA_SHEET, REVISION_GUIDE, PRACTICE_PAPER
   subject          String
   chapter          String?
   content          String?
   fileUrl          String?
   fileName         String?
   fileSize         String?
-  status           String    @default("PUBLISHED") // DRAFT, PUBLISHED, ARCHIVED
-  isStudentVisible Boolean   @default(true)
-  downloadCount    Int       @default(0)
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  status           String   @default("PUBLISHED") // DRAFT, PUBLISHED, ARCHIVED
+  isStudentVisible Boolean  @default(true)
+  downloadCount    Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   institute Institute @relation(fields: [instituteId], references: [id], onDelete: Cascade)
   batch     Batch     @relation(fields: [batchId], references: [id], onDelete: Cascade)
@@ -784,18 +854,18 @@ model StudyMaterial {
 }
 
 model StudentFeeRecord {
-  id           String    @id @default(cuid())
+  id           String   @id @default(cuid())
   instituteId  String
   studentId    String
   batchId      String?
-  feeTitle     String    // e.g. "Term 2 Tuition Fee", "JEE Test Series Pack"
+  feeTitle     String // e.g. "Term 2 Tuition Fee", "JEE Test Series Pack"
   totalAmount  Float
-  paidAmount   Float     @default(0)
+  paidAmount   Float    @default(0)
   dueDate      DateTime
-  status       String    @default("PENDING") // PAID, PARTIAL, PENDING, OVERDUE
-  academicYear String?   @default("2026-2027")
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  status       String   @default("PENDING") // PAID, PARTIAL, PENDING, OVERDUE
+  academicYear String?  @default("2026-2027")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   institute Institute            @relation(fields: [instituteId], references: [id], onDelete: Cascade)
   student   User                 @relation("StudentFeeRecords", fields: [studentId], references: [id], onDelete: Cascade)
@@ -805,6 +875,8 @@ model StudentFeeRecord {
   @@index([instituteId])
   @@index([studentId])
   @@index([status])
+  @@index([instituteId, dueDate])
+  @@index([studentId, dueDate])
 }
 
 model StudentFeeReminder {
@@ -813,12 +885,290 @@ model StudentFeeReminder {
   studentId   String
   channel     String   @default("IN_APP") // IN_APP, SMS, EMAIL, WHATSAPP
   message     String
-  status      String   @default("SENT") // SENT, DELIVERED, FAILED
+  status      String   @default("SENT") // legacy: SENT. New rows: RECORDED (no provider), DELIVERED (in-app), FAILED
   sentAt      DateTime @default(now())
   sentById    String
+  // `${channel}:${YYYY-MM-DD}` - at most one reminder per fee record, channel and day.
+  dedupeKey   String?
 
   feeRecord StudentFeeRecord @relation(fields: [feeRecordId], references: [id], onDelete: Cascade)
 
+  @@unique([feeRecordId, dedupeKey])
   @@index([feeRecordId])
   @@index([studentId])
+}
+
+// ==========================================================================
+// T-03 BACKEND CORE ADDITIONS (additive; see docs/database-and-migrations.md)
+// Everything below this line was added by the backend workstream. Other agents
+// that need schema changes (e.g. theme configuration) must hand their models to
+// the backend owner so they are merged here and in a new migration.
+// ==========================================================================
+
+/// Extra faculty assigned to a batch besides Batch.teacherId (the lead teacher).
+model BatchFaculty {
+  id          String   @id @default(cuid())
+  instituteId String
+  batchId     String
+  facultyId   String
+  assignedAt  DateTime @default(now())
+  assignedBy  String?
+
+  institute Institute @relation(fields: [instituteId], references: [id], onDelete: Cascade)
+  batch     Batch     @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  faculty   User      @relation(fields: [facultyId], references: [id], onDelete: Cascade)
+
+  @@unique([batchId, facultyId])
+  @@index([instituteId])
+  @@index([facultyId, instituteId])
+}
+
+/// Student request to correct an attendance record. Reviewed by the batch faculty or management.
+model AttendanceCorrectionRequest {
+  id           String    @id @default(cuid())
+  instituteId  String
+  studentId    String
+  batchId      String?
+  sessionId    String?
+  date         DateTime  @db.Date
+  reason       String
+  status       String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  reviewedById String?
+  reviewerNote String?
+  reviewedAt   DateTime?
+  createdAt    DateTime  @default(now())
+
+  institute Institute          @relation(fields: [instituteId], references: [id], onDelete: Cascade)
+  student   User               @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  batch     Batch?             @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  session   AttendanceSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([instituteId, status])
+  @@index([studentId, createdAt])
+  @@index([batchId, status])
+}
+
+/// Student -> faculty doubt. Replies are rows in AcademicQueryReply.
+model AcademicQuery {
+  id            String   @id @default(cuid())
+  instituteId   String
+  studentId     String
+  batchId       String?
+  facultyId     String? // optional addressee; null = any faculty of the batch
+  subject       String
+  topic         String?
+  questionText  String
+  attachmentUrl String?
+  status        String   @default("PENDING") // PENDING, ANSWERED
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  institute Institute            @relation(fields: [instituteId], references: [id], onDelete: Cascade)
+  student   User                 @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  batch     Batch?               @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  replies   AcademicQueryReply[]
+
+  @@index([studentId, createdAt])
+  @@index([instituteId, status])
+  @@index([batchId, status])
+}
+
+model AcademicQueryReply {
+  id        String   @id @default(cuid())
+  queryId   String
+  authorId  String
+  body      String
+  createdAt DateTime @default(now())
+
+  query AcademicQuery @relation(fields: [queryId], references: [id], onDelete: Cascade)
+
+  @@index([queryId, createdAt])
+}
+
+/// Personal study planner task. Strictly private to its owner.
+model StudyTask {
+  id          String    @id @default(cuid())
+  instituteId String?
+  userId      String
+  title       String
+  subject     String?
+  dueDate     DateTime?
+  priority    String    @default("NORMAL") // LOW, NORMAL, HIGH
+  isCompleted Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  institute Institute? @relation(fields: [instituteId], references: [id], onDelete: SetNull)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isCompleted, dueDate])
+}
+
+model SupportRequest {
+  id          String   @id @default(cuid())
+  instituteId String?
+  userId      String
+  category    String // PROFILE_CORRECTION, ATTENDANCE_MISMATCH, PAYMENT_ISSUE, ACADEMIC_HELP, TECHNICAL_SUPPORT
+  subject     String
+  description String
+  status      String   @default("SUBMITTED") // SUBMITTED, IN_REVIEW, RESOLVED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  institute Institute? @relation(fields: [instituteId], references: [id], onDelete: SetNull)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([instituteId, status])
+}
+
+/// Metadata for documents issued to a student (report cards, receipts, certificates). The file bytes
+/// live in object storage; only the reference is stored here.
+model StudentDocument {
+  id             String   @id @default(cuid())
+  instituteId    String
+  studentId      String
+  category       String // REPORT_CARD, FEE_RECEIPT, STUDY_MATERIAL, TIMETABLE_SCHEDULE, CERTIFICATE
+  title          String
+  academicPeriod String?
+  issueDate      DateTime @default(now())
+  downloadUrl    String
+  fileSize       String?
+  issuedById     String?
+  createdAt      DateTime @default(now())
+
+  institute Institute @relation(fields: [instituteId], references: [id], onDelete: Cascade)
+  student   User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, issueDate])
+  @@index([instituteId])
+}
+
+/// Faculty invitation (single-use, hashed token). The raw token is shown once to the owner.
+model FacultyInvitation {
+  id                   String    @id @default(cuid())
+  instituteId          String
+  email                String
+  fullName             String?
+  tokenHash            String    @unique // sha256 of the raw token
+  role                 Role      @default(FACULTY)
+  designation          String
+  assignedSubjects     String[]
+  batchIds             String[]
+  delegatedPermissions String[]
+  compensationType     String    @default("FIXED_MONTHLY")
+  baseSalary           Float     @default(0)
+  hourlyRate           Float     @default(0)
+  status               String    @default("PENDING") // PENDING, ACCEPTED, REVOKED
+  expiresAt            DateTime
+  invitedById          String
+  acceptedAt           DateTime?
+  acceptedUserId       String?
+  revokedAt            DateTime?
+  revokedById          String?
+  deliveryStatus       String    @default("NOT_SENT") // NOT_SENT, QUEUED, SENT, FAILED
+  lastSentAt           DateTime?
+  resendCount          Int       @default(0)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  institute Institute @relation(fields: [instituteId], references: [id], onDelete: Cascade)
+
+  @@index([instituteId, status])
+  @@index([instituteId, email])
+}
+
+/// Outbound message log / outbox. No provider is wired yet: rows are written as PENDING or SKIPPED so
+/// a future provider worker can drain them. `idempotencyKey` makes producers safe to retry.
+model NotificationOutbox {
+  id             String    @id @default(cuid())
+  instituteId    String?
+  userId         String?
+  channel        String // EMAIL, SMS, WHATSAPP, PUSH
+  template       String
+  recipient      String
+  payload        Json?
+  status         String    @default("PENDING") // PENDING, SENT, FAILED, SKIPPED
+  idempotencyKey String    @unique
+  attempts       Int       @default(0)
+  lastError      String?
+  createdAt      DateTime  @default(now())
+  sentAt         DateTime?
+
+  institute Institute? @relation(fields: [instituteId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([instituteId])
+}
+
+/// Test questions with the server-side answer key. NEVER serialised to students.
+model TestQuestion {
+  id                 String   @id @default(cuid())
+  testId             String
+  position           Int
+  text               String
+  type               String   @default("MCQ") // MCQ, TEXT
+  options            String[]
+  correctOptionIndex Int?
+  marks              Float    @default(1)
+  negativeMarks      Float    @default(0)
+
+  test    TestQuiz            @relation(fields: [testId], references: [id], onDelete: Cascade)
+  answers TestAttemptAnswer[]
+
+  @@unique([testId, position])
+  @@index([testId])
+}
+
+model TestAttemptAnswer {
+  id                  String   @id @default(cuid())
+  attemptId           String
+  questionId          String
+  studentId           String
+  selectedOptionIndex Int?
+  textAnswer          String?
+  isCorrect           Boolean?
+  marksAwarded        Float    @default(0)
+  createdAt           DateTime @default(now())
+
+  attempt  TestAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question TestQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  student  User         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([attemptId, questionId])
+  @@index([questionId])
+  @@index([studentId])
+}
+
+model PlatformAnnouncement {
+  id             String    @id @default(cuid())
+  title          String
+  message        String
+  severity       String    @default("info") // info, warning, critical
+  targetAudience String    @default("ALL") // ALL, TEACHERS, STUDENTS
+  expiresAt      DateTime?
+  createdById    String?
+  createdAt      DateTime  @default(now())
+
+  @@index([createdAt])
+}
+
+model PlatformThemeRevision {
+  id               String   @id @default(cuid())
+  revision         Int      @unique
+  revisionId       String   @unique
+  checksum         String
+  config           Json
+  action           String
+  restoredFrom     Int?
+  previousRevision Int?
+  changeSummary    Json?
+  reason           String?
+  actorId          String
+  actorEmail       String
+  isActive         Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  @@index([isActive])
+  @@index([createdAt])
 }

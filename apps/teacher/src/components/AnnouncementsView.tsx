@@ -52,7 +52,7 @@ export function AnnouncementsView({
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E3DFD9]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border-paper">
         <div>
           <h1 className="font-['Playfair_Display'] text-2xl sm:text-3xl font-bold text-stone-900">
             Broadcasts & Class Announcements
@@ -64,7 +64,7 @@ export function AnnouncementsView({
 
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#1677FF] hover:bg-[#3395FF] text-white text-xs font-semibold tracking-wide transition shadow-[0_2px_12px_rgba(22,119,255,0.35)] shrink-0"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-electric hover:bg-[#3395FF] text-white text-xs font-semibold tracking-wide transition shadow-[0_2px_12px_rgba(22,119,255,0.35)] shrink-0"
         >
           <Plus className="w-4 h-4" />
           <span>Post Announcement</span>
@@ -74,27 +74,27 @@ export function AnnouncementsView({
       {/* Announcements Feed */}
       <div className="space-y-4">
         {announcements.length === 0 ? (
-          <div className="p-12 rounded-xl bg-white border border-[#E3DFD9] text-center text-xs text-stone-500">
+          <div className="p-12 rounded-xl bg-white border border-border-paper text-center text-xs text-stone-500">
             No announcements broadcasted yet.
           </div>
         ) : (
           announcements.map((ann) => (
             <div
               key={ann.id}
-              className="p-5 rounded-xl bg-white border border-[#E3DFD9] space-y-3"
+              className="p-5 rounded-xl bg-white border border-border-paper space-y-3"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <span
                     className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
                       ann.priority === 'URGENT'
-                        ? 'bg-[#F43F5E]/15 text-[#F43F5E] border border-[#F43F5E]/30'
-                        : 'bg-[#F3EFE9] text-stone-500 border border-[#E3DFD9]'
+                        ? 'bg-status-danger/15 text-status-danger border border-status-danger/30'
+                        : 'bg-surface-subtle text-stone-500 border border-border-paper'
                     }`}
                   >
                     {ann.priority}
                   </span>
-                  <span className="text-xs font-semibold text-[#1677FF]">
+                  <span className="text-xs font-semibold text-electric">
                     {ann.batchName || 'All Batches'}
                   </span>
                 </div>
@@ -115,7 +115,7 @@ export function AnnouncementsView({
                 {ann.content}
               </p>
 
-              <div className="pt-2 border-t border-[#E3DFD9] text-[11px] text-stone-700">
+              <div className="pt-2 border-t border-border-paper text-[11px] text-stone-700">
                 Author: <span className="font-medium text-stone-900">{ann.authorName}</span> ({ann.authorRole})
               </div>
             </div>
@@ -126,7 +126,7 @@ export function AnnouncementsView({
       {/* Create Announcement Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white border border-[#E3DFD9] p-6 shadow-2xl relative animate-in zoom-in-95 duration-150">
+          <div className="w-full max-w-md rounded-2xl bg-white border border-border-paper p-6 shadow-2xl relative animate-in zoom-in-95 duration-150">
             <button
               onClick={() => setShowCreateModal(false)}
               className="absolute right-4 top-4 text-stone-500 hover:text-white"
@@ -150,7 +150,7 @@ export function AnnouncementsView({
                   placeholder="e.g. Schedule Change: Sunday Doubt Clearing Class"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E3DFD9] text-stone-900 focus:outline-none focus:border-[#1677FF]"
+                  className="w-full px-3 py-2 rounded-lg bg-paper-warm border border-border-paper text-stone-900 focus:outline-none focus:border-electric"
                 />
               </div>
 
@@ -160,7 +160,7 @@ export function AnnouncementsView({
                   <select
                     value={batchId}
                     onChange={(e) => setBatchId(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E3DFD9] text-stone-900 focus:outline-none focus:border-[#1677FF]"
+                    className="w-full px-3 py-2 rounded-lg bg-paper-warm border border-border-paper text-stone-900 focus:outline-none focus:border-electric"
                   >
                     <option value="" className="bg-white">
                       All Enrolled Batches
@@ -178,7 +178,7 @@ export function AnnouncementsView({
                   <select
                     value={priority}
                     onChange={(e) => setPriority(e.target.value as 'NORMAL' | 'URGENT')}
-                    className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E3DFD9] text-stone-900 focus:outline-none focus:border-[#1677FF]"
+                    className="w-full px-3 py-2 rounded-lg bg-paper-warm border border-border-paper text-stone-900 focus:outline-none focus:border-electric"
                   >
                     <option value="NORMAL" className="bg-white">
                       Normal Notice
@@ -198,7 +198,7 @@ export function AnnouncementsView({
                   placeholder="Enter detailed notice information..."
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
-                  className="w-full p-2.5 rounded-lg bg-[#FAF8F5] border border-[#E3DFD9] text-stone-900 focus:outline-none focus:border-[#1677FF]"
+                  className="w-full p-2.5 rounded-lg bg-paper-warm border border-border-paper text-stone-900 focus:outline-none focus:border-electric"
                 />
               </div>
 
@@ -213,7 +213,7 @@ export function AnnouncementsView({
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-2 rounded-lg bg-[#1677FF] hover:bg-[#3395FF] text-white font-semibold shadow-[0_2px_12px_rgba(22,119,255,0.35)] disabled:opacity-50"
+                  className="px-5 py-2 rounded-lg bg-electric hover:bg-[#3395FF] text-white font-semibold shadow-[0_2px_12px_rgba(22,119,255,0.35)] disabled:opacity-50"
                 >
                   {isSubmitting ? 'Publishing...' : 'Publish Announcement'}
                 </button>

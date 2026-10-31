@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { Skeleton } from './Skeleton';
 import { ErrorState } from './ErrorState';
-import { EmptyState } from './EmptyState';
+import { EmptyPaper } from './Paper';
 import { errorMessage } from '../../lib/format';
 
 interface QueryBoundaryProps<T> {
@@ -36,7 +36,7 @@ export function QueryBoundary<T>({
     return <ErrorState message={errorMessage(query.error)} onRetry={() => query.refetch()} />;
   }
   if (query.data === undefined || query.data === null || (isEmpty && isEmpty(query.data))) {
-    return <EmptyState title={emptyTitle} description={emptyDescription} />;
+    return <EmptyPaper title={emptyTitle} message={emptyDescription} />;
   }
   return <>{children(query.data)}</>;
 }

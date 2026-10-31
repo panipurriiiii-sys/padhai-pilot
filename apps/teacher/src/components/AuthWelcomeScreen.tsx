@@ -194,7 +194,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
           <div className="w-8 h-8 rounded-lg bg-[var(--brand-electric)] flex items-center justify-center text-white font-['Playfair_Display'] font-black text-sm shadow-sm">
             P
           </div>
-          <span className="font-['Playfair_Display'] font-bold text-lg text-[#1C1917] tracking-tight">
+          <span className="font-['Playfair_Display'] font-bold text-lg text-ink-primary tracking-tight">
             PadhaiPilot
           </span>
         </div>
@@ -206,11 +206,11 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
 
       {/* 2. CENTERED AUTH CARD */}
       <main className="w-full max-w-[440px] my-auto">
-        <div className="bg-white rounded-2xl border border-[#E3DFD9] p-6 sm:p-8 shadow-[0_4px_20px_rgba(0,0,0,0.05)]">
+        <div className="bg-white rounded-2xl border border-border-paper p-6 sm:p-8 shadow-[0_4px_20px_rgba(0,0,0,0.05)]">
           
           {/* Card Title */}
           <div className="text-center mb-6">
-            <h1 className="font-['Playfair_Display'] text-2xl sm:text-3xl font-bold text-[#1C1917] tracking-tight">
+            <h1 className="font-['Playfair_Display'] text-2xl sm:text-3xl font-bold text-ink-primary tracking-tight">
               {activeTab === 'login' && 'Sign in to your account'}
               {activeTab === 'register' && 'Create your account'}
               {activeTab === 'forgot' && 'Reset your password'}
@@ -236,7 +236,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                 }}
                 className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
                   activeTab === 'login'
-                    ? 'bg-white text-[#1C1917] shadow-sm'
+                    ? 'bg-white text-ink-primary shadow-sm'
                     : 'text-stone-500 hover:text-stone-900'
                 }`}
               >
@@ -251,7 +251,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                 }}
                 className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
                   activeTab === 'register'
-                    ? 'bg-white text-[#1C1917] shadow-sm'
+                    ? 'bg-white text-ink-primary shadow-sm'
                     : 'text-stone-500 hover:text-stone-900'
                 }`}
               >
@@ -290,7 +290,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                     placeholder="name@example.com"
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
-                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Inter'] text-[#1C1917] placeholder:text-stone-400 focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
+                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-border-input bg-paper-warm text-xs font-['Inter'] text-ink-primary placeholder:text-stone-400 focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
                   />
                 </div>
               </div>
@@ -321,7 +321,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                     placeholder="••••••••"
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
-                    className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Inter'] text-[#1C1917] placeholder:text-stone-400 focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
+                    className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-border-input bg-paper-warm text-xs font-['Inter'] text-ink-primary placeholder:text-stone-400 focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
                   />
                   <button
                     type="button"
@@ -348,7 +348,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full mt-2 py-2.5 px-4 rounded-xl bg-[var(--brand-electric)] hover:bg-[#0A6FE8] active:scale-[0.99] text-white text-xs font-bold shadow-sm transition flex items-center justify-center gap-2"
+                className="w-full mt-2 py-2.5 px-4 rounded-xl bg-[var(--brand-electric)] hover:bg-brand-hover active:scale-[0.99] text-white text-xs font-bold shadow-sm transition flex items-center justify-center gap-2"
               >
                 {isLoading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -410,7 +410,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                   placeholder="e.g. Alok Verma"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-medium text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
+                  className="w-full px-3.5 py-2 rounded-xl border border-border-input bg-paper-warm text-xs font-medium text-ink-primary focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
                 />
               </div>
 
@@ -425,7 +425,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                   placeholder="name@example.com"
                   value={registerEmail}
                   onChange={(e) => setRegisterEmail(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Inter'] text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
+                  className="w-full px-3.5 py-2 rounded-xl border border-border-input bg-paper-warm text-xs font-['Inter'] text-ink-primary focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
                 />
               </div>
 
@@ -441,7 +441,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                     placeholder="e.g. Zenith Academy"
                     value={instituteName}
                     onChange={(e) => setInstituteName(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-medium text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
+                    className="w-full px-3.5 py-2 rounded-xl border border-border-input bg-paper-warm text-xs font-medium text-ink-primary focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
                   />
                 </div>
               ) : (
@@ -454,7 +454,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                     placeholder="e.g. Mathematics"
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-medium text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
+                    className="w-full px-3.5 py-2 rounded-xl border border-border-input bg-paper-warm text-xs font-medium text-ink-primary focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
                   />
                 </div>
               )}
@@ -472,7 +472,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                     placeholder="••••••••"
                     value={registerPassword}
                     onChange={(e) => setRegisterPassword(e.target.value)}
-                    className="w-full px-3.5 py-2 pr-9 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Inter'] text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
+                    className="w-full px-3.5 py-2 pr-9 rounded-xl border border-border-input bg-paper-warm text-xs font-['Inter'] text-ink-primary focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
                   />
                   <button
                     type="button"
@@ -513,10 +513,10 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                   placeholder="Re-enter password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className={`w-full px-3.5 py-2 rounded-xl border bg-[#FAF8F5] text-xs font-['Inter'] text-[#1C1917] focus:outline-none focus:bg-white transition ${
+                  className={`w-full px-3.5 py-2 rounded-xl border bg-paper-warm text-xs font-['Inter'] text-ink-primary focus:outline-none focus:bg-white transition ${
                     confirmPassword && confirmPassword !== registerPassword
                       ? 'border-rose-400'
-                      : 'border-[#DDD8D2] focus:border-[var(--brand-electric)]'
+                      : 'border-border-input focus:border-[var(--brand-electric)]'
                   }`}
                 />
               </div>
@@ -524,7 +524,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full mt-2 py-2.5 px-4 rounded-xl bg-[var(--brand-electric)] hover:bg-[#0A6FE8] active:scale-[0.99] text-white text-xs font-bold shadow-sm transition flex items-center justify-center gap-2"
+                className="w-full mt-2 py-2.5 px-4 rounded-xl bg-[var(--brand-electric)] hover:bg-brand-hover active:scale-[0.99] text-white text-xs font-bold shadow-sm transition flex items-center justify-center gap-2"
               >
                 {isLoading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -557,7 +557,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                     placeholder="name@example.com"
                     value={forgotEmail}
                     onChange={(e) => setForgotEmail(e.target.value)}
-                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Inter'] text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
+                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-border-input bg-paper-warm text-xs font-['Inter'] text-ink-primary focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
                   />
                 </div>
               </div>
@@ -565,7 +565,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-2.5 px-4 rounded-xl bg-[var(--brand-electric)] hover:bg-[#0A6FE8] text-white text-xs font-bold shadow-sm transition flex items-center justify-center gap-2"
+                className="w-full py-2.5 px-4 rounded-xl bg-[var(--brand-electric)] hover:bg-brand-hover text-white text-xs font-bold shadow-sm transition flex items-center justify-center gap-2"
               >
                 {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Send Reset Code</span>}
               </button>
@@ -601,7 +601,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                     placeholder="Enter reset code"
                     value={resetToken}
                     onChange={(e) => setResetToken(e.target.value)}
-                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Inter'] font-mono text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
+                    className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-border-input bg-paper-warm text-xs font-['Inter'] font-mono text-ink-primary focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
                   />
                 </div>
               </div>
@@ -619,7 +619,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
                     placeholder="••••••••"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-[#DDD8D2] bg-[#FAF8F5] text-xs font-['Inter'] text-[#1C1917] focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
+                    className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-border-input bg-paper-warm text-xs font-['Inter'] text-ink-primary focus:outline-none focus:border-[var(--brand-electric)] focus:bg-white transition"
                   />
                   <button
                     type="button"
@@ -634,7 +634,7 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-2.5 px-4 rounded-xl bg-[var(--brand-electric)] hover:bg-[#0A6FE8] text-white text-xs font-bold shadow-sm transition flex items-center justify-center gap-2"
+                className="w-full py-2.5 px-4 rounded-xl bg-[var(--brand-electric)] hover:bg-brand-hover text-white text-xs font-bold shadow-sm transition flex items-center justify-center gap-2"
               >
                 {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Save New Password</span>}
               </button>

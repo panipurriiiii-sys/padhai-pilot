@@ -6,18 +6,18 @@ import { lightColors, darkColors, typography } from '../src/theme/tokens';
 const fs = require('fs');
 const path = require('path');
 
-/** Guards the "one identity across web and mobile" rule: mobile tokens must equal the Teacher Portal CSS. */
-const css = fs.readFileSync(path.join(__dirname, '../../teacher/src/app/globals.css'), 'utf8');
-
-const block = (selectorStart: string): string => {
-  const start = css.indexOf(selectorStart);
-  const open = css.indexOf('{', start);
-  return css.slice(open + 1, css.indexOf('}', open));
+/**
+ * Guards the "one identity across web and mobile" rule: mobile tokens must equal the authoritative shared tokens
+ * (packages/shared/src/theme, generated to dist/theme/tokens.json), which are themselves tested against the Teacher
+ * Portal stylesheet. TODO(design-system): replace src/theme/tokens.ts with the shared toNativeTheme() output.
+ */
+const shared = JSON.parse(fs.readFileSync(path.join(__dirname, '../../../packages/shared/dist/theme/tokens.json'), 'utf8'));
+const rootBlock: Record<string, string> = shared.cssVariables.light;
+const darkBlock: Record<string, string> = { ...shared.cssVariables.light, ...shared.cssVariables.dark };
+const hex = (blockObj: Record<string, string>, name: string): string | undefined => {
+  const v = blockObj['--' + name];
+  return /^#[0-9A-Fa-f]{6}$/.test(v || '') ? v.toUpperCase() : undefined;
 };
-const rootBlock = block(':root');
-const darkBlock = block('.dark, .admin-dark');
-const hex = (blockText: string, name: string): string | undefined =>
-  blockText.match(new RegExp(`--${name}:\\s*(#[0-9A-Fa-f]{6})`))?.[1]?.toUpperCase();
 
 const MAP: Array<[string, keyof typeof lightColors]> = [
   ['bg-desk', 'background'],

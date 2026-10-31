@@ -14,6 +14,8 @@ import {
   Trash2,
 } from 'lucide-react';
 import type { BatchSummary, TestQuiz, TestQuestion } from '@padhai-pilot/shared';
+import { EmptyState } from '@padhai-pilot/ui';
+import { TestAveragesCard } from './charts';
 
 interface TestsViewProps {
   batches: BatchSummary[];
@@ -100,7 +102,7 @@ export function TestsView({
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E3DFD9]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border-paper">
         <div>
           <h1 className="font-['Playfair_Display'] text-2xl sm:text-3xl font-bold text-stone-900">
             Tests, Quizzes & Assessments
@@ -112,38 +114,34 @@ export function TestsView({
 
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#1677FF] hover:bg-[#3395FF] text-white text-xs font-semibold tracking-wide transition shadow-[0_2px_12px_rgba(22,119,255,0.35)] shrink-0"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-electric hover:bg-[#3395FF] text-white text-xs font-semibold tracking-wide transition shadow-[0_2px_12px_rgba(22,119,255,0.35)] shrink-0"
         >
           <Plus className="w-4 h-4" />
           <span>Create Assessment</span>
         </button>
       </div>
 
+      {tests.length > 0 && <TestAveragesCard tests={tests} />}
+
       {/* Tests Grid */}
       {tests.length === 0 ? (
-        <div className="paper-card p-12 text-center space-y-3">
-          <Award className="w-10 h-10 text-[var(--ink-muted)] mx-auto opacity-50" />
-          <h3 className="font-['Playfair_Display'] font-bold text-lg text-[var(--ink-primary)]">
-            No Quizzes or Tests Configured
-          </h3>
-          <p className="font-['Raleway'] text-xs text-[var(--ink-muted)] max-w-md mx-auto">
-            Click &quot;Create Assessment&quot; above to create timed objective quizzes and evaluate student learning.
-          </p>
+        <div className="paper-card">
+          <EmptyState art="education/exam-results" title="No tests created yet" description="Create a timed quiz or assessment for a batch. Average scores appear here once students attempt it." />
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {tests.map((t) => (
             <div
               key={t.id}
-              className="p-5 rounded-xl bg-white border border-[#E3DFD9] flex flex-col justify-between"
+              className="p-5 rounded-xl bg-white border border-border-paper flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-[#F3EFE9] text-[#1677FF] border border-[#1677FF]/20">
+                  <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-surface-subtle text-electric border border-electric/20">
                     {t.subject}
                   </span>
                   <span className="text-xs text-stone-500 flex items-center gap-1 font-['Inter']">
-                    <Clock className="w-3.5 h-3.5 text-[#1677FF]" />
+                    <Clock className="w-3.5 h-3.5 text-electric" />
                     {t.durationMinutes} mins
                   </span>
                 </div>
@@ -152,7 +150,7 @@ export function TestsView({
                 <p className="text-xs text-stone-500 mt-1">Batch: {t.batchName}</p>
               </div>
 
-              <div className="mt-5 pt-3 border-t border-[#E3DFD9] flex items-center justify-between text-xs">
+              <div className="mt-5 pt-3 border-t border-border-paper flex items-center justify-between text-xs">
                 <div className="font-['Inter']">
                   <span className="font-bold text-stone-900">{t.questions.length} questions</span>
                   <span className="text-stone-500"> • Total {t.totalMarks} pts</span>
@@ -162,8 +160,8 @@ export function TestsView({
                   onClick={() => onToggleResults(t.id)}
                   className={`px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition ${
                     t.resultsReleased
-                      ? 'bg-[#10B981]/15 text-[#10B981] border-[#10B981]/30 hover:bg-[#10B981]/25'
-                      : 'bg-[#F3EFE9] text-stone-500 border-[#E3DFD9] hover:text-white'
+                      ? 'bg-status-success/15 text-status-success border-status-success/30 hover:bg-status-success/25'
+                      : 'bg-surface-subtle text-stone-500 border-border-paper hover:text-white'
                   }`}
                 >
                   {t.resultsReleased ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
@@ -178,7 +176,7 @@ export function TestsView({
       {/* Create Test Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-          <div className="w-full max-w-2xl rounded-2xl bg-white border border-[#E3DFD9] p-6 shadow-2xl relative animate-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col text-xs">
+          <div className="w-full max-w-2xl rounded-2xl bg-white border border-border-paper p-6 shadow-2xl relative animate-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col text-xs">
             <button
               onClick={() => setShowCreateModal(false)}
               className="absolute right-4 top-4 text-stone-500 hover:text-white"
@@ -202,7 +200,7 @@ export function TestsView({
                   placeholder="e.g. Calculus Mid-Term Assessment Quiz"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E3DFD9] text-stone-900 focus:outline-none focus:border-[#1677FF]"
+                  className="w-full px-3 py-2 rounded-lg bg-paper-warm border border-border-paper text-stone-900 focus:outline-none focus:border-electric"
                 />
               </div>
 
@@ -215,7 +213,7 @@ export function TestsView({
                     placeholder="e.g. Mathematics"
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E3DFD9] text-stone-900"
+                    className="w-full px-3 py-2 rounded-lg bg-paper-warm border border-border-paper text-stone-900"
                   />
                 </div>
                 <div>
@@ -223,7 +221,7 @@ export function TestsView({
                   <select
                     value={batchId}
                     onChange={(e) => setBatchId(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E3DFD9] text-stone-900"
+                    className="w-full px-3 py-2 rounded-lg bg-paper-warm border border-border-paper text-stone-900"
                   >
                     {batches.map((b) => (
                       <option key={b.id} value={b.id} className="bg-white">
@@ -240,27 +238,27 @@ export function TestsView({
                     max={180}
                     value={duration}
                     onChange={(e) => setDuration(Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E3DFD9] text-stone-900"
+                    className="w-full px-3 py-2 rounded-lg bg-paper-warm border border-border-paper text-stone-900"
                   />
                 </div>
               </div>
 
               {/* Questions Section */}
-              <div className="pt-2 border-t border-[#E3DFD9]">
+              <div className="pt-2 border-t border-border-paper">
                 <div className="flex items-center justify-between mb-3">
                   <span className="font-bold text-stone-900">Question Items ({questions.length})</span>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => addQuestion('MCQ')}
-                      className="px-2.5 py-1 rounded bg-[#1677FF]/15 text-[#1677FF] border border-[#1677FF]/30 font-medium hover:bg-[#1677FF]/25"
+                      className="px-2.5 py-1 rounded bg-electric/15 text-electric border border-electric/30 font-medium hover:bg-electric/25"
                     >
                       + Add MCQ
                     </button>
                     <button
                       type="button"
                       onClick={() => addQuestion('TEXT')}
-                      className="px-2.5 py-1 rounded bg-[#F3EFE9] text-stone-700 border border-[#E3DFD9] font-medium hover:text-white"
+                      className="px-2.5 py-1 rounded bg-surface-subtle text-stone-700 border border-border-paper font-medium hover:text-white"
                     >
                       + Add Subjective
                     </button>
@@ -269,9 +267,9 @@ export function TestsView({
 
                 <div className="space-y-3">
                   {questions.map((q, idx) => (
-                    <div key={q.id} className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E3DFD9] space-y-2.5">
+                    <div key={q.id} className="p-3.5 rounded-xl bg-paper-warm border border-border-paper space-y-2.5">
                       <div className="flex items-center justify-between">
-                        <span className="font-mono text-[#1677FF] font-bold">Q{idx + 1} ({q.type})</span>
+                        <span className="font-mono text-electric font-bold">Q{idx + 1} ({q.type})</span>
                         <div className="flex items-center gap-2">
                           <input
                             type="number"
@@ -282,14 +280,14 @@ export function TestsView({
                               const marks = Number(e.target.value);
                               setQuestions(questions.map((item, i) => i === idx ? { ...item, marks } : item));
                             }}
-                            className="w-16 px-2 py-0.5 rounded bg-white border border-[#E3DFD9] text-center font-mono"
+                            className="w-16 px-2 py-0.5 rounded bg-white border border-border-paper text-center font-mono"
                           />
                           <span className="text-stone-500">pts</span>
                           {questions.length > 1 && (
                             <button
                               type="button"
                               onClick={() => removeQuestion(idx)}
-                              className="text-[#F43F5E] p-1 hover:bg-[#F43F5E]/15 rounded"
+                              className="text-status-danger p-1 hover:bg-status-danger/15 rounded"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -306,7 +304,7 @@ export function TestsView({
                           const text = e.target.value;
                           setQuestions(questions.map((item, i) => i === idx ? { ...item, text } : item));
                         }}
-                        className="w-full px-3 py-1.5 rounded-lg bg-white border border-[#E3DFD9] text-stone-900"
+                        className="w-full px-3 py-1.5 rounded-lg bg-white border border-border-paper text-stone-900"
                       />
 
                       {q.type === 'MCQ' && q.options && (
@@ -331,7 +329,7 @@ export function TestsView({
                                   newOptions[optIdx] = val;
                                   setQuestions(questions.map((item, i) => i === idx ? { ...item, options: newOptions } : item));
                                 }}
-                                className="w-full px-2.5 py-1 rounded bg-white border border-[#E3DFD9] text-stone-900"
+                                className="w-full px-2.5 py-1 rounded bg-white border border-border-paper text-stone-900"
                               />
                             </div>
                           ))}
@@ -353,7 +351,7 @@ export function TestsView({
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-2 rounded-lg bg-[#1677FF] hover:bg-[#3395FF] text-white font-semibold disabled:opacity-50"
+                  className="px-5 py-2 rounded-lg bg-electric hover:bg-[#3395FF] text-white font-semibold disabled:opacity-50"
                 >
                   {isSubmitting ? 'Publishing...' : 'Publish Assessment'}
                 </button>

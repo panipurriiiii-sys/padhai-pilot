@@ -12,17 +12,19 @@ import {
   AlertCircle,
   Plus,
 } from 'lucide-react';
-import type { TeacherDashboardMetrics } from '@padhai-pilot/shared';
+import type { TeacherDashboardMetrics, TeacherReports } from '@padhai-pilot/shared';
+import { AttendanceTrendCard, BatchAttendanceCard } from './charts';
 import type { NavTab } from './Sidebar';
 import { CountUp } from './ui/CountUp';
 
 interface DashboardViewProps {
   metrics: TeacherDashboardMetrics;
+  reports?: TeacherReports | null;
   onNavigate: (tab: NavTab) => void;
   onQuickAttendance: (batchId: string) => void;
 }
 
-export function DashboardView({ metrics, onNavigate, onQuickAttendance }: DashboardViewProps) {
+export function DashboardView({ metrics, reports, onNavigate, onQuickAttendance }: DashboardViewProps) {
   const currentDate = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'short',
@@ -159,6 +161,14 @@ export function DashboardView({ metrics, onNavigate, onQuickAttendance }: Dashbo
           </span>
         </div>
       </div>
+
+      {/* Attendance trend: from the already-loaded /teacher/reports payload (no extra request) */}
+      {reports && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <AttendanceTrendCard trends={reports.attendanceTrends} />
+          <BatchAttendanceCard rows={reports.batchPerformance} />
+        </div>
+      )}
 
       {/* Main Content Grid: Schedule & Noticeboard */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

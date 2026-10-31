@@ -6,7 +6,10 @@ import type {
   SubscriptionPlan,
   FeatureStatus,
   UserSession,
+  PublishedTheme,
+  PlatformThemeConfig,
 } from '@padhai-pilot/shared';
+import { BUILT_IN_PUBLISHED_THEME } from '@padhai-pilot/shared';
 
 export interface InstituteSummary {
   id: string;
@@ -64,11 +67,22 @@ export interface PlatformAnnouncementItem {
   expiresAt?: string;
 }
 
-const PRODUCTION_API_URL = 'https://padhai-pilot.vercel.app/api';
+export interface ThemeHistoryItem {
+  revision: number;
+  revisionId: string;
+  checksum: string;
+  publishedAt: string;
+  publishedByEmail: string;
+  reason?: string;
+}
+
+export interface AdminThemeOverview {
+  published: PublishedTheme;
+  history: ThemeHistoryItem[];
+}
 
 function getCleanApiBaseUrl(): string {
-  const isLocal = typeof window !== 'undefined' && window.location.hostname === 'localhost';
-  const envUrl = process.env.NEXT_PUBLIC_API_URL || (isLocal ? 'http://localhost:3001/api' : PRODUCTION_API_URL);
+  const envUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
   let clean = envUrl.trim().replace(/\/+$/, '');
   if (!clean.endsWith('/api')) {
     clean += '/api';
@@ -492,6 +506,97 @@ class AdminApiClient {
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.message || 'Failed to post announcement');
+    }
+    return res.json();
+  }
+
+  // --------------------------------------------------------------------------
+  // Platform Theme Settings (Consumes /api/theme and /api/admin/theme)
+  // --------------------------------------------------------------------------
+
+  async getPublicTheme(): Promise<PublishedTheme> {
+    try {
+      const res = await fetch(`${getCleanApiBaseUrl()}/theme`, {
+        headers: { Accept: 'application/json' },
+        cache: 'no-store',
+      });
+      if (res.ok) {
+        return (await res.json()) as PublishedTheme;
+      }
+    } catch {
+      // Offline fallback
+    }
+    return BUILT_IN_PUBLISHED_THEME;
+  }
+
+  async getAdminThemeOverview(): Promise<AdminThemeOverview> {
+    try {
+      const res = await fetch(`${getCleanApiBaseUrl()}/admin/theme`, {
+        headers: this.getHeaders(),
+      });
+      if (res.ok) {
+        const body = await res.json();
+        return body.data || body;
+      }
+    } catch {
+      // Offline fallback
+    }
+    return {
+      published: BUILT_IN_PUBLISHED_THEME,
+      history: [
+        {
+          revision: 0,
+          revisionId: 'r0-default',
+          checksum: 'default',
+          publishedAt: '2026-10-31T00:00:00.000Z',
+          publishedByEmail: 'system@padhaipilot.com',
+          reason: 'Initial authoritative design-system baseline',
+        },
+      ],
+    };
+  }
+
+  async validateThemeConfig(config: PlatformThemeConfig): Promise<{ valid: boolean; errors?: string[]; warnings?: string[] }> {
+    try {
+      const res = await fetch(`${getCleanApiBaseUrl()}/admin/theme/validate`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ config }),
+      });
+      if (res.ok) {
+        const body = await res.json();
+        return body.data || body;
+      }
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Theme validation failed');
+    } catch (err: unknown) {
+      if (err instanceof Error) throw err;
+      throw new Error('Theme validation failed');
+    }
+  }
+
+  async publishTheme(config: PlatformThemeConfig, reason?: string): Promise<{ success: boolean; data: any; message: string }> {
+    const res = await fetch(`${getCleanApiBaseUrl()}/admin/theme/publish`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ config, reason }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Failed to publish theme revision');
+    }
+    return res.json();
+  }
+
+  async restoreTheme(revision: number, reason?: string): Promise<{ success: boolean; data: any; message: string }> {
+    const res = await fetch(`${getCleanApiBaseUrl()}/admin/theme/restore/${revision}`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ reason }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to restore revision ${revision}`);
     }
     return res.json();
   }

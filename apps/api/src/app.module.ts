@@ -10,6 +10,9 @@ import { FeaturesModule } from './features/features.module.js';
 import { TuitionModule } from './tuition/tuition.module.js';
 import { StudentModule } from './student/student.module.js';
 import { AdminModule } from './admin/admin.module.js';
+import { ThemeModule } from './theme/theme.module.js';
+import { FacultyInvitationsModule } from './faculty-invitations/faculty-invitations.module.js';
+import { AnalyticsModule } from './analytics/analytics.module.js';
 import { HealthController } from './health/health.controller.js';
 import { InvitationsController } from './invitations/invitations.controller.js';
 import { AppController } from './app.controller.js';
@@ -28,6 +31,9 @@ import { RateLimitFilter } from './common/filters/rate-limit.filter.js';
     TuitionModule,
     StudentModule,
     AdminModule,
+    ThemeModule,
+    FacultyInvitationsModule,
+    AnalyticsModule,
   ],
   controllers: [
     AppController,

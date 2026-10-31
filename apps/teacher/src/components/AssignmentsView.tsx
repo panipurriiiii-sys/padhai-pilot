@@ -13,6 +13,8 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import type { BatchSummary, Assignment, AssignmentSubmission } from '@padhai-pilot/shared';
+import { EmptyState } from '@padhai-pilot/ui';
+import { AssignmentCompletionCard } from './charts';
 
 interface AssignmentsViewProps {
   batches: BatchSummary[];
@@ -132,7 +134,7 @@ export function AssignmentsView({
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E3DFD9]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border-paper">
         <div>
           <h1 className="font-['Playfair_Display'] text-2xl sm:text-3xl font-bold text-stone-900">
             Assignments & Academic Evaluations
@@ -144,38 +146,34 @@ export function AssignmentsView({
 
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#1677FF] hover:bg-[#3395FF] text-white text-xs font-semibold tracking-wide transition shadow-[0_2px_12px_rgba(22,119,255,0.35)] shrink-0"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-electric hover:bg-[#3395FF] text-white text-xs font-semibold tracking-wide transition shadow-[0_2px_12px_rgba(22,119,255,0.35)] shrink-0"
         >
           <Plus className="w-4 h-4" />
           <span>Create Assignment</span>
         </button>
       </div>
 
+      {assignments.length > 0 && <AssignmentCompletionCard items={assignments} />}
+
       {/* Assignments List */}
       {assignments.length === 0 ? (
-        <div className="paper-card p-12 text-center space-y-3">
-          <FileText className="w-10 h-10 text-[var(--ink-muted)] mx-auto opacity-50" />
-          <h3 className="font-['Playfair_Display'] font-bold text-lg text-[var(--ink-primary)]">
-            No Assignments Published
-          </h3>
-          <p className="font-['Raleway'] text-xs text-[var(--ink-muted)] max-w-md mx-auto">
-            Click &quot;Create Assignment&quot; above to compose and assign problem sets to your batches.
-          </p>
+        <div className="paper-card">
+          <EmptyState art="education/homework" title="No assignments published yet" description="Create an assignment to give a batch a problem set. Submissions and grading status will show up here." />
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {assignments.map((asg) => (
             <div
               key={asg.id}
-              className="p-5 rounded-xl bg-white border border-[#E3DFD9] hover:border-[#E3DFD9] transition flex flex-col justify-between"
+              className="p-5 rounded-xl bg-white border border-border-paper hover:border-border-paper transition flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-[#F3EFE9] text-[#1677FF] border border-[#1677FF]/20">
+                  <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-surface-subtle text-electric border border-electric/20">
                     {asg.subject}
                   </span>
                   <span className="text-xs text-stone-500 flex items-center gap-1 font-['Inter']">
-                    <Calendar className="w-3.5 h-3.5 text-[#1677FF]" />
+                    <Calendar className="w-3.5 h-3.5 text-electric" />
                     Due {new Date(asg.dueDate).toLocaleDateString()}
                   </span>
                 </div>
@@ -186,7 +184,7 @@ export function AssignmentsView({
                 </p>
               </div>
 
-              <div className="mt-5 pt-3 border-t border-[#E3DFD9] flex items-center justify-between">
+              <div className="mt-5 pt-3 border-t border-border-paper flex items-center justify-between">
                 <div className="font-['Inter'] text-xs">
                   <span className="text-stone-900 font-bold">{asg.submissionCount}</span>
                   <span className="text-stone-500"> / {asg.totalStudents} submitted</span>
@@ -195,7 +193,7 @@ export function AssignmentsView({
 
                 <button
                   onClick={() => handleOpenSubmissions(asg)}
-                  className="px-3 py-1.5 rounded-lg bg-[#F3EFE9] hover:bg-[#1677FF] text-stone-700 hover:text-white border border-[#E3DFD9] hover:border-[#1677FF] text-xs font-semibold transition flex items-center gap-1.5"
+                  className="px-3 py-1.5 rounded-lg bg-surface-subtle hover:bg-electric text-stone-700 hover:text-white border border-border-paper hover:border-electric text-xs font-semibold transition flex items-center gap-1.5"
                 >
                   <Eye className="w-3.5 h-3.5" />
                   <span>Review Work</span>
@@ -209,7 +207,7 @@ export function AssignmentsView({
       {/* Submissions Review Modal */}
       {activeAssignment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-          <div className="w-full max-w-2xl rounded-2xl bg-white border border-[#E3DFD9] p-6 shadow-2xl relative animate-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col">
+          <div className="w-full max-w-2xl rounded-2xl bg-white border border-border-paper p-6 shadow-2xl relative animate-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col">
             <button
               onClick={() => setActiveAssignment(null)}
               className="absolute right-4 top-4 text-stone-500 hover:text-white"
@@ -218,7 +216,7 @@ export function AssignmentsView({
             </button>
 
             <div className="mb-4">
-              <span className="text-[10px] uppercase font-mono tracking-wider text-[#1677FF]">
+              <span className="text-[10px] uppercase font-mono tracking-wider text-electric">
                 Submission Review
               </span>
               <h3 className="font-['Playfair_Display'] text-xl font-bold text-stone-900">
@@ -242,21 +240,21 @@ export function AssignmentsView({
                 submissions.map((sub) => (
                   <div
                     key={sub.id}
-                    className="p-4 rounded-xl bg-[#FAF8F5] border border-[#E3DFD9] flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                    className="p-4 rounded-xl bg-paper-warm border border-border-paper flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                   >
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-['Inter'] font-semibold text-xs text-[#1677FF]">
+                        <span className="font-['Inter'] font-semibold text-xs text-electric">
                           {sub.rollNumber}
                         </span>
                         <span className="text-xs font-bold text-stone-900">{sub.studentName}</span>
                         <span
                           className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
                             sub.status === 'GRADED'
-                              ? 'bg-[#10B981]/15 text-[#10B981]'
+                              ? 'bg-status-success/15 text-status-success'
                               : sub.status === 'RESUBMIT'
-                              ? 'bg-[#F59E0B]/15 text-[#F59E0B]'
-                              : 'bg-[#1677FF]/15 text-[#1677FF]'
+                              ? 'bg-status-warning/15 text-status-warning'
+                              : 'bg-electric/15 text-electric'
                           }`}
                         >
                           {sub.status}
@@ -272,7 +270,7 @@ export function AssignmentsView({
 
                     <div className="flex items-center gap-3 shrink-0">
                       {sub.marksObtained !== undefined && (
-                        <div className="font-['Inter'] text-sm font-bold text-[#10B981]">
+                        <div className="font-['Inter'] text-sm font-bold text-status-success">
                           {sub.marksObtained} / {activeAssignment.maxMarks}
                         </div>
                       )}
@@ -283,7 +281,7 @@ export function AssignmentsView({
                           setFeedback(sub.feedback || '');
                           setRequestResubmit(sub.status === 'RESUBMIT');
                         }}
-                        className="px-3 py-1.5 rounded-lg bg-[#1677FF] hover:bg-[#3395FF] text-white text-xs font-semibold transition flex items-center gap-1"
+                        className="px-3 py-1.5 rounded-lg bg-electric hover:bg-[#3395FF] text-white text-xs font-semibold transition flex items-center gap-1"
                       >
                         <Award className="w-3.5 h-3.5" />
                         <span>{sub.status === 'GRADED' ? 'Edit Grade' : 'Grade'}</span>
@@ -300,7 +298,7 @@ export function AssignmentsView({
       {/* Grade Dialog */}
       {gradingSubmission && activeAssignment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white border border-[#E3DFD9] p-6 shadow-2xl relative animate-in zoom-in-95 duration-150">
+          <div className="w-full max-w-md rounded-2xl bg-white border border-border-paper p-6 shadow-2xl relative animate-in zoom-in-95 duration-150">
             <button
               onClick={() => setGradingSubmission(null)}
               className="absolute right-4 top-4 text-stone-500 hover:text-white"
@@ -327,7 +325,7 @@ export function AssignmentsView({
                   required
                   value={marks}
                   onChange={(e) => setMarks(Number(e.target.value))}
-                  className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E3DFD9] text-stone-900 font-['Inter'] text-sm focus:outline-none focus:border-[#1677FF]"
+                  className="w-full px-3 py-2 rounded-lg bg-paper-warm border border-border-paper text-stone-900 font-['Inter'] text-sm focus:outline-none focus:border-electric"
                 />
               </div>
 
@@ -340,7 +338,7 @@ export function AssignmentsView({
                   placeholder="e.g. Excellent conceptual clarity on limits. Ensure step proofs are numbered."
                   value={feedback}
                   onChange={(e) => setFeedback(e.target.value)}
-                  className="w-full p-2.5 rounded-lg bg-[#FAF8F5] border border-[#E3DFD9] text-stone-900 focus:outline-none focus:border-[#1677FF]"
+                  className="w-full p-2.5 rounded-lg bg-paper-warm border border-border-paper text-stone-900 focus:outline-none focus:border-electric"
                 />
               </div>
 
@@ -350,7 +348,7 @@ export function AssignmentsView({
                   id="resubmit"
                   checked={requestResubmit}
                   onChange={(e) => setRequestResubmit(e.target.checked)}
-                  className="rounded bg-[#FAF8F5] border-[#E3DFD9] text-[#1677FF] focus:ring-0"
+                  className="rounded bg-paper-warm border-border-paper text-electric focus:ring-0"
                 />
                 <label htmlFor="resubmit" className="text-stone-700 cursor-pointer">
                   Request student to resubmit corrections
@@ -368,7 +366,7 @@ export function AssignmentsView({
                 <button
                   type="submit"
                   disabled={isSavingGrade}
-                  className="px-5 py-2 rounded-lg bg-[#1677FF] hover:bg-[#3395FF] text-white font-semibold disabled:opacity-50"
+                  className="px-5 py-2 rounded-lg bg-electric hover:bg-[#3395FF] text-white font-semibold disabled:opacity-50"
                 >
                   {isSavingGrade ? 'Saving Grade...' : 'Save Grade'}
                 </button>
@@ -381,7 +379,7 @@ export function AssignmentsView({
       {/* Create Assignment Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white border border-[#E3DFD9] p-6 shadow-2xl relative animate-in zoom-in-95 duration-150">
+          <div className="w-full max-w-md rounded-2xl bg-white border border-border-paper p-6 shadow-2xl relative animate-in zoom-in-95 duration-150">
             <button
               onClick={() => setShowCreateModal(false)}
               className="absolute right-4 top-4 text-stone-500 hover:text-white"
@@ -405,7 +403,7 @@ export function AssignmentsView({
                   placeholder="e.g. Problem Set 5: Integral Calculus"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E3DFD9] text-stone-900 focus:outline-none focus:border-[#1677FF]"
+                  className="w-full px-3 py-2 rounded-lg bg-paper-warm border border-border-paper text-stone-900 focus:outline-none focus:border-electric"
                 />
               </div>
 
@@ -418,7 +416,7 @@ export function AssignmentsView({
                     placeholder="e.g. Mathematics"
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E3DFD9] text-stone-900 focus:outline-none focus:border-[#1677FF]"
+                    className="w-full px-3 py-2 rounded-lg bg-paper-warm border border-border-paper text-stone-900 focus:outline-none focus:border-electric"
                   />
                 </div>
                 <div>
@@ -426,7 +424,7 @@ export function AssignmentsView({
                   <select
                     value={batchId}
                     onChange={(e) => setBatchId(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E3DFD9] text-stone-900 focus:outline-none focus:border-[#1677FF]"
+                    className="w-full px-3 py-2 rounded-lg bg-paper-warm border border-border-paper text-stone-900 focus:outline-none focus:border-electric"
                   >
                     {batches.map((b) => (
                       <option key={b.id} value={b.id} className="bg-white">
@@ -445,7 +443,7 @@ export function AssignmentsView({
                     required
                     value={dueDate}
                     onChange={(e) => setDueDate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E3DFD9] text-stone-900 focus:outline-none focus:border-[#1677FF]"
+                    className="w-full px-3 py-2 rounded-lg bg-paper-warm border border-border-paper text-stone-900 focus:outline-none focus:border-electric"
                   />
                 </div>
                 <div>
@@ -456,7 +454,7 @@ export function AssignmentsView({
                     max={200}
                     value={maxMarks}
                     onChange={(e) => setMaxMarks(Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E3DFD9] text-stone-900 focus:outline-none focus:border-[#1677FF]"
+                    className="w-full px-3 py-2 rounded-lg bg-paper-warm border border-border-paper text-stone-900 focus:outline-none focus:border-electric"
                   />
                 </div>
               </div>
@@ -468,7 +466,7 @@ export function AssignmentsView({
                   placeholder="Detail what students should solve, proofs required, and submission format..."
                   value={instructions}
                   onChange={(e) => setInstructions(e.target.value)}
-                  className="w-full p-2.5 rounded-lg bg-[#FAF8F5] border border-[#E3DFD9] text-stone-900 focus:outline-none focus:border-[#1677FF]"
+                  className="w-full p-2.5 rounded-lg bg-paper-warm border border-border-paper text-stone-900 focus:outline-none focus:border-electric"
                 />
               </div>
 
@@ -483,7 +481,7 @@ export function AssignmentsView({
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-2 rounded-lg bg-[#1677FF] hover:bg-[#3395FF] text-white font-semibold shadow-[0_2px_12px_rgba(22,119,255,0.35)] disabled:opacity-50"
+                  className="px-5 py-2 rounded-lg bg-electric hover:bg-[#3395FF] text-white font-semibold shadow-[0_2px_12px_rgba(22,119,255,0.35)] disabled:opacity-50"
                 >
                   {isSubmitting ? 'Publishing...' : 'Publish Assignment'}
                 </button>
