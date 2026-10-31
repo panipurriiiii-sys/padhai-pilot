@@ -53,8 +53,7 @@ const TAB_RESOURCES: Partial<Record<NavTab, ResourceKey[]>> = {
   assignments: ['batches', 'assignments'],
   tests: ['batches', 'tests'],
   lessonPlans: ['batches', 'lessonPlans'],
-  invitations: ['batches', 'invitations'],
-  timetable: ['timetable'],
+  invitations: ['batches'],
   announcements: ['batches', 'announcements'],
   reports: ['reports'],
 };
@@ -382,6 +381,7 @@ function TeacherApp() {
               selectedBatchId={selectedBatchId}
               onSelectBatch={handleSelectBatch}
               onCreateBatch={handleCreateBatch}
+              onBatchChanged={() => loadResource('batches')}
             />
           )}
 
@@ -426,13 +426,10 @@ function TeacherApp() {
           {currentTab === 'invitations' && (
             <InvitationsView
               batches={batches}
-              invitations={invitations}
-              onCreateInvitation={handleCreateInvitation}
-              onRevokeInvitation={handleRevokeInvitation}
             />
           )}
 
-          {currentTab === 'timetable' && <TimetableView slots={timetable} />}
+          {currentTab === 'timetable' && <TimetableView batches={batches} />}
 
           {currentTab === 'announcements' && (
             <AnnouncementsView

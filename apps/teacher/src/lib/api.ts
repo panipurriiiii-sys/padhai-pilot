@@ -41,6 +41,32 @@ import {
   DispatchFeeReminderDto,
   FeeSummaryOverview,
   TeacherAnalyticsSummary,
+  TeacherBatch,
+  CreateBatchPayload,
+  UpdateBatchPayload,
+  PromoteBatchPayload,
+  PromoteBatchResult,
+  EnrollmentCode,
+  CreateEnrollmentCodePayload,
+  UpdateEnrollmentCodePayload,
+  TimetableSlotItem,
+  CreateTimetableSlotPayload,
+  UpdateTimetableSlotPayload,
+  BroadcastItem,
+  CreateBroadcastPayload,
+  CreateBroadcastResult,
+  CreateBatchFeeStructureRequest,
+  BatchFeeStructureItem,
+  FeeLedgerItem,
+  BatchFeeSummary,
+  RecordFeePaymentRequest,
+  FeePaymentItem,
+  SendFeeRemindersRequest,
+  SendFeeRemindersResult,
+  StudentLeaveItem,
+  ReviewStudentLeaveRequest,
+  InstituteLetterhead,
+  UpdateInstituteLetterheadRequest,
 } from '@padhai-pilot/shared';
 
 const PRODUCTION_API_URL = 'https://padhai-pilot.vercel.app/api';
@@ -124,6 +150,35 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
+}
+
+/** Fetches a server-rendered PDF (document routes need the bearer token) and returns it as a Blob. */
+export async function fetchDocumentBlob(path: string): Promise<Blob> {
+  const token = getAuthToken();
+  let res: Response;
+  try {
+    res = await fetch(`${getCleanApiBaseUrl()}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  } catch {
+    throw new ApiError('Cannot reach the server. Check your connection and try again.', 0);
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new ApiError((body as { message?: string }).message || `Could not generate the document (${res.status})`, res.status);
+  }
+  return res.blob();
+}
+
+/** Opens a PDF blob in a new tab (or downloads it when popups are blocked). */
+export function openBlob(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const w = window.open(url, '_blank');
+  if (!w) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.click();
+  }
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
 /** Normalised API failure: `status` 0 means the server could not be reached. */
@@ -304,6 +359,7 @@ export const teacherApi = {
     subject: string;
     dueDate: string;
     maxMarks?: number;
+    attachmentUrl?: string;
   }): Promise<Assignment> {
     return await request<Assignment>('/teacher/assignments', {
       method: 'POST',
@@ -453,6 +509,125 @@ export const teacherApi = {
     });
     if (!res.ok) throw new Error('Failed to export CSV');
     return await res.text();
+  },
+
+  // -------------------------------------------------------------
+  // ACADEMIC CORE (batch edit/promote, enrolment codes, timetable CRUD, broadcast)
+  // -------------------------------------------------------------
+  async listBatches(includeArchived = false): Promise<TeacherBatch[]> {
+    return request<TeacherBatch[]>(`/teacher/batches?includeArchived=${includeArchived}`);
+  },
+  async createBatchV2(data: CreateBatchPayload): Promise<TeacherBatch> {
+    return request<TeacherBatch>('/teacher/batches', { method: 'POST', body: JSON.stringify(data) });
+  },
+  async updateBatch(batchId: string, data: UpdateBatchPayload): Promise<TeacherBatch> {
+    return request<TeacherBatch>(`/teacher/batches/${batchId}`, { method: 'PATCH', body: JSON.stringify(data) });
+  },
+  async archiveBatch(batchId: string, archive: boolean): Promise<TeacherBatch> {
+    return request<TeacherBatch>(`/teacher/batches/${batchId}/${archive ? 'archive' : 'unarchive'}`, { method: 'POST' });
+  },
+  async promoteBatch(batchId: string, data: PromoteBatchPayload): Promise<PromoteBatchResult> {
+    return request<PromoteBatchResult>(`/teacher/batches/${batchId}/promote`, { method: 'POST', body: JSON.stringify(data) });
+  },
+
+  async listEnrollmentCodes(batchId?: string): Promise<EnrollmentCode[]> {
+    return request<EnrollmentCode[]>(`/teacher/invitations${batchId ? `?batchId=${batchId}` : ''}`);
+  },
+  async createEnrollmentCode(data: CreateEnrollmentCodePayload): Promise<EnrollmentCode> {
+    return request<EnrollmentCode>('/teacher/invitations', { method: 'POST', body: JSON.stringify(data) });
+  },
+  async updateEnrollmentCode(id: string, data: UpdateEnrollmentCodePayload): Promise<EnrollmentCode> {
+    return request<EnrollmentCode>(`/teacher/invitations/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+  },
+  async revokeEnrollmentCode(id: string): Promise<{ success: boolean; message: string; code: string }> {
+    return request(`/teacher/invitations/${id}/revoke`, { method: 'POST' });
+  },
+  async reactivateEnrollmentCode(id: string): Promise<EnrollmentCode> {
+    return request<EnrollmentCode>(`/teacher/invitations/${id}/reactivate`, { method: 'POST' });
+  },
+  async regenerateEnrollmentCode(id: string): Promise<EnrollmentCode> {
+    return request<EnrollmentCode>(`/teacher/invitations/${id}/regenerate`, { method: 'POST' });
+  },
+
+  async listTimetable(batchId?: string): Promise<TimetableSlotItem[]> {
+    return request<TimetableSlotItem[]>(`/teacher/timetable${batchId ? `?batchId=${batchId}` : ''}`);
+  },
+  async createTimetableSlot(batchId: string, data: CreateTimetableSlotPayload): Promise<TimetableSlotItem> {
+    return request<TimetableSlotItem>(`/teacher/batches/${batchId}/timetable`, { method: 'POST', body: JSON.stringify(data) });
+  },
+  async updateTimetableSlot(slotId: string, data: UpdateTimetableSlotPayload): Promise<TimetableSlotItem> {
+    return request<TimetableSlotItem>(`/teacher/timetable/${slotId}`, { method: 'PATCH', body: JSON.stringify(data) });
+  },
+  async deleteTimetableSlot(slotId: string): Promise<{ success: boolean }> {
+    return request(`/teacher/timetable/${slotId}`, { method: 'DELETE' });
+  },
+
+  async listBroadcasts(batchId?: string): Promise<BroadcastItem[]> {
+    return request<BroadcastItem[]>(`/teacher/announcements${batchId ? `?batchId=${batchId}` : ''}`);
+  },
+  async createBroadcast(data: CreateBroadcastPayload): Promise<CreateBroadcastResult> {
+    return request<CreateBroadcastResult>('/teacher/announcements', { method: 'POST', body: JSON.stringify(data) });
+  },
+  async deleteBroadcast(id: string): Promise<{ success: boolean }> {
+    return request(`/teacher/announcements/${id}`, { method: 'DELETE' });
+  },
+
+  // -------------------------------------------------------------
+  // FINANCE (batch fees, payments, receipts, reminders, student leave)
+  // -------------------------------------------------------------
+  async createFeeStructure(batchId: string, data: CreateBatchFeeStructureRequest): Promise<BatchFeeStructureItem> {
+    return request<BatchFeeStructureItem>(`/finance/batches/${batchId}/structures`, { method: 'POST', body: JSON.stringify(data) });
+  },
+  async listFeeStructures(batchId: string): Promise<BatchFeeStructureItem[]> {
+    return request<BatchFeeStructureItem[]>(`/finance/batches/${batchId}/structures`);
+  },
+  async voidFeeStructure(id: string): Promise<{ success: boolean }> {
+    return request(`/finance/structures/${id}/void`, { method: 'POST' });
+  },
+  async listBatchFees(batchId: string): Promise<FeeLedgerItem[]> {
+    return request<FeeLedgerItem[]>(`/finance/batches/${batchId}/fees`);
+  },
+  async getBatchFeeSummary(batchId: string): Promise<BatchFeeSummary> {
+    return request<BatchFeeSummary>(`/finance/batches/${batchId}/summary`);
+  },
+  async recordFeePayment(feeRecordId: string, data: RecordFeePaymentRequest): Promise<FeePaymentItem> {
+    return request<FeePaymentItem>(`/finance/fees/${feeRecordId}/payments`, { method: 'POST', body: JSON.stringify(data) });
+  },
+  async voidFeePayment(paymentId: string, reason: string): Promise<{ success: boolean }> {
+    return request(`/finance/payments/${paymentId}/void`, { method: 'POST', body: JSON.stringify({ reason }) });
+  },
+  async sendFeeReminders(data: SendFeeRemindersRequest): Promise<SendFeeRemindersResult> {
+    return request<SendFeeRemindersResult>('/finance/reminders/send', { method: 'POST', body: JSON.stringify(data) });
+  },
+  async listStudentLeaves(): Promise<StudentLeaveItem[]> {
+    return request<StudentLeaveItem[]>('/finance/leaves');
+  },
+  async reviewStudentLeave(id: string, data: ReviewStudentLeaveRequest): Promise<StudentLeaveItem> {
+    return request<StudentLeaveItem>(`/finance/leaves/${id}/review`, { method: 'PUT', body: JSON.stringify(data) });
+  },
+
+  // Branding / letterhead and server-rendered PDFs (institute name and logo, never the platform's)
+  async getLetterhead(): Promise<InstituteLetterhead> {
+    return request<InstituteLetterhead>('/branding');
+  },
+  async updateLetterhead(data: UpdateInstituteLetterheadRequest): Promise<InstituteLetterhead> {
+    return request<InstituteLetterhead>('/branding', { method: 'PUT', body: JSON.stringify(data) });
+  },
+  async openFeeReceipt(paymentId: string) {
+    openBlob(await fetchDocumentBlob(`/documents/fee-receipt/${paymentId}`), 'fee-receipt.pdf');
+  },
+  async openReportCard(studentId: string, batchId: string) {
+    openBlob(await fetchDocumentBlob(`/documents/report-card/${studentId}?batchId=${batchId}`), 'report-card.pdf');
+  },
+  async openSalarySlip(recordId: string) {
+    openBlob(await fetchDocumentBlob(`/documents/salary-slip/${recordId}`), 'salary-slip.pdf');
+  },
+  async openAttendanceReport(params: { batchId?: string; studentId?: string; from?: string; to?: string }) {
+    const q = new URLSearchParams(Object.entries(params).filter(([, v]) => v) as [string, string][]);
+    openBlob(await fetchDocumentBlob(`/documents/attendance-report?${q.toString()}`), 'attendance-report.pdf');
+  },
+  async openResultSheet(assessmentId: string) {
+    openBlob(await fetchDocumentBlob(`/documents/result-sheet/${assessmentId}`), 'result-sheet.pdf');
   },
 
   // -------------------------------------------------------------
