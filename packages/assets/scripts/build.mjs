@@ -51,7 +51,7 @@ ${body}
 
 if (check) {
   const current = fs.existsSync(outFile) ? fs.readFileSync(outFile, 'utf8') : '';
-  if (current !== out) { console.error('registry.ts is stale - run `npm run build --workspace=@padhai-pilot/assets`'); stale = true; }
+  if (current.replace(/\r\n/g, '\n') !== out) { console.error('registry.ts is stale - run `npm run build --workspace=@padhai-pilot/assets`'); stale = true; }
   if (stale) process.exit(1);
   console.log(`ok: ${entries.length} assets, ${totalBytes} bytes`);
 } else {
