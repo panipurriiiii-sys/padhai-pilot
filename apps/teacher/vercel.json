@@ -1,5 +1,5 @@
 {
   "version": 2,
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "ignoreCommand": "[ \"$VERCEL_GIT_COMMIT_REF\" != \"main\" ]"
 }
-
