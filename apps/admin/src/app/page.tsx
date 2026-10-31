@@ -38,7 +38,9 @@ import type {
   SubscriptionPlan,
   PlatformThemeConfig,
   PublishedTheme,
+  PlatformAdminAnalyticsSummary,
 } from '@padhai-pilot/shared';
+import { ChartCard, DonutChart, HBarChart } from '@padhai-pilot/ui/charts';
 import {
   DEFAULT_THEME_CONFIG,
   resolveTheme,
@@ -56,8 +58,8 @@ import {
 export default function AdminPlatformOwnerDashboard() {
   // Authentication State
   const [currentUser, setCurrentUser] = useState<any | null>(null);
-  const [authEmail, setAuthEmail] = useState('super@padhaipilot.com');
-  const [authPassword, setAuthPassword] = useState('password123');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
 
@@ -65,6 +67,34 @@ export default function AdminPlatformOwnerDashboard() {
   const [activeTab, setActiveTab] = useState<
     'tenants' | 'features' | 'plans' | 'whitelabel' | 'audit' | 'system' | 'theme'
   >('tenants');
+  const [loadErrors, setLoadErrors] = useState<Record<string, string>>({});
+  const [analytics, setAnalytics] = useState<PlatformAdminAnalyticsSummary | null>(null);
+  const [themeError, setThemeError] = useState<string | null>(null);
+
+  // Each console section has its own URL hash (#/audit, #/theme, ...) so it can be linked and reloaded.
+  useEffect(() => {
+    const valid = ['tenants', 'features', 'plans', 'whitelabel', 'audit', 'system', 'theme'];
+    const fromHash = () => {
+      const h = window.location.hash.replace(/^#\/?/, '');
+      if (valid.includes(h)) setActiveTab(h as typeof activeTab);
+    };
+    fromHash();
+    window.addEventListener('hashchange', fromHash);
+    const onUnauthorized = () => {
+      setCurrentUser(null);
+      setAuthError('Your session expired. Please sign in again.');
+    };
+    window.addEventListener('pp:unauthorized', onUnauthorized);
+    return () => {
+      window.removeEventListener('hashchange', fromHash);
+      window.removeEventListener('pp:unauthorized', onUnauthorized);
+    };
+  }, []);
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.hash !== '#/' + activeTab) {
+      window.history.replaceState(null, '', '#/' + activeTab);
+    }
+  }, [activeTab]);
 
   // Platform Theme State (Consumes /api/theme and /api/admin/theme)
   const [publishedTheme, setPublishedTheme] = useState<PublishedTheme | null>(null);
@@ -122,24 +152,21 @@ export default function AdminPlatformOwnerDashboard() {
 
   const loadAll = async () => {
     setIsLoading(true);
-    try {
-      const [h, insts, feats, logs, anns] = await Promise.all([
-        adminApi.getHealth(),
-        adminApi.getInstitutes(),
-        adminApi.getFeatureRegistry().catch(() => []),
-        adminApi.getAuditLogs().catch(() => []),
-        adminApi.getAnnouncements().catch(() => []),
-      ]);
-      setHealth(h);
-      setInstitutes(insts);
-      setFeatures(feats);
-      setAuditLogs(logs);
-      setAnnouncements(anns);
-    } catch (err) {
-      console.error('Failed to load admin data:', err);
-    } finally {
-      setIsLoading(false);
-    }
+    const jobs: Array<[string, () => Promise<void>]> = [
+      ['health', async () => setHealth(await adminApi.getHealth())],
+      ['institutes', async () => setInstitutes(await adminApi.getInstitutes())],
+      ['features', async () => setFeatures(await adminApi.getFeatureRegistry())],
+      ['audit', async () => setAuditLogs(await adminApi.getAuditLogs())],
+      ['announcements', async () => setAnnouncements(await adminApi.getAnnouncements())],
+      ['analytics', async () => setAnalytics(await adminApi.getAdminAnalytics())],
+    ];
+    const results = await Promise.allSettled(jobs.map(([, run]) => run()));
+    const errs: Record<string, string> = {};
+    results.forEach((r, i) => {
+      if (r.status === 'rejected') errs[jobs[i][0]] = r.reason instanceof Error ? r.reason.message : 'Request failed';
+    });
+    setLoadErrors(errs);
+    setIsLoading(false);
   };
 
   useEffect(() => {
@@ -150,27 +177,16 @@ export default function AdminPlatformOwnerDashboard() {
 
   const loadThemeData = async () => {
     setIsThemeLoading(true);
+    setThemeError(null);
     try {
-      // 1. Consume public GET /api/theme
-      const pub = await adminApi.getPublicTheme();
-      if (pub) {
-        setPublishedTheme(pub);
-        if (pub.config) {
-          setThemeConfig(pub.config);
-        }
-      }
-
-      // 2. Consume SUPER_ADMIN GET /api/admin/theme overview & history
       const overview = await adminApi.getAdminThemeOverview();
       if (overview?.published) {
         setPublishedTheme(overview.published);
         setThemeConfig(overview.published.config);
       }
-      if (overview?.history) {
-        setThemeHistory(overview.history);
-      }
+      setThemeHistory(overview?.history ?? []);
     } catch (err: unknown) {
-      console.error('Failed to load theme data:', err);
+      setThemeError(err instanceof Error ? err.message : 'Could not load theme settings.');
     } finally {
       setIsThemeLoading(false);
     }
@@ -436,18 +452,6 @@ export default function AdminPlatformOwnerDashboard() {
             </button>
           </form>
 
-          {/* Quick Demo Fill button */}
-          <div className="mt-6 pt-5 border-t border-border-paper text-center">
-            <button
-              onClick={() => {
-                setAuthEmail('super@padhaipilot.com');
-                setAuthPassword('password123');
-              }}
-              className="text-[11px] text-ink-faint hover:text-electric transition-colors inline-flex items-center gap-1 font-data"
-            >
-              <span>Use standard root credential: super@padhaipilot.com</span>
-            </button>
-          </div>
         </div>
       </div>
     );
@@ -553,6 +557,13 @@ export default function AdminPlatformOwnerDashboard() {
             >
               Dismiss
             </button>
+          </div>
+        )}
+
+        {Object.keys(loadErrors).length > 0 && activeTab !== 'system' && activeTab !== 'theme' && (
+          <div role="alert" className="p-3.5 rounded-xl border bg-status-danger-bg border-status-danger-border text-status-danger-text text-xs flex items-center justify-between gap-4">
+            <span>Some data could not be loaded: {Object.entries(loadErrors).map(([k, v]) => `${k} (${v})`).join('; ')}. Lists below may be incomplete.</span>
+            <button onClick={loadAll} className="underline font-bold shrink-0">Retry</button>
           </div>
         )}
 
@@ -1100,13 +1111,65 @@ export default function AdminPlatformOwnerDashboard() {
               </button>
             </div>
 
+            {Object.keys(loadErrors).length > 0 && (
+              <div role="alert" className="p-3.5 rounded-xl border bg-status-danger-bg border-status-danger-border text-status-danger-text text-xs flex items-center justify-between gap-4">
+                <span>
+                  Could not load: {Object.entries(loadErrors).map(([k, v]) => `${k} (${v})`).join('; ')}
+                </span>
+                <button onClick={loadAll} className="underline font-bold shrink-0">Retry</button>
+              </div>
+            )}
+
+            {/* Usage (GET /analytics/admin) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <ChartCard
+                title="Institutes by plan"
+                subtitle={analytics ? `${analytics.activeInstitutes} active of ${analytics.totalInstitutes}` : undefined}
+                state={loadErrors.analytics ? 'error' : !analytics ? 'loading' : analytics.totalInstitutes === 0 ? 'empty' : 'ready'}
+                errorMessage={loadErrors.analytics}
+                onRetry={loadAll}
+                emptyTitle="No institutes onboarded yet"
+                height={150}
+              >
+                {analytics && (
+                  <DonutChart
+                    label="Institutes by plan"
+                    centerValue={String(analytics.totalInstitutes)}
+                    centerLabel="institutes"
+                    slices={Object.entries(analytics.institutesByPlan)
+                      .filter(([, n]) => n > 0)
+                      .map(([plan, n], i) => ({ id: plan, label: plan, value: n, tone: (['brand', 'success', 'warning', 'deep'] as const)[i % 4] }))}
+                  />
+                )}
+              </ChartCard>
+              <ChartCard
+                title="Recent activity"
+                subtitle="Records written across all institutes"
+                state={loadErrors.analytics ? 'error' : !analytics ? 'loading' : 'ready'}
+                errorMessage={loadErrors.analytics}
+                onRetry={loadAll}
+                height={150}
+              >
+                {analytics && (
+                  <HBarChart
+                    label="Recent platform activity"
+                    rows={[
+                      { id: 'a', label: 'Assessments created', value: analytics.recentActivityCounts.assessmentsCreated, tone: 'brand' },
+                      { id: 'b', label: 'Attendance records', value: analytics.recentActivityCounts.attendanceRecorded, tone: 'success' },
+                      { id: 'c', label: 'Logins, last 24h', value: analytics.recentActivityCounts.activeLoginsLast24h, tone: 'warning' },
+                    ]}
+                  />
+                )}
+              </ChartCard>
+            </div>
+
             {/* Health Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="p-4 rounded-2xl bg-paper border border-border-paper">
                 <span className="text-[10px] uppercase font-primary font-bold text-ink-faint block mb-1">
                   Total Active Students
                 </span>
-                <span className="font-data text-2xl font-bold text-ink-primary">{health?.activeStudents || 1457}</span>
+                <span className="font-data text-2xl font-bold text-ink-primary">{health ? health.activeStudents : '-'}</span>
                 <p className="text-[10px] text-status-success-text mt-1">Across all registered tenants</p>
               </div>
 
@@ -1114,26 +1177,26 @@ export default function AdminPlatformOwnerDashboard() {
                 <span className="text-[10px] uppercase font-primary font-bold text-ink-faint block mb-1">
                   Active Faculty & Teachers
                 </span>
-                <span className="font-data text-2xl font-bold text-ink-primary">{health?.activeTeachers || 58}</span>
+                <span className="font-data text-2xl font-bold text-ink-primary">{health ? health.activeTeachers : '-'}</span>
                 <p className="text-[10px] text-electric mt-1">Conducting active sessions</p>
               </div>
 
               <div className="p-4 rounded-2xl bg-paper border border-border-paper">
                 <span className="text-[10px] uppercase font-primary font-bold text-ink-faint block mb-1">
-                  Platform Uptime
+                  API Status
                 </span>
-                <span className="font-data text-2xl font-bold text-status-success-text">99.98%</span>
+                <span className="font-data text-2xl font-bold text-status-success-text">{health ? (health.status === 'ok' ? 'Healthy' : 'Degraded') : '-'}</span>
                 <p className="text-[10px] text-ink-faint mt-1 font-data">
-                  {Math.floor((health?.uptimeSeconds || 12450) / 3600)}h operational
+                  {health ? `${Math.floor(health.uptimeSeconds / 3600)}h since last restart` : 'Status unavailable'}
                 </p>
               </div>
 
               <div className="p-4 rounded-2xl bg-paper border border-border-paper">
                 <span className="text-[10px] uppercase font-primary font-bold text-ink-faint block mb-1">
-                  Global Deployment
+                  Environment
                 </span>
-                <span className="font-data text-2xl font-bold text-ink-primary">Vercel + Nest</span>
-                <p className="text-[10px] text-status-success-text mt-1 font-data">Asia-South1 (Mumbai)</p>
+                <span className="font-data text-2xl font-bold text-ink-primary">{health ? health.environment : '-'}</span>
+                <p className="text-[10px] text-ink-faint mt-1 font-data">Database {health ? (health.database ? 'connected' : 'not connected') : 'unknown'}</p>
               </div>
             </div>
 
@@ -1172,7 +1235,13 @@ export default function AdminPlatformOwnerDashboard() {
         {/* ================================================================== */}
         {/* TAB 7: PLATFORM THEME SETTINGS & ENGINE (Consumes /api/theme) */}
         {/* ================================================================== */}
-        {activeTab === 'theme' && (
+        {activeTab === 'theme' && themeError && (
+          <div role="alert" className="p-4 rounded-xl border bg-status-danger-bg border-status-danger-border text-status-danger-text text-sm flex items-center justify-between gap-4">
+            <span>Could not load theme settings: {themeError}</span>
+            <button onClick={loadThemeData} className="underline font-bold">Retry</button>
+          </div>
+        )}
+        {activeTab === 'theme' && !themeError && (
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>

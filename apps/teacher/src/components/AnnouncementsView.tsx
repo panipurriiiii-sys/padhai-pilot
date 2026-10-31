@@ -22,6 +22,8 @@ export function AnnouncementsView({
 }: AnnouncementsViewProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [sentNotice, setSentNotice] = useState<string | null>(null);
 
   // Form State
   const [title, setTitle] = useState('');
@@ -34,6 +36,7 @@ export function AnnouncementsView({
     if (!title || !content) return;
 
     setIsSubmitting(true);
+    setSubmitError(null);
     try {
       await onCreateAnnouncement({
         title,
@@ -44,6 +47,10 @@ export function AnnouncementsView({
       setShowCreateModal(false);
       setTitle('');
       setContent('');
+      setSentNotice('Announcement published. Students in the selected batch have been notified in the app.');
+      setTimeout(() => setSentNotice(null), 5000);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Could not publish the announcement.');
     } finally {
       setIsSubmitting(false);
     }
@@ -73,6 +80,7 @@ export function AnnouncementsView({
 
       {/* Announcements Feed */}
       <div className="space-y-4">
+        {sentNotice && <p role="status" className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs">{sentNotice}</p>}
         {announcements.length === 0 ? (
           <div className="p-12 rounded-xl bg-white border border-border-paper text-center text-xs text-stone-500">
             No announcements broadcasted yet.
@@ -142,6 +150,7 @@ export function AnnouncementsView({
             </p>
 
             <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+              {submitError && <p role="alert" className="p-2 rounded-lg bg-rose-50 border border-rose-200 text-rose-800">{submitError}</p>}
               <div>
                 <label className="block text-stone-500 font-medium mb-1">Notice Title *</label>
                 <input

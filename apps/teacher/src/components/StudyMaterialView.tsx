@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { teacherApi } from '../lib/api';
 import { uploadMediaFile } from '../lib/mediaUpload';
+import { LoadError } from './LoadError';
 import type {
   StudyMaterialItem,
   CreateStudyMaterialDto,
@@ -49,6 +50,7 @@ export function StudyMaterialView({
 }: StudyMaterialViewProps) {
   const [materials, setMaterials] = useState<StudyMaterialItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedBatch, setSelectedBatch] = useState<string>('ALL');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -86,10 +88,13 @@ export function StudyMaterialView({
 
   async function loadMaterials() {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const batchParam = selectedBatch === 'ALL' ? undefined : selectedBatch;
       const data = await teacherApi.getStudyMaterials(batchParam);
       setMaterials(data);
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : 'Could not load this section.');
     } finally {
       setIsLoading(false);
     }
@@ -287,7 +292,9 @@ export function StudyMaterialView({
       </div>
 
       {/* Materials Grid */}
-      {isLoading ? (
+      {loadError ? (
+        <LoadError message={loadError} onRetry={loadMaterials} />
+      ) : isLoading ? (
         <div className="paper-card p-12 text-center text-xs font-['Raleway'] text-[var(--ink-muted)]">
           Loading study materials...
         </div>

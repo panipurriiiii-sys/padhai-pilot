@@ -409,7 +409,6 @@ export class TeacherService {
         subject: data.subject,
         dueDate,
         maxMarks: data.maxMarks || 100,
-        attachmentUrl: optionalUrl(data.attachmentUrl, 'attachmentUrl') ?? null,
         status: 'PUBLISHED',
         attachmentUrl,
       },

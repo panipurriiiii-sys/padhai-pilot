@@ -42,16 +42,17 @@ import {
   calculateGradeAndPercentage,
 } from '@padhai-pilot/shared';
 import { teacherApi } from '../lib/api';
-import { downloadAssessmentResultPdf } from '../lib/pdfGenerator';
 
 interface BulkMarksEntryViewProps {
   batches: BatchSummary[];
   selectedBatchId?: string;
   onSelectBatch?: (batchId: string) => void;
+  instituteName?: string;
 }
 
 export function BulkMarksEntryView({
   batches,
+  instituteName,
   selectedBatchId: initialBatchId,
 }: BulkMarksEntryViewProps) {
   // 1. Class & Assessment Setup State
@@ -607,27 +608,17 @@ export function BulkMarksEntryView({
   // -------------------------------------------------------------
   // FRONTEND PDF GENERATION
   // -------------------------------------------------------------
-  const handleDownloadPdf = () => {
-    const currentBatch = batches.find((b) => b.id === selectedBatchId);
-    const instituteName = currentBatch?.name
-      ? `${currentBatch.name} • PadhaiPilot Institute`
-      : 'Apex Academy Kota';
-
-    downloadAssessmentResultPdf({
-      assessment: {
-        title: assessmentTitle || 'Assessment Result Sheet',
-        subject: isMultiSubject ? subjects.map((s) => s.name).join(', ') : subject,
-        subjects: isMultiSubject ? subjects : undefined,
-        isMultiSubject,
-        batchName: currentBatch?.name || 'Class Batch',
-        assessmentDate,
-        category,
-        maxMarks: isMultiSubject ? subjects.reduce((sum, s) => sum + s.maxMarks, 0) : maxMarks,
-        passingMarks,
-      },
-      roster: filteredRoster,
-      instituteName,
-    });
+  // The PDF is rendered by the API on the institute's own letterhead (name, logo, signatory), never the platform's.
+  const handleDownloadPdf = async () => {
+    if (!currentAssessmentId) {
+      alert('Save the marks as a draft first, then download the result sheet.');
+      return;
+    }
+    try {
+      await teacherApi.openResultSheet(currentAssessmentId);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Could not generate the result sheet.');
+    }
   };
 
   const handleConfirmPublish = async () => {
@@ -797,7 +788,7 @@ export function BulkMarksEntryView({
           <button
             onClick={handleDownloadPdf}
             className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-all cursor-pointer shadow-sm"
-            title="Generate official PDF marksheet directly from frontend"
+            title="Official result sheet PDF on your institute letterhead"
           >
             <FileDown className="w-3.5 h-3.5 text-rose-600" />
             Download PDF Report

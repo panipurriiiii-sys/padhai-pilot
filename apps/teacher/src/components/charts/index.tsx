@@ -24,3 +24,8 @@ export const AssignmentCompletionCard = dynamic(() => import('./ReportCharts').t
 export const TestAveragesCard = dynamic(() => import('./ReportCharts').then((m) => m.TestAveragesCard), { ssr: false, loading: ChartFallback });
 export const SyllabusCoverageCard = dynamic(() => import('./ReportCharts').then((m) => m.SyllabusCoverageCard), { ssr: false, loading: ChartFallback });
 export const RegisterBreakdownCard = dynamic(() => import('./ReportCharts').then((m) => m.RegisterBreakdownCard), { ssr: false, loading: ChartFallback });
+export const GradeDistributionCard = dynamic(() => import('./AnalyticsCards').then((m) => m.GradeDistributionCard), { ssr: false, loading: ChartFallback });
+export const SubjectComparisonCard = dynamic(() => import('./AnalyticsCards').then((m) => m.SubjectComparisonCard), { ssr: false, loading: ChartFallback });
+export const BatchAttendanceTrendsCard = dynamic(() => import('./AnalyticsCards').then((m) => m.BatchAttendanceTrendsCard), { ssr: false, loading: ChartFallback });
+export const SubmissionRatesCard = dynamic(() => import('./AnalyticsCards').then((m) => m.SubmissionRatesCard), { ssr: false, loading: ChartFallback });
+export const SyllabusCoverageApiCard = dynamic(() => import('./AnalyticsCards').then((m) => m.SyllabusCoverageApiCard), { ssr: false, loading: ChartFallback });

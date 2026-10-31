@@ -3,6 +3,11 @@ import {
   InAppNotification,
   UserSession,
   StudyMaterialItem,
+  StudentAnalyticsSummary,
+  StudentFeeLedger,
+  StudentLeaveItem,
+  ApplyStudentLeaveRequest,
+  InstituteLetterhead,
 } from '@padhai-pilot/shared';
 
 const PRODUCTION_API_URL = 'https://padhai-pilot.vercel.app/api';
@@ -63,22 +68,64 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   const url = endpoint.startsWith('http') ? endpoint : `${baseUrl}${cleanEndpoint}`;
 
+  let res: Response;
   try {
-    const res = await fetch(url, {
-      ...options,
-      headers,
-      credentials: 'include',
-    });
+    res = await fetch(url, { ...options, headers, credentials: 'include' });
+  } catch {
+    throw new ApiError('Cannot reach the server. Check your connection and try again.', 0);
+  }
 
-    if (!res.ok) {
-      const errorData = await res.json().catch(() => ({}));
-      throw new Error(errorData.message || `API error: ${res.statusText}`);
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    const raw = (errorData as { message?: string | string[] }).message;
+    const message = Array.isArray(raw) ? raw.join(', ') : raw || `Request failed (${res.status})`;
+    if (res.status === 401 && token && !endpoint.startsWith('/auth/')) {
+      clearAuthToken();
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('pp:unauthorized'));
     }
+    throw new ApiError(message, res.status);
+  }
 
-    return await res.json();
-  } catch (err) {
-    console.warn(`Student API call to ${endpoint} failed:`, (err as Error).message);
-    throw err;
+  if (res.status === 204) return undefined as T;
+  return (await res.json()) as T;
+}
+
+/** Fetches a server-rendered PDF (needs the bearer token) as a Blob. */
+async function fetchDocumentBlob(path: string): Promise<Blob> {
+  const token = getAuthToken();
+  let res: Response;
+  try {
+    res = await fetch(`${getCleanApiBaseUrl()}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  } catch {
+    throw new ApiError('Cannot reach the server. Check your connection and try again.', 0);
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new ApiError((body as { message?: string }).message || `Could not generate the document (${res.status})`, res.status);
+  }
+  return res.blob();
+}
+
+function openBlob(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const w = window.open(url, '_blank');
+  if (!w) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.click();
+  }
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+/** Normalised API failure: status 0 means the server could not be reached. */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+    this.name = 'ApiError';
   }
 }
 
@@ -239,16 +286,17 @@ export const studentApi = {
     return res;
   },
 
-  async loginDemoStudent(): Promise<{ user: UserSession; token: string }> {
-    const res = await request<{ user: UserSession; token: string }>('/auth/demo-student');
-    if (res.token) setAuthToken(res.token);
-    if (res.user) {
-      cachedSession = res.user;
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('padhaipilot_student_session', JSON.stringify(res.user));
-      }
+  /** Verifies the stored token with the server; returns null (and clears it) if it is no longer valid. */
+  async verifySession(): Promise<UserSession | null> {
+    if (!getAuthToken()) return null;
+    const res = await request<{ authenticated: boolean; user: UserSession }>('/auth/me');
+    if (!res.authenticated || !res.user) {
+      clearAuthToken();
+      return null;
     }
-    return res;
+    cachedSession = res.user;
+    if (typeof window !== 'undefined') localStorage.setItem('padhaipilot_student_session', JSON.stringify(res.user));
+    return res.user;
   },
 
   getStudentSession(): UserSession | null {
@@ -256,23 +304,15 @@ export const studentApi = {
     if (typeof window === 'undefined') return null;
     const stored = localStorage.getItem('padhaipilot_student_session');
     if (stored) {
-      try {
-        cachedSession = JSON.parse(stored);
-        return cachedSession;
-      } catch {
-        return null;
-      }
+      cachedSession = JSON.parse(stored);
+      return cachedSession;
     }
     return null;
   },
 
   // 1. Dashboard Overview
   async getDashboard(): Promise<any> {
-    try {
-      return await request('/student/dashboard');
-    } catch {
-      return null;
-    }
+    return await request('/student/dashboard');
   },
 
   // 2. Invitation & Batch Enrollment
@@ -290,11 +330,36 @@ export const studentApi = {
     });
   },
 
-  async joinBatch(code: string): Promise<{ success: boolean; message: string; batchName: string }> {
-    return await request('/student/join-batch', {
+  /** The API re-issues the session for the new tenant: store the fresh token and user. */
+  async joinBatch(code: string): Promise<{ alreadyEnrolled: boolean; token: string; user: UserSession }> {
+    const res = await request<{ alreadyEnrolled: boolean; token: string; user: UserSession }>('/student/join-batch', {
       method: 'POST',
       body: JSON.stringify({ code }),
     });
+    if (res.token) setAuthToken(res.token);
+    if (res.user) {
+      cachedSession = res.user;
+      if (typeof window !== 'undefined') localStorage.setItem('padhaipilot_student_session', JSON.stringify(res.user));
+    }
+    return res;
+  },
+
+  async changePassword(oldPassword: string, newPassword: string): Promise<{ success: boolean; user: UserSession; token: string }> {
+    const res = await request<{ success: boolean; user: UserSession; token: string }>('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ oldPassword, newPassword }),
+    });
+    if (res.token) setAuthToken(res.token);
+    if (res.user) {
+      cachedSession = res.user;
+      if (typeof window !== 'undefined') localStorage.setItem('padhaipilot_student_session', JSON.stringify(res.user));
+    }
+    return res;
+  },
+
+  /** GET /analytics/student - null percentages mean no data. */
+  async getAnalytics(): Promise<StudentAnalyticsSummary> {
+    return request<StudentAnalyticsSummary>('/analytics/student');
   },
 
   // 3. Profile & Settings
@@ -311,24 +376,16 @@ export const studentApi = {
 
   // 4. Daily Teaching Diary
   async getTeachingDiaries(subject?: string, search?: string): Promise<TeachingDiaryEntry[]> {
-    try {
-      const params = new URLSearchParams();
-      if (subject && subject !== 'ALL') params.set('subject', subject);
-      if (search && search.trim()) params.set('search', search.trim());
-      const q = params.toString() ? `?${params.toString()}` : '';
-      return await request<TeachingDiaryEntry[]>(`/student/diary${q}`);
-    } catch {
-      return [];
-    }
+    const params = new URLSearchParams();
+    if (subject && subject !== 'ALL') params.set('subject', subject);
+    if (search && search.trim()) params.set('search', search.trim());
+    const q = params.toString() ? `?${params.toString()}` : '';
+    return await request<TeachingDiaryEntry[]>(`/student/diary${q}`);
   },
 
   // 5. Timetable & Schedule
   async getTimetable(): Promise<TimetableDay[]> {
-    try {
-      return await request<TimetableDay[]>('/student/timetable');
-    } catch {
-      return [];
-    }
+    return await request<TimetableDay[]>('/student/timetable');
   },
 
   // 6. Attendance & History
@@ -346,11 +403,7 @@ export const studentApi = {
       remarks?: string;
     }>;
   }> {
-    try {
-      return await request('/student/attendance');
-    } catch {
-      return { totalClasses: 0, attended: 0, absent: 0, late: 0, percentage: 0, records: [] };
-    }
+    return await request('/student/attendance');
   },
 
   async submitAttendanceCorrection(date: string, reason: string): Promise<{ success: boolean; message: string }> {
@@ -362,11 +415,7 @@ export const studentApi = {
 
   // 7. Homework & Assignments
   async getAssignments(): Promise<AssignmentItem[]> {
-    try {
-      return await request<AssignmentItem[]>('/student/assignments');
-    } catch {
-      return [];
-    }
+    return await request<AssignmentItem[]>('/student/assignments');
   },
 
   async submitAssignment(
@@ -381,11 +430,7 @@ export const studentApi = {
 
   // 8. Tests & Quizzes
   async getTests(): Promise<TestItem[]> {
-    try {
-      return await request<TestItem[]>('/student/tests');
-    } catch {
-      return [];
-    }
+    return await request<TestItem[]>('/student/tests');
   },
 
   async getTestDetails(id: string): Promise<any> {
@@ -404,24 +449,16 @@ export const studentApi = {
 
   // 9. Published Results
   async getPublishedResults(): Promise<StudentAssessmentResult[]> {
-    try {
-      return await request<StudentAssessmentResult[]>('/assessment/student/results');
-    } catch {
-      return [];
-    }
+    return await request<StudentAssessmentResult[]>('/assessment/student/results');
   },
 
   // 10. Study Materials Library
   async getStudyMaterials(batchId?: string, category?: string): Promise<StudyMaterialItem[]> {
-    try {
-      const params = new URLSearchParams();
-      if (batchId && batchId !== 'ALL') params.set('batchId', batchId);
-      if (category && category !== 'ALL') params.set('category', category);
-      const query = params.toString() ? `?${params.toString()}` : '';
-      return await request<StudyMaterialItem[]>(`/student/materials${query}`);
-    } catch {
-      return [];
-    }
+    const params = new URLSearchParams();
+    if (batchId && batchId !== 'ALL') params.set('batchId', batchId);
+    if (category && category !== 'ALL') params.set('category', category);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return await request<StudyMaterialItem[]>(`/student/materials${query}`);
   },
 
   // 11. Fees & Receipts
@@ -429,7 +466,7 @@ export const studentApi = {
     totalFees: number;
     paidAmount: number;
     balanceDue: number;
-    status: 'PAID' | 'PARTIAL' | 'OVERDUE';
+    status: 'PAID' | 'PARTIAL' | 'PENDING' | 'OVERDUE';
     receipts: Array<{
       id: string;
       title: string;
@@ -441,11 +478,32 @@ export const studentApi = {
       receiptNumber?: string;
     }>;
   }> {
-    try {
-      return await request('/student/fees');
-    } catch {
-      return { totalFees: 0, paidAmount: 0, balanceDue: 0, status: 'PAID', receipts: [] };
-    }
+    return await request('/student/fees');
+  },
+
+  // 11b. Fee ledger (PENDING until the teacher records a payment), receipts and server-rendered PDFs
+  async getFeeLedger(): Promise<StudentFeeLedger> {
+    return request<StudentFeeLedger>('/student/finance/fees');
+  },
+  async openReceipt(paymentId: string): Promise<void> {
+    openBlob(await fetchDocumentBlob(`/documents/fee-receipt/${paymentId}`), 'fee-receipt.pdf');
+  },
+  async openAttendanceReport(): Promise<void> {
+    openBlob(await fetchDocumentBlob('/documents/attendance-report'), 'attendance-report.pdf');
+  },
+
+  // 11c. Leave applications
+  async getLeaves(): Promise<StudentLeaveItem[]> {
+    return request<StudentLeaveItem[]>('/student/leaves');
+  },
+  async applyLeave(dto: ApplyStudentLeaveRequest): Promise<StudentLeaveItem> {
+    return request<StudentLeaveItem>('/student/leaves', { method: 'POST', body: JSON.stringify(dto) });
+  },
+  async cancelLeave(id: string): Promise<StudentLeaveItem> {
+    return request<StudentLeaveItem>(`/student/leaves/${id}/cancel`, { method: 'POST' });
+  },
+  async getLetterhead(): Promise<InstituteLetterhead> {
+    return request<InstituteLetterhead>('/branding');
   },
 
   // 12. Announcements
@@ -457,20 +515,12 @@ export const studentApi = {
     priority: 'NORMAL' | 'URGENT';
     authorName?: string;
   }>> {
-    try {
-      return await request('/student/announcements');
-    } catch {
-      return [];
-    }
+    return await request('/student/announcements');
   },
 
   // 13. Academic Queries (Student-to-Faculty)
   async getAcademicQueries(): Promise<AcademicQuery[]> {
-    try {
-      return await request<AcademicQuery[]>('/student/queries');
-    } catch {
-      return [];
-    }
+    return await request<AcademicQuery[]>('/student/queries');
   },
 
   async submitAcademicQuery(dto: {
@@ -487,11 +537,7 @@ export const studentApi = {
 
   // 14. Study Planner & Personal Tasks
   async getStudyTasks(): Promise<StudyTask[]> {
-    try {
-      return await request<StudyTask[]>('/student/study-tasks');
-    } catch {
-      return [];
-    }
+    return await request<StudyTask[]>('/student/study-tasks');
   },
 
   async createStudyTask(dto: {
@@ -519,11 +565,7 @@ export const studentApi = {
 
   // 15. Student Documents & PDF Center
   async getDocuments(): Promise<OfficialDocument[]> {
-    try {
-      return await request<OfficialDocument[]>('/student/documents');
-    } catch {
-      return [];
-    }
+    return await request<OfficialDocument[]>('/student/documents');
   },
 
   // 16. Support Requests
@@ -540,18 +582,10 @@ export const studentApi = {
 
   // 17. In-App Notifications
   async getNotifications(): Promise<InAppNotification[]> {
-    try {
-      return await request<InAppNotification[]>('/assessment/student/notifications');
-    } catch {
-      return [];
-    }
+    return await request<InAppNotification[]>('/assessment/student/notifications');
   },
 
   async markNotificationRead(id: string): Promise<void> {
-    try {
-      await request(`/assessment/student/notifications/${id}/read`, { method: 'PUT' });
-    } catch {
-      // Ignored
-    }
+    await request(`/assessment/student/notifications/${id}/read`, { method: 'PUT' });
   },
 };

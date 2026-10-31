@@ -13,12 +13,14 @@ import {
   X,
 } from 'lucide-react';
 import type { BatchSummary, StudentRosterItem } from '@padhai-pilot/shared';
+import { BatchActions } from './BatchActions';
 
 interface BatchesViewProps {
   batches: BatchSummary[];
   students: StudentRosterItem[];
   selectedBatchId?: string;
   onSelectBatch: (id: string) => void;
+  onBatchChanged?: () => void;
   onCreateBatch: (data: { name: string; code: string; subject: string; gradeLevel: string; room?: string }) => Promise<void>;
 }
 
@@ -28,6 +30,7 @@ export function BatchesView({
   selectedBatchId,
   onSelectBatch,
   onCreateBatch,
+  onBatchChanged,
 }: BatchesViewProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -87,6 +90,10 @@ export function BatchesView({
           <span>Create New Batch</span>
         </button>
       </div>
+
+      {activeBatch && onBatchChanged && (
+        <BatchActions key={activeBatch.id} batch={activeBatch} batches={batches} onChanged={onBatchChanged} />
+      )}
 
       {/* Batch Cards Selector */}
       {batches.length === 0 ? (

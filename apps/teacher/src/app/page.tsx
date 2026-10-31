@@ -19,8 +19,10 @@ import { FacultyManagementView } from '../components/FacultyManagementView';
 import { FacultySalaryView } from '../components/FacultySalaryView';
 import { FacultyLeaveView } from '../components/FacultyLeaveView';
 import { StudyMaterialView } from '../components/StudyMaterialView';
-import { StudentFeeAlertView } from '../components/StudentFeeAlertView';
+import { BatchFeesView } from '../components/BatchFeesView';
+import { StudentLeavesView } from '../components/StudentLeavesView';
 import { TuitionBrandingView } from '../components/TuitionBrandingView';
+import { LoadError } from '../components/LoadError';
 import { AuthModal } from '../components/AuthModal';
 import { AuthWelcomeScreen } from '../components/AuthWelcomeScreen';
 import { teacherApi, getAuthToken, clearAuthToken } from '../lib/api';
@@ -36,9 +38,27 @@ import type {
   AnnouncementItem,
   TeacherReports,
   UserSession,
+  TeacherAnalyticsSummary,
 } from '@padhai-pilot/shared';
 import { Loader2 } from 'lucide-react';
 import { MotionProvider, ToastProvider } from '@padhai-pilot/ui';
+
+type ResourceKey = 'dashboard' | 'batches' | 'invitations' | 'assignments' | 'tests' | 'lessonPlans' | 'timetable' | 'announcements' | 'reports' | 'analytics';
+const ALL_RESOURCES: ResourceKey[] = ['dashboard', 'batches', 'invitations', 'assignments', 'tests', 'lessonPlans', 'timetable', 'announcements', 'reports', 'analytics'];
+/** Resources each tab cannot render without. A failure shows an error state with Retry, never empty data. */
+const TAB_RESOURCES: Partial<Record<NavTab, ResourceKey[]>> = {
+  dashboard: ['dashboard'],
+  batches: ['batches'],
+  attendance: ['batches'],
+  bulkMarks: ['batches'],
+  assignments: ['batches', 'assignments'],
+  tests: ['batches', 'tests'],
+  lessonPlans: ['batches', 'lessonPlans'],
+  invitations: ['batches'],
+  announcements: ['batches', 'announcements'],
+  reports: ['reports'],
+  studentFees: ['batches'],
+};
 
 function TeacherApp() {
   const [currentTab, setCurrentTab] = useState<NavTab>('dashboard');
@@ -54,47 +74,61 @@ function TeacherApp() {
   const [timetable, setTimetable] = useState<TimetableSlot[]>([]);
   const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
   const [reports, setReports] = useState<TeacherReports | null>(null);
+  const [analytics, setAnalytics] = useState<TeacherAnalyticsSummary | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [sessionNotice, setSessionNotice] = useState<string | null>(null);
+
+  const [loadErrors, setLoadErrors] = useState<Partial<Record<ResourceKey, string>>>({});
+
+  const loadResource = useCallback(async (key: ResourceKey) => {
+    try {
+      switch (key) {
+        case 'dashboard': setMetrics(await teacherApi.getDashboard()); break;
+        case 'batches': {
+          const list = await teacherApi.getBatches();
+          setBatches(list);
+          setSelectedBatchId((cur) => (cur && list.some((b) => b.id === cur) ? cur : list[0]?.id ?? ''));
+          if (list.length > 0) {
+            const rosterRes = await teacherApi.getBatchRoster(list[0].id);
+            setStudents(rosterRes.students);
+          } else {
+            setStudents([]);
+          }
+          break;
+        }
+        case 'invitations': setInvitations(await teacherApi.getInvitations()); break;
+        case 'assignments': setAssignments(await teacherApi.getAssignments()); break;
+        case 'tests': setTests(await teacherApi.getTests()); break;
+        case 'lessonPlans': setLessonPlans(await teacherApi.getLessonPlans()); break;
+        case 'timetable': setTimetable(await teacherApi.getTimetable()); break;
+        case 'announcements': setAnnouncements(await teacherApi.getAnnouncements()); break;
+        case 'reports': setReports(await teacherApi.getReports()); break;
+        case 'analytics': setAnalytics(await teacherApi.getAnalytics()); break;
+      }
+      setLoadErrors((p) => {
+        if (!p[key]) return p;
+        const n = { ...p };
+        delete n[key];
+        return n;
+      });
+    } catch (err) {
+      setLoadErrors((p) => ({ ...p, [key]: err instanceof Error ? err.message : 'Request failed' }));
+    }
+  }, []);
 
   const loadUserData = useCallback(async () => {
-    try {
-      const [dashData, batchList, invList, asgList, testList, lpList, ttList, annList, repData] =
-        await Promise.all([
-          teacherApi.getDashboard(),
-          teacherApi.getBatches(),
-          teacherApi.getInvitations(),
-          teacherApi.getAssignments(),
-          teacherApi.getTests(),
-          teacherApi.getLessonPlans(),
-          teacherApi.getTimetable(),
-          teacherApi.getAnnouncements(),
-          teacherApi.getReports(),
-        ]);
+    await Promise.all(ALL_RESOURCES.map((k) => loadResource(k)));
+  }, [loadResource]);
 
-      setMetrics(dashData);
-      setBatches(batchList);
-      setInvitations(invList);
-      setAssignments(asgList);
-      setTests(testList);
-      setLessonPlans(lpList);
-      setTimetable(ttList);
-      setAnnouncements(annList);
-      setReports(repData);
-
-      if (batchList.length > 0) {
-        const initialBatch = batchList[0];
-        setSelectedBatchId(initialBatch.id);
-        const rosterRes = await teacherApi.getBatchRoster(initialBatch.id);
-        setStudents(rosterRes.students);
-      } else {
-        setSelectedBatchId('');
-        setStudents([]);
-      }
-    } catch (err) {
-      console.error('Failed to load user portal data:', err);
-    }
+  useEffect(() => {
+    const onUnauthorized = () => {
+      setUser(null);
+      setSessionNotice('Your session expired. Please sign in again.');
+    };
+    window.addEventListener('pp:unauthorized', onUnauthorized);
+    return () => window.removeEventListener('pp:unauthorized', onUnauthorized);
   }, []);
 
   // Initialize teacher authentication and load core data
@@ -249,10 +283,19 @@ function TeacherApp() {
     setTimetable([]);
     setAnnouncements([]);
     setReports(null);
+    setAnalytics(null);
+    setLoadErrors({});
     setShowAuthModal(true);
   };
 
   const handleAuthSuccess = async (authenticatedUser: UserSession) => {
+    if (authenticatedUser.role === 'SUPER_ADMIN') {
+      // Platform administration lives in the separate Admin console, never in the faculty studio.
+      clearAuthToken();
+      setUser(null);
+      setSessionNotice('Platform administrator accounts sign in to the Admin console, not the Teacher Portal.');
+      return;
+    }
     setUser(authenticatedUser);
     setShowAuthModal(false);
     if (authenticatedUser.role === 'TUITION_OWNER') {
@@ -264,6 +307,8 @@ function TeacherApp() {
     await loadUserData();
     setIsLoading(false);
   };
+
+  const blockingErrors = (TAB_RESOURCES[currentTab] ?? []).filter((k) => loadErrors[k]);
 
   if (isLoading) {
     return (
@@ -283,6 +328,7 @@ function TeacherApp() {
     return (
       <AuthWelcomeScreen
         onAuthSuccess={handleAuthSuccess}
+        notice={sessionNotice}
       />
     );
   }
@@ -302,10 +348,20 @@ function TeacherApp() {
       {/* Main View Area */}
       <main className="flex-1 min-w-0 p-6 md:p-10 overflow-y-auto">
         <div className="max-w-6xl mx-auto">
+          {blockingErrors.length > 0 ? (
+            <LoadError
+              message={blockingErrors.map((k) => loadErrors[k]).join("; ")}
+              onRetry={() => blockingErrors.forEach((k) => loadResource(k))}
+            />
+          ) : (
+          <>
           {currentTab === 'dashboard' && metrics && (
             <DashboardView
               metrics={metrics}
               reports={reports}
+              analytics={analytics}
+              reportsError={loadErrors.reports}
+              analyticsError={loadErrors.analytics}
               onNavigate={setCurrentTab}
               onQuickAttendance={handleQuickAttendance}
             />
@@ -313,6 +369,7 @@ function TeacherApp() {
 
           {currentTab === 'bulkMarks' && (
             <BulkMarksEntryView
+              instituteName={user?.instituteName}
               batches={batches}
               selectedBatchId={selectedBatchId}
               onSelectBatch={setSelectedBatchId}
@@ -326,6 +383,7 @@ function TeacherApp() {
               selectedBatchId={selectedBatchId}
               onSelectBatch={handleSelectBatch}
               onCreateBatch={handleCreateBatch}
+              onBatchChanged={() => loadResource('batches')}
             />
           )}
 
@@ -370,13 +428,10 @@ function TeacherApp() {
           {currentTab === 'invitations' && (
             <InvitationsView
               batches={batches}
-              invitations={invitations}
-              onCreateInvitation={handleCreateInvitation}
-              onRevokeInvitation={handleRevokeInvitation}
             />
           )}
 
-          {currentTab === 'timetable' && <TimetableView slots={timetable} />}
+          {currentTab === 'timetable' && <TimetableView batches={batches} />}
 
           {currentTab === 'announcements' && (
             <AnnouncementsView
@@ -417,12 +472,16 @@ function TeacherApp() {
           {currentTab === 'facultyLeave' && (
             <FacultyLeaveView
               currentUserId={user?.id}
-              isOwnerOrManager={user?.role === 'SUPER_ADMIN' || user?.role === 'TUITION_OWNER' || user?.role === 'INSTITUTE_ADMIN'}
+              isOwnerOrManager={user?.role === 'TUITION_OWNER' || user?.role === 'INSTITUTE_ADMIN'}
             />
           )}
 
           {currentTab === 'studentFees' && (
-            <StudentFeeAlertView />
+            <BatchFeesView batches={batches} />
+          )}
+
+          {currentTab === 'studentLeaves' && (
+            <StudentLeavesView />
           )}
 
           {currentTab === 'tuitionBranding' && (
@@ -437,6 +496,8 @@ function TeacherApp() {
               onUpdateUser={setUser}
               onLogout={handleLogout}
             />
+          )}
+          </>
           )}
         </div>
       </main>

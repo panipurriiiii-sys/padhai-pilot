@@ -46,3 +46,9 @@ export const StudentTaskProgressCard = dynamic(
   () => import('./StudentCharts').then((m) => m.StudentTaskProgressCard),
   { ssr: false, loading: ChartFallback },
 );
+
+export const ExamVsClassCard = dynamic(() => import('./AnalyticsCards').then((m) => m.ExamVsClassCard), { ssr: false, loading: ChartFallback });
+
+export const SubjectPerformanceCard = dynamic(() => import('./AnalyticsCards').then((m) => m.SubjectPerformanceCard), { ssr: false, loading: ChartFallback });
+
+export const HomeworkCompletionCard = dynamic(() => import('./AnalyticsCards').then((m) => m.HomeworkCompletionCard), { ssr: false, loading: ChartFallback });

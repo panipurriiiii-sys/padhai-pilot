@@ -18,6 +18,7 @@ import {
   Building,
 } from 'lucide-react';
 import { teacherApi } from '../lib/api';
+import { LoadError } from './LoadError';
 import type {
   StudentFeeItem,
   FeeSummaryOverview,
@@ -29,6 +30,7 @@ export function StudentFeeAlertView() {
   const [fees, setFees] = useState<StudentFeeItem[]>([]);
   const [summary, setSummary] = useState<FeeSummaryOverview | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
@@ -45,6 +47,7 @@ export function StudentFeeAlertView() {
 
   async function loadData() {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const [list, sum] = await Promise.all([
         teacherApi.getFeeRecords(),
@@ -52,6 +55,8 @@ export function StudentFeeAlertView() {
       ]);
       setFees(list);
       setSummary(sum);
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : 'Could not load this section.');
     } finally {
       setIsLoading(false);
     }
@@ -213,7 +218,11 @@ export function StudentFeeAlertView() {
           </div>
         </div>
 
-        {isLoading ? (
+        {loadError ? (
+
+          <LoadError message={loadError} onRetry={loadData} />
+
+        ) : isLoading ? (
           <div className="p-12 text-center text-xs font-['Raleway'] text-[var(--ink-muted)]">
             Loading fee records...
           </div>

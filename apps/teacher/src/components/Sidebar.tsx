@@ -42,6 +42,7 @@ export type NavTab =
   | 'facultySalary'
   | 'facultyLeave'
   | 'studentFees'
+  | 'studentLeaves'
   | 'tuitionBranding'
   | 'reports'
   | 'settings';
@@ -58,8 +59,8 @@ interface SidebarProps {
 export function Sidebar({
   currentTab,
   onSelectTab,
-  teacherName = 'Faculty Member',
-  instituteName = 'PadhaiPilot Academy',
+  teacherName = '',
+  instituteName = '',
   userRole = 'TEACHER',
   onOpenAuthModal,
 }: SidebarProps) {
@@ -84,6 +85,8 @@ export function Sidebar({
         { id: 'invitations' as NavTab, label: 'Student Invites', icon: KeyRound },
         { id: 'timetable' as NavTab, label: 'Timetable', icon: Clock },
         { id: 'announcements' as NavTab, label: 'Announcements', icon: Megaphone },
+        { id: 'studentLeaves' as NavTab, label: 'Student Leaves', icon: CalendarDays },
+        { id: 'reports' as NavTab, label: 'Reports & Charts', icon: BarChart3 },
       ],
     },
 
@@ -97,8 +100,7 @@ export function Sidebar({
               { id: 'facultyRoster' as NavTab, label: 'Faculty & Workload', icon: Users, badge: 'HR' },
               { id: 'facultySalary' as NavTab, label: 'Salary & Payroll', icon: CreditCard, badge: 'Ledger' },
               { id: 'facultyLeave' as NavTab, label: 'Leave Applications', icon: CalendarDays },
-              { id: 'studentFees' as NavTab, label: 'Fee Dues & Alerts', icon: IndianRupee },
-              { id: 'reports' as NavTab, label: 'Reports & Analytics', icon: BarChart3 },
+              { id: 'studentFees' as NavTab, label: 'Batch Fees', icon: IndianRupee },
             ],
           },
         ]

@@ -19,10 +19,12 @@ import {
   studentFeeBreakdown,
   studentTaskProgress,
 } from '@padhai-pilot/ui/charts';
-import type {
-  StudentAssessmentResult,
-  StudentAttendanceRecord,
-} from '@padhai-pilot/shared';
+import type { StudentAssessmentResult } from '@padhai-pilot/shared';
+
+export interface StudentAttendanceRecord {
+  date: string;
+  status: 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED';
+}
 
 export interface StudentAttendanceTrendCardProps {
   records: ReadonlyArray<StudentAttendanceRecord> | undefined | null;
