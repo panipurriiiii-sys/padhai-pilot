@@ -10,16 +10,29 @@ import {
   HttpCode,
   HttpStatus,
   Inject,
+  NotFoundException,
 } from '@nestjs/common';
 import type { Response, Request } from 'express';
 import { AuthService } from './auth.service.js';
 import { AuthGuard } from '../common/guards/auth.guard.js';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import type { AuthenticatedUser } from '../common/types.js';
+import { authCookieOptions, isDemoMode } from '../common/security/runtime.js';
+
+type SessionResult = { user: AuthenticatedUser; token: string };
 
 @Controller('auth')
 export class AuthController {
   constructor(@Inject(AuthService) private readonly authService: AuthService) {}
+
+  private startSession(res: Response, result: SessionResult) {
+    res.cookie('token', result.token, authCookieOptions());
+    return { success: true, user: result.user, token: result.token };
+  }
+
+  private requireDemoMode() {
+    if (!isDemoMode()) throw new NotFoundException();
+  }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
@@ -28,27 +41,13 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const email = body.email || 'teacher@padhaipilot.com';
-    const password = body.password || 'password123';
-    const clientIp = (req.headers['x-forwarded-for'] as string) || req.ip || '127.0.0.1';
-
-    const result = await this.authService.validateAndLogin(email, password, clientIp);
-
-    res.cookie('token', result.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: '/',
-    });
-
-    return {
-      success: true,
-      user: result.user,
-      token: result.token,
-    };
+    const forwarded = (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim();
+    const clientIp = forwarded || req.ip || '127.0.0.1';
+    const result = await this.authService.validateAndLogin(body?.email as string, body?.password as string, clientIp);
+    return this.startSession(res, result);
   }
 
+  /** Public sign-up for a new tuition (TUITION_OWNER). Faculty are invited; SUPER_ADMIN is bootstrapped. */
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   async register(
@@ -64,21 +63,7 @@ export class AuthController {
     },
     @Res({ passthrough: true }) res: Response,
   ) {
-    const result = await this.authService.registerTeacher(body);
-
-    res.cookie('token', result.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: '/',
-    });
-
-    return {
-      success: true,
-      user: result.user,
-      token: result.token,
-    };
+    return this.startSession(res, await this.authService.registerTeacher(body));
   }
 
   @Post('register-student')
@@ -94,21 +79,7 @@ export class AuthController {
     },
     @Res({ passthrough: true }) res: Response,
   ) {
-    const result = await this.authService.registerStudent(body);
-
-    res.cookie('token', result.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: '/',
-    });
-
-    return {
-      success: true,
-      user: result.user,
-      token: result.token,
-    };
+    return this.startSession(res, await this.authService.registerStudent(body));
   }
 
   @Post('forgot-password')
@@ -163,21 +134,12 @@ export class AuthController {
     };
   }
 
+  // ---- Demo sessions: development/test only, 404 in production ----
+
   @Get('demo-teacher')
-  getDemoToken(@Res({ passthrough: true }) res: Response) {
-    const result = this.authService.getDemoTeacher();
-    res.cookie('token', result.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: '/',
-    });
-    return {
-      success: true,
-      user: result.user,
-      token: result.token,
-    };
+  async getDemoToken(@Res({ passthrough: true }) res: Response) {
+    this.requireDemoMode();
+    return this.startSession(res, await this.authService.getDemoTeacher());
   }
 
   @Post('demo-teacher')
@@ -186,54 +148,21 @@ export class AuthController {
   }
 
   @Get('demo-owner')
-  getDemoOwnerToken(@Res({ passthrough: true }) res: Response) {
-    const result = this.authService.getDemoOwner();
-    res.cookie('token', result.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: '/',
-    });
-    return {
-      success: true,
-      user: result.user,
-      token: result.token,
-    };
+  async getDemoOwnerToken(@Res({ passthrough: true }) res: Response) {
+    this.requireDemoMode();
+    return this.startSession(res, await this.authService.getDemoOwner());
   }
 
   @Get('demo-admin')
-  getDemoAdminToken(@Res({ passthrough: true }) res: Response) {
-    const result = this.authService.getDemoAdmin();
-    res.cookie('token', result.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: '/',
-    });
-    return {
-      success: true,
-      user: result.user,
-      token: result.token,
-    };
+  async getDemoAdminToken(@Res({ passthrough: true }) res: Response) {
+    this.requireDemoMode();
+    return this.startSession(res, await this.authService.getDemoAdmin());
   }
 
   @Get('demo-student')
-  getDemoStudentToken(@Res({ passthrough: true }) res: Response) {
-    const result = this.authService.getDemoStudent();
-    res.cookie('token', result.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: '/',
-    });
-    return {
-      success: true,
-      user: result.user,
-      token: result.token,
-    };
+  async getDemoStudentToken(@Res({ passthrough: true }) res: Response) {
+    this.requireDemoMode();
+    return this.startSession(res, await this.authService.getDemoStudent());
   }
 
   @Post('demo-student')

@@ -6,8 +6,7 @@ import {
 } from '@nestjs/common';
 import jwt from 'jsonwebtoken';
 import { AuthenticatedUser } from '../types.js';
-
-export const JWT_SECRET = process.env.JWT_SECRET || 'padhaipilot-production-secret-key-2026';
+import { getJwtSecret } from '../security/runtime.js';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -29,7 +28,7 @@ export class AuthGuard implements CanActivate {
     }
 
     try {
-      const decoded = jwt.verify(token, JWT_SECRET) as AuthenticatedUser;
+      const decoded = jwt.verify(token, getJwtSecret(), { algorithms: ['HS256'] }) as AuthenticatedUser;
       request.user = decoded;
       return true;
     } catch {

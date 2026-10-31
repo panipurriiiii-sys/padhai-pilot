@@ -900,3 +900,11 @@ The Student Portal (`apps/student`) has been fully designed, implemented, and ve
    - Vitest unit tests: 9 test suites, **77/77 tests passing** (including 16/16 tests for `student.service.spec.ts`).
    - Production Next.js Turbopack build verified with zero errors across all workspaces.
 
+
+---
+
+## 23. Audit Correction (2026-10-31)
+
+Sections 20–22 above describe intended scope and were written as completion reports. A code-level audit (see `docs/PROJECT_AUDIT.md`) found that they overstate readiness: persistence is largely in-memory fallback code with no Prisma migrations, the API did not compile at the start of the audit, the mobile app does not type-check, and no cross-portal workflow has been verified against PostgreSQL. Treat those sections as **In Progress**, not "Production Ready & Verified". `docs/PROJECT_AUDIT.md` is the authoritative status record until features are individually marked Verified.
+
+Security baseline changes made during the audit: passwords are hashed (scrypt), universal/backdoor passwords were removed, `JWT_SECRET` is mandatory in production (the previously committed literal is rejected), demo accounts/endpoints are disabled in production, CORS is an exact-origin allow-list, public sign-up can only create a `TUITION_OWNER`, and the `SUPER_ADMIN` is provisioned only by `npm run bootstrap:admin`.

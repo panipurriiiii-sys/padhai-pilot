@@ -307,10 +307,9 @@ export class AdminService {
           data: {
             id: newInst.id,
             name: newInst.name,
-            subdomain: newInst.subdomain,
+            slug: newInst.subdomain,
             plan: newInst.plan,
-            status: newInst.status,
-            customDomain: newInst.customDomain,
+            isActive: newInst.status !== 'SUSPENDED',
           },
         });
       } catch {
@@ -347,7 +346,7 @@ export class AdminService {
       try {
         await this.prisma.institute.update({
           where: { id },
-          data: { status: dto.status },
+          data: { isActive: dto.status !== 'SUSPENDED' },
         });
       } catch {}
     }
