@@ -105,3 +105,110 @@ export interface StudentAnalyticsContract {
   feeBreakdown: StudentFeeBreakdown;
   taskProgress: StudentTaskProgressMetrics;
 }
+
+// -------------------------------------------------------------
+// ANALYTICS ENDPOINT CONTRACTS (apps/api/src/analytics)
+// Percentages are null when there is no underlying data - never a made-up default.
+// -------------------------------------------------------------
+
+export interface StudentAttendanceDay {
+  date: string;
+  status: 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED';
+  subject: string;
+}
+
+export interface SubjectPerformanceItem {
+  subject: string;
+  marksObtained: number;
+  maxMarks: number;
+  percentage: number;
+  grade: string;
+  assessmentsCount: number;
+}
+
+export interface ExamScoreTrendPoint {
+  assessmentId: string;
+  title: string;
+  date: string;
+  percentage: number;
+  /** Average of all published scores for this assessment; null when it cannot be computed. */
+  classAveragePercentage: number | null;
+}
+
+export interface HomeworkCompletionSummary {
+  totalAssigned: number;
+  submitted: number;
+  graded: number;
+  pending: number;
+  completionRatePercentage: number | null;
+}
+
+export interface StudentAnalyticsSummary {
+  studentId: string;
+  attendanceRate: number | null;
+  attendanceTrend: StudentAttendanceDay[];
+  subjectPerformance: SubjectPerformanceItem[];
+  examScoreTrend: ExamScoreTrendPoint[];
+  homeworkSummary: HomeworkCompletionSummary;
+}
+
+export interface BatchAttendanceTrend {
+  batchId: string;
+  batchName: string;
+  averageAttendancePercentage: number | null;
+  sessionsCount: number;
+}
+
+export interface GradeDistributionBucket {
+  grade: string;
+  studentCount: number;
+  percentage: number;
+}
+
+export interface SubjectComparisonItem {
+  subject: string;
+  averageScorePercentage: number | null;
+  totalStudents: number;
+  assessmentCount: number;
+}
+
+export interface AssignmentSubmissionStat {
+  assignmentId: string;
+  title: string;
+  dueDate: string;
+  totalStudents: number;
+  submittedCount: number;
+  submissionRatePercentage: number;
+}
+
+export interface SyllabusCoverageItem {
+  batchId: string;
+  batchName: string;
+  subject: string;
+  totalTopics: number;
+  completedTopics: number;
+  coveragePercentage: number;
+}
+
+export interface TeacherAnalyticsSummary {
+  instituteId: string;
+  teacherId: string;
+  batchAttendanceTrends: BatchAttendanceTrend[];
+  gradeDistribution: GradeDistributionBucket[];
+  subjectComparison: SubjectComparisonItem[];
+  assignmentSubmissions: AssignmentSubmissionStat[];
+  syllabusCoverage: SyllabusCoverageItem[];
+}
+
+export interface PlatformAdminAnalyticsSummary {
+  totalInstitutes: number;
+  activeInstitutes: number;
+  institutesByPlan: Record<string, number>;
+  totalStudents: number;
+  totalTeachers: number;
+  recentActivityCounts: {
+    assessmentsCreated: number;
+    attendanceRecorded: number;
+    activeLoginsLast24h: number;
+  };
+}

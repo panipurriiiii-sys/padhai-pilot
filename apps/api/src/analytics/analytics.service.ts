@@ -11,7 +11,7 @@ import type {
   StudentAnalyticsSummary,
   TeacherAnalyticsSummary,
   PlatformAdminAnalyticsSummary,
-  AttendanceTrendPoint,
+  StudentAttendanceDay,
   SubjectPerformanceItem,
   ExamScoreTrendPoint,
   HomeworkCompletionSummary,
@@ -68,9 +68,9 @@ export class AnalyticsService {
     ).length;
     const attendanceRate = records.length > 0
       ? Math.round((presentCount / records.length) * 100)
-      : 100;
+      : null;
 
-    const attendanceTrend: AttendanceTrendPoint[] = records.slice(-14).map((r) => ({
+    const attendanceTrend: StudentAttendanceDay[] = records.slice(-14).map((r) => ({
       date: r.session.date.toISOString().split('T')[0],
       status: r.status as any,
       subject: r.session.batch.subject,
@@ -128,12 +128,27 @@ export class AnalyticsService {
       },
     );
 
+    // Class average is an aggregate over published scores only (no other student's row is exposed).
+    const classAverages = marks.length
+      ? await this.db.assessmentMark.groupBy({
+          by: ['assessmentId'],
+          where: {
+            assessmentId: { in: [...new Set(marks.map((m) => m.assessmentId))] },
+            isPublished: true,
+            resultStatus: 'SCORED',
+          },
+          _avg: { percentage: true },
+        })
+      : [];
+    const classAvgByAssessment = new Map(
+      classAverages.map((c) => [c.assessmentId, c._avg.percentage === null ? null : Math.round(c._avg.percentage)]),
+    );
     const examScoreTrend: ExamScoreTrendPoint[] = marks.map((m) => ({
       assessmentId: m.assessmentId,
       title: m.assessment.title,
       date: m.assessment.assessmentDate.toISOString().split('T')[0],
       percentage: m.percentage || 0,
-      classAveragePercentage: 74,
+      classAveragePercentage: classAvgByAssessment.get(m.assessmentId) ?? null,
     }));
 
     // Homework Summary
@@ -159,7 +174,7 @@ export class AnalyticsService {
     const pending = submissions.filter((s) => s.status === 'SUBMITTED').length;
     const completionRatePercentage = totalAssigned > 0
       ? Math.round((submitted / totalAssigned) * 100)
-      : 100;
+      : null;
 
     const homeworkSummary: HomeworkCompletionSummary = {
       totalAssigned,
@@ -220,7 +235,7 @@ export class AnalyticsService {
 
         const averageAttendancePercentage = totalRecords > 0
           ? Math.round((presentRecords / totalRecords) * 100)
-          : 90;
+          : null;
 
         return {
           batchId: b.id,
@@ -295,7 +310,7 @@ export class AnalyticsService {
     const subjectComparison: SubjectComparisonItem[] = Array.from(subjectMap.entries()).map(
       ([subject, stat]) => ({
         subject,
-        averageScorePercentage: stat.count > 0 ? Math.round(stat.totalPct / stat.count) : 75,
+        averageScorePercentage: stat.count > 0 ? Math.round(stat.totalPct / stat.count) : null,
         totalStudents: stat.totalStudents,
         assessmentCount: stat.asmCount,
       }),
@@ -320,7 +335,7 @@ export class AnalyticsService {
     });
 
     const assignmentSubmissions: AssignmentSubmissionStat[] = recentAssignments.map((a) => {
-      const totalStudents = a.batch?._count?.enrollments || 25;
+      const totalStudents = a.batch?._count?.enrollments ?? 0;
       const submittedCount = a._count.submissions;
       return {
         assignmentId: a.id,

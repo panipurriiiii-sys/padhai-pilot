@@ -292,10 +292,10 @@ export class AdminService {
             teacherCount: inst._count.facultyProfiles,
             createdAt: inst.createdAt.toISOString(),
             updatedAt: inst.updatedAt.toISOString(),
-            themePrimaryColor: inst.themePrimaryColor || inst.primaryColor || undefined,
+            themePrimaryColor: inst.primaryColor || undefined,
             logoUrl: inst.logoUrl || undefined,
-            maxStudentsLimit: inst.maxStudentsLimit || 500,
-            maxTeachersLimit: inst.maxTeachersLimit || 25,
+            maxStudentsLimit: inst.maxStudents || 500,
+            maxTeachersLimit: inst.maxTeachers || 25,
           };
         }
       } catch {}
@@ -368,8 +368,8 @@ export class AdminService {
             plan: newInst.plan,
             isActive: newInst.status !== 'SUSPENDED',
             customDomain: newInst.customDomain,
-            maxStudentsLimit: newInst.maxStudentsLimit,
-            maxTeachersLimit: newInst.maxTeachersLimit,
+            maxStudents: newInst.maxStudentsLimit,
+            maxTeachers: newInst.maxTeachersLimit,
           },
         });
       } catch {
