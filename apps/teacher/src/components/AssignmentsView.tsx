@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { uploadMediaFile, MAX_MEDIA_SIZE_BYTES, formatBytes } from '../lib/mediaUpload';
 import {
   FileText,
   Plus,
@@ -26,6 +27,7 @@ interface AssignmentsViewProps {
     subject: string;
     dueDate: string;
     maxMarks?: number;
+    attachmentUrl?: string;
   }) => Promise<void>;
   loadSubmissions: (assignmentId: string) => Promise<{ assignment: Assignment; submissions: AssignmentSubmission[] }>;
   onGradeSubmission: (
@@ -42,6 +44,29 @@ export function AssignmentsView({
   onGradeSubmission,
 }: AssignmentsViewProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [attachmentUrl, setAttachmentUrl] = useState('');
+  const [attachmentName, setAttachmentName] = useState('');
+  const [attachBusy, setAttachBusy] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  const handleAttach = async (file: File | undefined) => {
+    if (!file) return;
+    setCreateError(null);
+    if (file.size > MAX_MEDIA_SIZE_BYTES) {
+      setCreateError(`File must be under ${formatBytes(MAX_MEDIA_SIZE_BYTES)}.`);
+      return;
+    }
+    setAttachBusy(true);
+    try {
+      const r = await uploadMediaFile(file, () => undefined);
+      setAttachmentUrl(r.url);
+      setAttachmentName(r.fileName);
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : 'Upload failed.');
+    } finally {
+      setAttachBusy(false);
+    }
+  };
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form State
@@ -90,11 +115,17 @@ export function AssignmentsView({
         batchId,
         dueDate: new Date(dueDate).toISOString(),
         maxMarks: Number(maxMarks),
+        attachmentUrl: attachmentUrl || undefined,
       });
+      setAttachmentUrl('');
+      setAttachmentName('');
+      setCreateError(null);
       setShowCreateModal(false);
       setTitle('');
       setInstructions('');
       setSubject('');
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : 'Could not create the assignment.');
     } finally {
       setIsSubmitting(false);
     }
@@ -341,6 +372,14 @@ export function AssignmentsView({
                   className="w-full p-2.5 rounded-lg bg-paper-warm border border-border-paper text-stone-900 focus:outline-none focus:border-electric"
                 />
               </div>
+
+              <div>
+                <label className="block text-stone-500 mb-1 font-medium">Attach a PDF or document (optional)</label>
+                <input type="file" accept=".pdf,.doc,.docx,.ppt,.pptx,image/*" disabled={attachBusy} onChange={(e) => handleAttach(e.target.files?.[0])} className="w-full text-xs" />
+                {attachBusy && <p className="mt-1 text-stone-500">Uploading...</p>}
+                {attachmentName && <p className="mt-1 text-emerald-700">Attached: {attachmentName}</p>}
+              </div>
+              {createError && <p role="alert" className="text-rose-700">{createError}</p>}
 
               <div className="flex items-center gap-2">
                 <input

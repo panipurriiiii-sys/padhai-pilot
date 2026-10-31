@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Pencil, ArrowUpRight } from 'lucide-react';
+import { Pencil, ArrowUpRight, FileText } from 'lucide-react';
 import type { BatchSummary, PromoteBatchResult } from '@padhai-pilot/shared';
 import { teacherApi } from '../lib/api';
 import { Modal, Field } from './InvitationsView';
@@ -69,6 +69,9 @@ export function BatchActions({ batch, batches, onChanged }: { batch: BatchSummar
       <div className="flex gap-2">
         <button type="button" className="btn-secondary text-xs px-3 py-2 flex items-center gap-1.5" onClick={() => open('edit')}>
           <Pencil className="w-3.5 h-3.5" /> Edit batch
+        </button>
+        <button type="button" className="btn-secondary text-xs px-3 py-2 flex items-center gap-1.5" onClick={() => teacherApi.openAttendanceReport({ batchId: batch.id }).catch((e) => alert(e instanceof Error ? e.message : 'Could not generate the report.'))}>
+          <FileText className="w-3.5 h-3.5" /> Attendance report PDF
         </button>
         <button type="button" className="btn-secondary text-xs px-3 py-2 flex items-center gap-1.5" onClick={() => open('promote')}>
           <ArrowUpRight className="w-3.5 h-3.5" /> Promote to next class

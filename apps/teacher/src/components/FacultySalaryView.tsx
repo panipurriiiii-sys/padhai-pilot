@@ -539,11 +539,11 @@ export function FacultySalaryView({
               </button>
               <button
                 type="button"
-                onClick={() => window.print()}
+                onClick={async () => { try { await teacherApi.openSalarySlip(salarySlipTarget.id); } catch (e) { alert(e instanceof Error ? e.message : 'Could not generate the salary slip.'); } }}
                 className="btn-primary text-xs font-['Raleway'] font-bold px-4 py-2 flex items-center gap-1.5"
               >
                 <Printer className="w-4 h-4" />
-                Print Statement
+                Open salary slip PDF
               </button>
             </div>
           </div>

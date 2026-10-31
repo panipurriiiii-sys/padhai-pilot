@@ -17,6 +17,7 @@ import {
 import { teacherApi } from '../lib/api';
 import type { TuitionBrandingProfile, UpdateTuitionBrandingDto } from '@padhai-pilot/shared';
 import { LoadError } from './LoadError';
+import { uploadMediaFile, MAX_MEDIA_SIZE_BYTES, formatBytes } from '../lib/mediaUpload';
 
 export function TuitionBrandingView() {
   const [profile, setProfile] = useState<TuitionBrandingProfile | null>(null);
@@ -25,6 +26,31 @@ export function TuitionBrandingView() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [logoBusy, setLogoBusy] = useState(false);
+  const [logoError, setLogoError] = useState<string | null>(null);
+
+  async function handleLogoFile(file: File | undefined) {
+    if (!file) return;
+    setLogoError(null);
+    if (!file.type.startsWith('image/')) {
+      setLogoError('Choose an image file (PNG, JPG or SVG).');
+      return;
+    }
+    if (file.size > MAX_MEDIA_SIZE_BYTES) {
+      setLogoError(`Logo must be under ${formatBytes(MAX_MEDIA_SIZE_BYTES)}.`);
+      return;
+    }
+    setLogoBusy(true);
+    try {
+      const res = await uploadMediaFile(file, () => undefined);
+      setFormData((prev) => ({ ...prev, logoUrl: res.url }));
+    } catch (err) {
+      setLogoError(err instanceof Error ? err.message : 'Logo upload failed.');
+    } finally {
+      setLogoBusy(false);
+    }
+  }
 
   useEffect(() => {
     loadProfile();
@@ -60,11 +86,14 @@ export function TuitionBrandingView() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setIsSubmitting(true);
+    setSaveError(null);
     try {
       const updated = await teacherApi.updateTuitionProfile(formData);
       setProfile(updated);
       setToastMessage('Tuition branding settings and letterhead profile saved!');
       setTimeout(() => setToastMessage(null), 4000);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Could not save branding.');
     } finally {
       setIsSubmitting(false);
     }
@@ -114,6 +143,26 @@ export function TuitionBrandingView() {
               <h3 className="font-['Playfair_Display'] font-bold text-lg text-[var(--ink-primary)] pb-2 border-b border-[var(--border-paper)]">
                 General Institute Information
               </h3>
+
+              <div className="flex items-center gap-4">
+                <div className="w-20 h-20 rounded-xl border border-[var(--border-paper)] bg-[var(--bg-paper-warm)] flex items-center justify-center overflow-hidden">
+                  {formData.logoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={formData.logoUrl} alt="Institute logo" className="max-w-full max-h-full object-contain" />
+                  ) : (
+                    <Image className="w-6 h-6 text-[var(--ink-muted)]" aria-hidden="true" />
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <label className="btn-secondary text-xs px-3 py-2 inline-block cursor-pointer">
+                    {logoBusy ? 'Uploading...' : formData.logoUrl ? 'Replace logo' : 'Upload logo'}
+                    <input type="file" accept="image/*" className="sr-only" disabled={logoBusy} onChange={(e) => handleLogoFile(e.target.files?.[0])} />
+                  </label>
+                  <p className="text-[11px] text-[var(--ink-muted)]">Shown on receipts, result sheets and reports. Max 20 MB.</p>
+                  {logoError && <p role="alert" className="text-[11px] text-rose-700">{logoError}</p>}
+                </div>
+              </div>
+              {saveError && <p role="alert" className="text-xs text-rose-700">{saveError}</p>}
 
               <div>
                 <label className="block text-xs font-['Raleway'] font-bold text-[var(--ink-secondary)] mb-1">
