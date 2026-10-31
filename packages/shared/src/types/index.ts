@@ -77,9 +77,12 @@ export interface InvitationCode {
   issuerName?: string;
   maxUses: number;
   usedCount: number;
-  expiresAt: string;
+  /** null = never expires. */
+  expiresAt: string | null;
   isRevoked: boolean;
   status: 'ACTIVE' | 'EXPIRED' | 'REVOKED' | 'EXHAUSTED';
+  shareText?: string;
+  shareLink?: string;
   createdAt: string;
 }
 
@@ -371,5 +374,6 @@ export function calculateGradeAndPercentage(
 export * from './features.js';
 export * from './tuition.js';
 export * from './student.js';
+export * from './academic.js';
 
 export * from './analytics.js';

@@ -3,6 +3,8 @@ import {
   Get,
   Post,
   Put,
+  Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -12,6 +14,10 @@ import {
   Inject,
 } from '@nestjs/common';
 import { TeacherService } from './teacher.service.js';
+import { BatchesService } from './batches.service.js';
+import { EnrollmentCodesService } from './enrollment-codes.service.js';
+import { TimetableService } from './timetable.service.js';
+import { BroadcastService } from './broadcast.service.js';
 import { AuthGuard } from '../common/guards/auth.guard.js';
 import { RolesGuard } from '../common/guards/roles.guard.js';
 import { Roles } from '../common/decorators/roles.decorator.js';
@@ -23,7 +29,13 @@ import type { AuthenticatedUser } from '../common/types.js';
 @UseGuards(AuthGuard, RolesGuard)
 @Roles(...STAFF_ROLES)
 export class TeacherController {
-  constructor(@Inject(TeacherService) private readonly teacherService: TeacherService) {}
+  constructor(
+    @Inject(TeacherService) private readonly teacherService: TeacherService,
+    @Inject(BatchesService) private readonly batches: BatchesService,
+    @Inject(EnrollmentCodesService) private readonly codes: EnrollmentCodesService,
+    @Inject(TimetableService) private readonly timetable: TimetableService,
+    @Inject(BroadcastService) private readonly broadcast: BroadcastService,
+  ) {}
 
   // 1. Dashboard Metrics
   @Get('dashboard')
@@ -33,48 +45,118 @@ export class TeacherController {
 
   // 2. Batches & Roster
   @Get('batches')
-  getBatches(@CurrentUser() user: AuthenticatedUser) {
-    return this.teacherService.getBatches(user);
-  }
-
-  @Get('batches/:batchId/students')
-  getBatchRoster(
-    @Param('batchId') batchId: string,
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
-    return this.teacherService.getBatchRoster(batchId, user);
+  getBatches(@CurrentUser() user: AuthenticatedUser, @Query('includeArchived') includeArchived?: string, @Query('limit') limit?: string) {
+    return this.batches.list(user, { includeArchived: includeArchived === 'true', limit });
   }
 
   @Post('batches')
   @HttpCode(HttpStatus.CREATED)
-  createBatch(
-    @Body() body: { name: string; code?: string; subject: string; gradeLevel?: string; room?: string },
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
-    return this.teacherService.createBatch(body, user);
+  createBatch(@Body() body: Record<string, unknown>, @CurrentUser() user: AuthenticatedUser) {
+    return this.batches.create(body, user);
   }
 
-  // 3. Student Invitations
+  @Get('batches/:batchId/students')
+  getBatchRoster(@Param('batchId') batchId: string, @CurrentUser() user: AuthenticatedUser, @Query('limit') limit?: string) {
+    return this.batches.roster(batchId, user, { limit });
+  }
+
+  @Patch('batches/:batchId')
+  updateBatch(@Param('batchId') batchId: string, @Body() body: Record<string, unknown>, @CurrentUser() user: AuthenticatedUser) {
+    return this.batches.update(batchId, body, user);
+  }
+
+  @Post('batches/:batchId/archive')
+  @HttpCode(HttpStatus.OK)
+  archiveBatch(@Param('batchId') batchId: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.batches.setArchived(batchId, true, user);
+  }
+
+  @Post('batches/:batchId/unarchive')
+  @HttpCode(HttpStatus.OK)
+  unarchiveBatch(@Param('batchId') batchId: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.batches.setArchived(batchId, false, user);
+  }
+
+  @Post('batches/:batchId/promote')
+  @HttpCode(HttpStatus.OK)
+  promoteBatch(
+    @Param('batchId') batchId: string,
+    @Body() body: { targetBatchId?: string; newBatch?: Record<string, unknown>; studentIds?: string[]; archiveSource?: boolean },
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.batches.promote(batchId, body, user);
+  }
+
+  @Patch('batches/:batchId/students/:studentId')
+  updateRoll(
+    @Param('batchId') batchId: string,
+    @Param('studentId') studentId: string,
+    @Body('rollNumber') rollNumber: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.batches.updateRoll(batchId, studentId, rollNumber, user);
+  }
+
+  @Delete('batches/:batchId/students/:studentId')
+  removeStudent(@Param('batchId') batchId: string, @Param('studentId') studentId: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.batches.removeStudent(batchId, studentId, user);
+  }
+
+  // 2b. Weekly timetable (CRUD)
+  @Get('batches/:batchId/timetable')
+  getBatchTimetable(@Param('batchId') batchId: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.timetable.list(user, { batchId });
+  }
+
+  @Post('batches/:batchId/timetable')
+  @HttpCode(HttpStatus.CREATED)
+  createSlot(@Param('batchId') batchId: string, @Body() body: Record<string, unknown>, @CurrentUser() user: AuthenticatedUser) {
+    return this.timetable.create(batchId, body, user);
+  }
+
+  @Patch('timetable/:slotId')
+  updateSlot(@Param('slotId') slotId: string, @Body() body: Record<string, unknown>, @CurrentUser() user: AuthenticatedUser) {
+    return this.timetable.update(slotId, body, user);
+  }
+
+  @Delete('timetable/:slotId')
+  deleteSlot(@Param('slotId') slotId: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.timetable.remove(slotId, user);
+  }
+
+  // 3. Enrollment (invitation) codes
   @Get('invitations')
-  getInvitations(@CurrentUser() user: AuthenticatedUser) {
-    return this.teacherService.getInvitations(user);
+  getInvitations(@CurrentUser() user: AuthenticatedUser, @Query('batchId') batchId?: string, @Query('limit') limit?: string) {
+    return this.codes.list(user, { batchId, limit });
   }
 
   @Post('invitations')
   @HttpCode(HttpStatus.CREATED)
-  createInvitation(
-    @Body() body: { batchId?: string; maxUses?: number; expiryDays?: number },
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
-    return this.teacherService.createInvitation(body, user);
+  createInvitation(@Body() body: Record<string, any>, @CurrentUser() user: AuthenticatedUser) {
+    return this.codes.create(body, user);
   }
 
-  @Post('invitations/:code/revoke')
-  revokeInvitation(
-    @Param('code') code: string,
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
-    return this.teacherService.revokeInvitation(code, user);
+  @Patch('invitations/:id')
+  updateInvitation(@Param('id') id: string, @Body() body: Record<string, any>, @CurrentUser() user: AuthenticatedUser) {
+    return this.codes.update(id, body, user);
+  }
+
+  @Post('invitations/:id/revoke')
+  @HttpCode(HttpStatus.OK)
+  revokeInvitation(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.codes.revoke(id, user);
+  }
+
+  @Post('invitations/:id/reactivate')
+  @HttpCode(HttpStatus.OK)
+  reactivateInvitation(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.codes.reactivate(id, user);
+  }
+
+  @Post('invitations/:id/regenerate')
+  @HttpCode(HttpStatus.OK)
+  regenerateInvitation(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.codes.regenerate(id, user);
   }
 
   // 4. Attendance
@@ -212,16 +294,16 @@ export class TeacherController {
     return this.teacherService.toggleLessonPlanStatus(planId, user);
   }
 
-  // 8. Timetable
+  // 8. Timetable (all slots visible to the caller)
   @Get('timetable')
-  getTimetable(@CurrentUser() user: AuthenticatedUser) {
-    return this.teacherService.getTimetable(user);
+  getTimetable(@CurrentUser() user: AuthenticatedUser, @Query('batchId') batchId?: string) {
+    return this.timetable.list(user, { batchId });
   }
 
-  // 9. Announcements
+  // 9. Academic broadcast (announcements)
   @Get('announcements')
-  getAnnouncements(@CurrentUser() user: AuthenticatedUser) {
-    return this.teacherService.getAnnouncements(user);
+  getAnnouncements(@CurrentUser() user: AuthenticatedUser, @Query('batchId') batchId?: string, @Query('limit') limit?: string) {
+    return this.broadcast.list(user, { batchId, limit });
   }
 
   @Post('announcements')
@@ -230,7 +312,12 @@ export class TeacherController {
     @Body() body: { batchId?: string; title: string; content: string; priority?: 'NORMAL' | 'URGENT' },
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.teacherService.createAnnouncement(body, user);
+    return this.broadcast.create(body, user);
+  }
+
+  @Delete('announcements/:id')
+  deleteAnnouncement(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.broadcast.remove(id, user);
   }
 
   // 10. Reports
