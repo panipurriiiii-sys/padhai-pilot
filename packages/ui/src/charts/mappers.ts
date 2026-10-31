@@ -284,13 +284,14 @@ export function studentAssignmentStatus(
     else counts.PENDING += 1;
   }
 
-  const slices: DonutSlice[] = [
+  const all: DonutSlice[] = [
     { id: 'graded', label: 'Graded', value: counts.GRADED, tone: 'success' },
     { id: 'submitted', label: 'Submitted', value: counts.SUBMITTED, tone: 'brand' },
     { id: 'pending', label: 'Pending', value: counts.PENDING, tone: 'warning' },
     { id: 'late', label: 'Late', value: counts.LATE, tone: 'danger' },
     { id: 'resubmit', label: 'Resubmit', value: counts.RESUBMIT, tone: 'deep' },
-  ].filter((s) => s.value > 0);
+  ];
+  const slices = all.filter((s) => s.value > 0);
 
   return slices.length ? slices : null;
 }

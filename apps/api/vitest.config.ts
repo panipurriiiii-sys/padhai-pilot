@@ -8,5 +8,9 @@ export default defineConfig({
     globals: true,
     root: './',
     include: ['**/*.spec.ts'],
+    // auth/teacher specs hash with scrypt (CPU bound); on a busy machine (several agents/dev servers) the 5 s default
+    // produced spurious timeouts. 30 s is far above normal (<1 s) and still fails hung tests.
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
   },
 });

@@ -31,3 +31,9 @@ Overrides: `LOCAL_API_PORT` (default 3001), `LOCAL_DB_PORT` (default 54329). If 
 - **Postgres will not start / stale lock**: stop `local:db`, delete `.local/pgdata`, start again, then `local:migrate && local:seed`.
 - **Postgres refuses to run as Administrator**: use a normal (non-elevated) terminal.
 - Migration `20261031000300_theme_revision_and_audit_reason` was added by local-env-qa: the earlier migrations did not create `PlatformThemeRevision` nor `AssessmentAudit.reason` (found by the drift check). It is idempotent (`IF NOT EXISTS`).
+
+## E2E tests (`apps/api/test/e2e`)
+`npm run test:e2e` starts the DB if needed, migrates, re-seeds, starts the API on :3199 (with `SESSION_CHECK_TTL_MS=0`), runs vitest (`apps/api/vitest.config.e2e.ts`), and stops what it started (`E2E_KEEP=1` keeps it running). Files: auth, roles (route x role matrix), tenancy (institute A vs B), scope (own data / assigned batches), invitations (lifecycle, maxUses, concurrency), idempotency.
+- `it.fails(...)` = a KNOWN BUG, written as the correct behaviour; the suite goes red when it is fixed so the marker gets removed. `it.todo(...)` = feature not built yet. Do not delete either.
+- The DB is created with `--encoding=UTF8` (Windows default WIN1252 cannot store the rupee sign and made fee reminders 500).
+- Unit tests: `npm test` (vitest, 30 s timeout since scrypt-heavy specs timed out on a loaded machine).
