@@ -16,7 +16,7 @@ Fluid compute is already on for every project, which lets one instance serve con
 ## Changes made in the repository
 
 - Every project's `vercel.json` has `ignoreCommand: [ "$VERCEL_GIT_COMMIT_REF" != "main" ]`, so pushes to feature branches no longer build previews for five projects. Only `main` builds. Previews can still be created manually (`vercel deploy`) when a branch needs a look. The projects already have "affected projects only" builds enabled, so a change that touches one app does not rebuild the others.
-- API function `maxDuration` is capped at 30 s so a runaway request cannot bill for minutes.
+- API function `maxDuration` should be capped (about 30 s) so a runaway request cannot bill for minutes. It is not set in `vercel.json` because the API project uses the NestJS framework preset and a `functions` pattern that does not match its generated function fails the deployment; set it under Project Settings → Functions instead.
 - Portals fall back to the production API URL when `NEXT_PUBLIC_API_URL` is unset (a relative `/api` would have hit the portal's own static site).
 
 ## Levers still open (ordered by expected saving)
