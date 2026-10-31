@@ -11,7 +11,8 @@
     "./motion": "./src/motion/index.ts",
     "./charts": "./src/charts/index.ts",
     "./charts-core": "./src/charts/core.ts",
-    "./styles.css": "./src/styles/pp.css"
+    "./styles.css": "./src/styles/pp.css",
+    "./charts-mappers": "./src/charts/mappers.ts"
   },
   "sideEffects": [
     "*.css"

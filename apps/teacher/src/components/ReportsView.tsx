@@ -3,6 +3,7 @@
 import React from 'react';
 import { BarChart3, TrendingUp, Users, CheckCircle, Clock } from 'lucide-react';
 import type { TeacherReports } from '@padhai-pilot/shared';
+import { AttendanceTrendCard, BatchAttendanceCard, SubmissionFunnelCard } from './charts';
 
 interface ReportsViewProps {
   reports: TeacherReports;
@@ -31,7 +32,7 @@ export function ReportsView({ reports }: ReportsViewProps) {
           <div className="font-['Inter'] text-2xl font-bold text-[#10B981]">
             {reports.summary.averageClassAttendance}
           </div>
-          <span className="text-[11px] text-stone-500 mt-1 block">Consistent over last 4 weeks</span>
+          <span className="text-[11px] text-stone-500 mt-1 block">Across all your batches</span>
         </div>
 
         <div className="p-4 rounded-xl bg-white border border-[#E3DFD9]">
@@ -70,30 +71,12 @@ export function ReportsView({ reports }: ReportsViewProps) {
         </div>
       </div>
 
-      {/* Attendance Trends Bar Visualization */}
-      <div className="p-5 rounded-xl bg-white border border-[#E3DFD9] space-y-4">
-        <h3 className="font-['Raleway'] font-bold text-sm text-stone-900 flex items-center gap-2">
-          <TrendingUp className="w-4 h-4 text-[#1677FF]" />
-          <span>Attendance Rate Trajectory (Last 4 Weeks)</span>
-        </h3>
-
-        <div className="grid grid-cols-4 gap-3 pt-2">
-          {reports.attendanceTrends.map((trend, idx) => (
-            <div key={idx} className="space-y-2">
-              <div className="h-28 rounded-lg bg-[#FAF8F5] border border-[#E3DFD9] flex flex-col justify-end p-2 relative overflow-hidden">
-                <div
-                  className="w-full rounded bg-[#1677FF] transition-all duration-500 shadow-[0_0_12px_rgba(22,119,255,0.3)]"
-                  style={{ height: `${trend.rate}%` }}
-                />
-              </div>
-              <div className="text-center font-['Inter']">
-                <span className="text-xs font-bold text-stone-900 block">{trend.rate}%</span>
-                <span className="text-[10px] text-stone-500 block">{trend.label}</span>
-              </div>
-            </div>
-          ))}
-        </div>
+      {/* Charts: all computed from the single /teacher/reports payload */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <AttendanceTrendCard trends={reports.attendanceTrends} />
+        <SubmissionFunnelCard metrics={reports.submissionMetrics} />
       </div>
+      <BatchAttendanceCard rows={reports.batchPerformance} />
 
       {/* Comparative Batch Performance Table */}
       <div className="rounded-xl bg-white border border-[#E3DFD9] overflow-hidden text-xs">
