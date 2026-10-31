@@ -28,11 +28,21 @@ import {
   Mail,
   UserCheck,
   ChevronRight,
+  Palette,
+  RotateCcw,
+  UploadCloud,
 } from 'lucide-react';
 import type {
   FeatureKey,
   FeatureDefinition,
   SubscriptionPlan,
+  PlatformThemeConfig,
+  PublishedTheme,
+} from '@padhai-pilot/shared';
+import {
+  DEFAULT_THEME_CONFIG,
+  resolveTheme,
+  contrastRatio,
 } from '@padhai-pilot/shared';
 import {
   adminApi,
@@ -40,6 +50,7 @@ import {
   PlatformHealth,
   PlatformAuditItem,
   PlatformAnnouncementItem,
+  ThemeHistoryItem,
 } from '../lib/api';
 
 export default function AdminPlatformOwnerDashboard() {
@@ -52,8 +63,17 @@ export default function AdminPlatformOwnerDashboard() {
 
   // Tab State
   const [activeTab, setActiveTab] = useState<
-    'tenants' | 'features' | 'plans' | 'whitelabel' | 'audit' | 'system'
+    'tenants' | 'features' | 'plans' | 'whitelabel' | 'audit' | 'system' | 'theme'
   >('tenants');
+
+  // Platform Theme State (Consumes /api/theme and /api/admin/theme)
+  const [publishedTheme, setPublishedTheme] = useState<PublishedTheme | null>(null);
+  const [themeHistory, setThemeHistory] = useState<ThemeHistoryItem[]>([]);
+  const [themeConfig, setThemeConfig] = useState<PlatformThemeConfig>(DEFAULT_THEME_CONFIG);
+  const [themeValidation, setThemeValidation] = useState<{ valid: boolean; errors?: string[]; warnings?: string[] } | null>(null);
+  const [publishReason, setPublishReason] = useState('');
+  const [isThemeLoading, setIsThemeLoading] = useState(false);
+  const [isThemePublishing, setIsThemePublishing] = useState(false);
 
   // Platform Data
   const [health, setHealth] = useState<PlatformHealth | null>(null);
@@ -127,6 +147,84 @@ export default function AdminPlatformOwnerDashboard() {
       loadAll();
     }
   }, [currentUser]);
+
+  const loadThemeData = async () => {
+    setIsThemeLoading(true);
+    try {
+      // 1. Consume public GET /api/theme
+      const pub = await adminApi.getPublicTheme();
+      if (pub) {
+        setPublishedTheme(pub);
+        if (pub.config) {
+          setThemeConfig(pub.config);
+        }
+      }
+
+      // 2. Consume SUPER_ADMIN GET /api/admin/theme overview & history
+      const overview = await adminApi.getAdminThemeOverview();
+      if (overview?.published) {
+        setPublishedTheme(overview.published);
+        setThemeConfig(overview.published.config);
+      }
+      if (overview?.history) {
+        setThemeHistory(overview.history);
+      }
+    } catch (err: unknown) {
+      console.error('Failed to load theme data:', err);
+    } finally {
+      setIsThemeLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'theme') {
+      loadThemeData();
+    }
+  }, [activeTab]);
+
+  const handleValidateTheme = async () => {
+    try {
+      const res = await adminApi.validateThemeConfig(themeConfig);
+      setThemeValidation(res);
+      if (res.valid) {
+        setStatusMsg({ text: 'Theme configuration passed all validation and WCAG contrast checks.', type: 'success' });
+      } else {
+        setStatusMsg({ text: `Theme validation found issues: ${res.errors?.join(', ') || 'Check configuration'}`, type: 'error' });
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Validation failed';
+      setStatusMsg({ text: msg, type: 'error' });
+    }
+  };
+
+  const handlePublishTheme = async () => {
+    setIsThemePublishing(true);
+    try {
+      const res = await adminApi.publishTheme(themeConfig, publishReason);
+      setStatusMsg({ text: res.message || 'Theme revision successfully published live.', type: 'success' });
+      setPublishReason('');
+      await loadThemeData();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Publish failed';
+      setStatusMsg({ text: msg, type: 'error' });
+    } finally {
+      setIsThemePublishing(false);
+    }
+  };
+
+  const handleRestoreRevision = async (revision: number) => {
+    if (!window.confirm(`Are you sure you want to restore Theme Revision #${revision}? This will publish it as the active revision.`)) {
+      return;
+    }
+    try {
+      const res = await adminApi.restoreTheme(revision, `Restored revision #${revision} via admin console`);
+      setStatusMsg({ text: res.message || `Revision #${revision} restored successfully.`, type: 'success' });
+      await loadThemeData();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Restore failed';
+      setStatusMsg({ text: msg, type: 'error' });
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -531,6 +629,18 @@ export default function AdminPlatformOwnerDashboard() {
             >
               <Activity className="w-4 h-4" />
               System Status
+            </button>
+
+            <button
+              onClick={() => setActiveTab('theme')}
+              className={`px-3.5 py-2 text-xs font-primary font-bold rounded-xl transition-all flex items-center gap-2 shrink-0 ${
+                activeTab === 'theme'
+                  ? 'bg-electric text-on-brand shadow-lift '
+                  : 'text-ink-muted hover:text-on-brand hover:bg-paper-warm'
+              }`}
+            >
+              <Palette className="w-4 h-4" />
+              Theme Settings
             </button>
           </div>
 
@@ -1055,6 +1165,512 @@ export default function AdminPlatformOwnerDashboard() {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ================================================================== */}
+        {/* TAB 7: PLATFORM THEME SETTINGS & ENGINE (Consumes /api/theme) */}
+        {/* ================================================================== */}
+        {activeTab === 'theme' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="font-display text-xl font-bold text-ink-primary">
+                  Platform Theme Settings & Design Engine
+                </h2>
+                <p className="text-xs font-primary text-ink-muted mt-0.5">
+                  Authoritative runtime styling served via <code className="px-1.5 py-0.5 bg-paper-warm border border-border-paper rounded font-data text-electric">GET /api/theme</code> and synchronized across Web, Teacher, Student, and Mobile portals.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={loadThemeData}
+                  disabled={isThemeLoading}
+                  className="px-3.5 py-2 rounded-xl bg-paper hover:bg-paper-warm border border-border-paper text-ink-secondary text-xs font-primary font-semibold transition-all flex items-center gap-2"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isThemeLoading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </button>
+                <button
+                  type="button"
+                  onClick={handleValidateTheme}
+                  className="px-3.5 py-2 rounded-xl bg-paper hover:bg-paper-warm border border-border-paper text-ink-primary text-xs font-primary font-bold transition-all flex items-center gap-2"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5 text-status-success-text" />
+                  Validate
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePublishTheme}
+                  disabled={isThemePublishing}
+                  className="px-4 py-2 rounded-xl bg-electric hover:bg-brand-hover active:scale-95 text-on-brand text-xs font-primary font-bold tracking-wide transition-all shadow-lift flex items-center gap-2"
+                >
+                  <UploadCloud className="w-4 h-4" />
+                  {isThemePublishing ? 'Publishing...' : 'Publish Revision Live'}
+                </button>
+              </div>
+            </div>
+
+            {/* Published Theme Status Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="p-4 rounded-2xl bg-paper border border-border-paper">
+                <span className="text-[10px] uppercase font-primary font-bold text-ink-faint block mb-1">
+                  Active Revision
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="font-data text-2xl font-bold text-ink-primary">
+                    #{publishedTheme?.revision ?? 0}
+                  </span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-data font-bold bg-brand-subtle text-electric border border-border-focus">
+                    {publishedTheme?.revisionId ?? 'r0-default'}
+                  </span>
+                </div>
+                <p className="text-[10px] text-ink-faint mt-1">
+                  {publishedTheme?.publishedAt ? new Date(publishedTheme.publishedAt).toLocaleString() : 'Built-in baseline default'}
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-paper border border-border-paper">
+                <span className="text-[10px] uppercase font-primary font-bold text-ink-faint block mb-1">
+                  Brand Electric Blue
+                </span>
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-5 h-5 rounded-full border border-border-paper shadow-sm shrink-0"
+                    style={{ backgroundColor: themeConfig.brand.primary }}
+                  />
+                  <span className="font-data text-lg font-bold text-ink-primary">
+                    {themeConfig.brand.primary}
+                  </span>
+                </div>
+                <p className="text-[10px] text-ink-faint mt-1">
+                  Contrast ratio: {contrastRatio(themeConfig.brand.primary, '#FFFFFF').toFixed(2)}:1 on Paper
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-paper border border-border-paper">
+                <span className="text-[10px] uppercase font-primary font-bold text-ink-faint block mb-1">
+                  Default Scheme
+                </span>
+                <span className="font-data text-lg font-bold uppercase text-ink-primary">
+                  {themeConfig.appearance.defaultScheme}
+                </span>
+                <p className="text-[10px] text-status-success-text mt-1">
+                  {themeConfig.appearance.allowUserSchemeToggle ? 'User toggle enabled' : 'Locked by admin'}
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-paper border border-border-paper">
+                <span className="text-[10px] uppercase font-primary font-bold text-ink-faint block mb-1">
+                  CDN & Client Cache
+                </span>
+                <span className="font-data text-sm font-bold text-status-success-text">
+                  60s browser / 300s edge
+                </span>
+                <p className="text-[10px] text-ink-faint mt-1">
+                  Stale-while-revalidate: 86400s
+                </p>
+              </div>
+            </div>
+
+            {/* Validation Feedback Banner */}
+            {themeValidation && (
+              <div
+                className={`p-4 rounded-2xl border flex items-start gap-3 ${
+                  themeValidation.valid
+                    ? 'bg-status-success-bg border-status-success-border text-status-success-text'
+                    : 'bg-status-danger-bg border-status-danger-border text-status-danger-text'
+                }`}
+              >
+                {themeValidation.valid ? (
+                  <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" />
+                ) : (
+                  <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+                )}
+                <div className="text-xs">
+                  <div className="font-bold">
+                    {themeValidation.valid
+                      ? 'Theme configuration passed authoritative schema and WCAG contrast validation.'
+                      : 'Validation errors detected:'}
+                  </div>
+                  {themeValidation.errors && themeValidation.errors.length > 0 && (
+                    <ul className="list-disc list-inside mt-1 space-y-0.5">
+                      {themeValidation.errors.map((e, idx) => (
+                        <li key={idx}>{e}</li>
+                      ))}
+                    </ul>
+                  )}
+                  {themeValidation.warnings && themeValidation.warnings.length > 0 && (
+                    <ul className="list-disc list-inside mt-1 space-y-0.5 text-status-warning-text">
+                      {themeValidation.warnings.map((w, idx) => (
+                        <li key={idx}>{w}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Two-Column Editor & Live Preview */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left Column: Form Controls */}
+              <div className="bg-paper border border-border-paper rounded-2xl p-5 space-y-5">
+                <h3 className="font-display font-bold text-base text-ink-primary flex items-center gap-2">
+                  <Sliders className="w-4 h-4 text-electric" />
+                  Theme Configuration Editor
+                </h3>
+
+                {/* Primary Brand Color */}
+                <div>
+                  <label className="block text-xs font-semibold text-ink-primary mb-1.5">
+                    Brand Primary Colour (Hex)
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={themeConfig.brand.primary}
+                      onChange={(e) =>
+                        setThemeConfig((prev) => ({
+                          ...prev,
+                          brand: { ...prev.brand, primary: e.target.value },
+                        }))
+                      }
+                      className="w-10 h-10 rounded-xl border border-border-paper cursor-pointer p-0.5 bg-paper"
+                    />
+                    <input
+                      type="text"
+                      value={themeConfig.brand.primary}
+                      onChange={(e) =>
+                        setThemeConfig((prev) => ({
+                          ...prev,
+                          brand: { ...prev.brand, primary: e.target.value },
+                        }))
+                      }
+                      placeholder="#1677FF"
+                      className="w-36 bg-paper-warm border border-border-paper rounded-xl px-3 py-2 text-xs font-data text-ink-primary focus:outline-none focus:border-border-focus"
+                    />
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {['#1677FF', '#0A6FE8', '#059669', '#7C3AED', '#D97706', '#E11D48'].map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() =>
+                            setThemeConfig((prev) => ({
+                              ...prev,
+                              brand: { ...prev.brand, primary: preset },
+                            }))
+                          }
+                          className="w-5 h-5 rounded-full border border-border-paper hover:scale-110 transition-transform"
+                          style={{ backgroundColor: preset }}
+                          title={preset}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Brand Accent Color */}
+                <div>
+                  <label className="block text-xs font-semibold text-ink-primary mb-1.5">
+                    Brand Accent Colour (Micro-highlights)
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={themeConfig.brand.accent || '#0A6FE8'}
+                      onChange={(e) =>
+                        setThemeConfig((prev) => ({
+                          ...prev,
+                          brand: { ...prev.brand, accent: e.target.value },
+                        }))
+                      }
+                      className="w-10 h-10 rounded-xl border border-border-paper cursor-pointer p-0.5 bg-paper"
+                    />
+                    <input
+                      type="text"
+                      value={themeConfig.brand.accent || '#0A6FE8'}
+                      onChange={(e) =>
+                        setThemeConfig((prev) => ({
+                          ...prev,
+                          brand: { ...prev.brand, accent: e.target.value },
+                        }))
+                      }
+                      placeholder="#0A6FE8"
+                      className="w-36 bg-paper-warm border border-border-paper rounded-xl px-3 py-2 text-xs font-data text-ink-primary focus:outline-none focus:border-border-focus"
+                    />
+                  </div>
+                </div>
+
+                {/* Default Colour Scheme */}
+                <div>
+                  <label className="block text-xs font-semibold text-ink-primary mb-1.5">
+                    Default Colour Scheme
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['light', 'dark', 'system'] as const).map((scheme) => (
+                      <button
+                        key={scheme}
+                        type="button"
+                        onClick={() =>
+                          setThemeConfig((prev) => ({
+                            ...prev,
+                            appearance: { ...prev.appearance, defaultScheme: scheme },
+                          }))
+                        }
+                        className={`py-2 px-3 rounded-xl border text-xs font-primary font-bold capitalize transition-all ${
+                          themeConfig.appearance.defaultScheme === scheme
+                            ? 'bg-electric text-on-brand border-electric shadow-lift'
+                            : 'bg-paper-warm border-border-paper text-ink-muted hover:text-ink-primary'
+                        }`}
+                      >
+                        {scheme}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Appearance Flags */}
+                <div className="space-y-3 pt-2 border-t border-border-paper">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={themeConfig.appearance.allowUserSchemeToggle}
+                      onChange={(e) =>
+                        setThemeConfig((prev) => ({
+                          ...prev,
+                          appearance: { ...prev.appearance, allowUserSchemeToggle: e.target.checked },
+                        }))
+                      }
+                      className="rounded border-border-paper text-electric focus:ring-0"
+                    />
+                    <span className="text-xs font-primary text-ink-primary">
+                      Allow end users (teachers & students) to toggle light / dark scheme
+                    </span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={themeConfig.appearance.deskTexture}
+                      onChange={(e) =>
+                        setThemeConfig((prev) => ({
+                          ...prev,
+                          appearance: { ...prev.appearance, deskTexture: e.target.checked },
+                        }))
+                      }
+                      className="rounded border-border-paper text-electric focus:ring-0"
+                    />
+                    <span className="text-xs font-primary text-ink-primary">
+                      Render authentic warm paper desk texture behind workspace canvas
+                    </span>
+                  </label>
+                </div>
+
+                {/* Typographic Role Assignments */}
+                <div className="pt-2 border-t border-border-paper">
+                  <label className="block text-xs font-semibold text-ink-primary mb-2">
+                    Approved Typographic Font Families (Mandatory 3)
+                  </label>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-paper-warm border border-border-paper">
+                      <span className="font-semibold text-ink-muted">Headings & Titles:</span>
+                      <span className="font-display font-bold text-ink-primary">Playfair Display</span>
+                    </div>
+                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-paper-warm border border-border-paper">
+                      <span className="font-semibold text-ink-muted">UI & Navigation:</span>
+                      <span className="font-primary font-bold text-ink-primary">Raleway</span>
+                    </div>
+                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-paper-warm border border-border-paper">
+                      <span className="font-semibold text-ink-muted">Numbers & Tables:</span>
+                      <span className="font-data font-bold text-ink-primary">Inter</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Changelog Reason */}
+                <div className="pt-2 border-t border-border-paper">
+                  <label className="block text-xs font-semibold text-ink-primary mb-1">
+                    Publish Audit Reason (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={publishReason}
+                    onChange={(e) => setPublishReason(e.target.value)}
+                    placeholder="e.g. Updated primary brand electric blue to #1677FF for Diwali release"
+                    className="w-full bg-paper-warm border border-border-paper rounded-xl px-3 py-2 text-xs font-primary text-ink-primary focus:outline-none focus:border-border-focus placeholder-ink-faint"
+                  />
+                </div>
+              </div>
+
+              {/* Right Column: Live Interactive Preview */}
+              <div className="bg-paper border border-border-paper rounded-2xl p-5 space-y-5">
+                <h3 className="font-display font-bold text-base text-ink-primary flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-electric" />
+                  Live Theme Preview & Contrast Guard
+                </h3>
+
+                {/* Light Scheme Simulation */}
+                <div className="p-4 rounded-xl border border-border-paper bg-paper shadow-sm space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-ink-faint">
+                      Light Paper-Desk Preview
+                    </span>
+                    <span className="text-[10px] font-data px-2 py-0.5 rounded bg-brand-subtle text-electric font-semibold">
+                      WCAG AA Compliant
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      style={{ backgroundColor: themeConfig.brand.primary }}
+                      className="px-3.5 py-1.5 rounded-xl text-white text-xs font-primary font-bold shadow-sm"
+                    >
+                      Primary Action
+                    </button>
+                    <button
+                      type="button"
+                      className="px-3.5 py-1.5 rounded-xl border border-border-paper text-ink-primary text-xs font-primary font-semibold hover:bg-paper-warm"
+                    >
+                      Secondary
+                    </button>
+                    <span className="px-2.5 py-1 rounded-full text-[10px] font-data font-bold bg-status-success-bg text-status-success-text border border-status-success-border">
+                      Active Batch
+                    </span>
+                  </div>
+
+                  <div className="p-3 rounded-lg bg-paper-warm border border-border-paper">
+                    <h4 className="font-display font-bold text-sm text-ink-primary">
+                      Playfair Display Heading Sample
+                    </h4>
+                    <p className="font-primary text-xs text-ink-secondary mt-0.5">
+                      Raleway primary interface text for student diaries, fee statements, and attendance records.
+                    </p>
+                    <div className="mt-2 font-data text-xs font-bold text-ink-primary">
+                      Inter Numerical Stat: ₹24,500 <span className="font-normal text-ink-muted">collected today</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dark Scheme Simulation */}
+                <div
+                  className="p-4 rounded-xl border border-white/10 shadow-sm space-y-3"
+                  style={{ backgroundColor: '#0A0D12' }}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#929BAA]">
+                      Dark Paper-Desk (.dark) Preview
+                    </span>
+                    <span className="text-[10px] font-data px-2 py-0.5 rounded bg-white/10 text-white font-semibold">
+                      Dark Contrast Pass
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      style={{ backgroundColor: themeConfig.brand.primary }}
+                      className="px-3.5 py-1.5 rounded-xl text-white text-xs font-primary font-bold"
+                    >
+                      Primary Action
+                    </button>
+                    <button
+                      type="button"
+                      className="px-3.5 py-1.5 rounded-xl border border-white/15 text-[#F5F7FA] text-xs font-primary font-semibold"
+                    >
+                      Secondary
+                    </button>
+                    <span className="px-2.5 py-1 rounded-full text-[10px] font-data font-bold bg-emerald-950/60 text-emerald-400 border border-emerald-800">
+                      Active
+                    </span>
+                  </div>
+
+                  <div
+                    className="p-3 rounded-lg border border-white/10"
+                    style={{ backgroundColor: '#10151D' }}
+                  >
+                    <h4 className="font-display font-bold text-sm text-[#F5F7FA]">
+                      Dark Playfair Heading
+                    </h4>
+                    <p className="font-primary text-xs text-[#C3CAD6] mt-0.5">
+                      Low-eyestrain reading ink on midnight paper surface.
+                    </p>
+                    <div className="mt-2 font-data text-xs font-bold text-[#F5F7FA]">
+                      Attendance: 96.8% <span className="font-normal text-[#929BAA]">verified</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Revision History Log */}
+            <div className="bg-paper border border-border-paper rounded-2xl p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="font-display font-bold text-base text-ink-primary flex items-center gap-2">
+                    <History className="w-4 h-4 text-ink-muted" />
+                    Platform Theme Revision History
+                  </h3>
+                  <p className="text-xs font-primary text-ink-muted mt-0.5">
+                    Immutable history of published theme revisions. Roll back to any prior revision instantly.
+                  </p>
+                </div>
+              </div>
+
+              {themeHistory.length === 0 ? (
+                <p className="text-xs font-primary text-ink-faint py-4 text-center">
+                  No previous revisions found. Built-in default revision is active.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs font-data">
+                    <thead>
+                      <tr className="border-b border-border-paper text-[10px] text-ink-faint uppercase">
+                        <th className="pb-2">Rev</th>
+                        <th className="pb-2">Revision ID</th>
+                        <th className="pb-2">Published At</th>
+                        <th className="pb-2">Publisher</th>
+                        <th className="pb-2">Changelog Reason</th>
+                        <th className="pb-2 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border-paper">
+                      {themeHistory.map((rev) => (
+                        <tr key={rev.revisionId} className="hover:bg-paper-warm/50">
+                          <td className="py-2.5 font-bold text-ink-primary">#{rev.revision}</td>
+                          <td className="py-2.5 text-electric">{rev.revisionId}</td>
+                          <td className="py-2.5 text-ink-muted">
+                            {rev.publishedAt ? new Date(rev.publishedAt).toLocaleString() : 'Baseline'}
+                          </td>
+                          <td className="py-2.5 text-ink-secondary">{rev.publishedByEmail}</td>
+                          <td className="py-2.5 text-ink-muted max-w-xs truncate">
+                            {rev.reason || '—'}
+                          </td>
+                          <td className="py-2.5 text-right">
+                            {publishedTheme?.revision !== rev.revision ? (
+                              <button
+                                type="button"
+                                onClick={() => handleRestoreRevision(rev.revision)}
+                                className="px-2.5 py-1 rounded-lg border border-border-paper text-ink-secondary hover:text-ink-primary hover:bg-paper-warm text-[10px] font-primary font-bold flex items-center gap-1.5 ml-auto"
+                              >
+                                <RotateCcw className="w-3 h-3 text-electric" />
+                                Restore
+                              </button>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-brand-subtle text-electric">
+                                Active
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         )}

@@ -10,6 +10,7 @@ import {
 interface AuthState {
   session: MobileUserSession | null;
   isAuthenticated: boolean;
+  isInitialized: boolean;
   isLoading: boolean;
   error: string | null;
 
@@ -22,12 +23,14 @@ interface AuthState {
   loginDemo: () => Promise<void>;
   loginDemoTeacher: () => Promise<void>;
   logout: () => void;
+  initializeAuth: () => Promise<void>;
   clearError: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   session: null,
   isAuthenticated: false,
+  isInitialized: false,
   isLoading: false,
   error: null,
 
@@ -133,6 +136,19 @@ export const useAuthStore = create<AuthState>((set) => ({
   logout: () => {
     authService.logout();
     set({ session: null, isAuthenticated: false, error: null });
+  },
+
+  initializeAuth: async () => {
+    try {
+      const session = await authService.restoreStoredSession();
+      if (session) {
+        set({ session, isAuthenticated: true, isInitialized: true, error: null });
+      } else {
+        set({ session: null, isAuthenticated: false, isInitialized: true });
+      }
+    } catch {
+      set({ session: null, isAuthenticated: false, isInitialized: true });
+    }
   },
 
   clearError: () => set({ error: null }),

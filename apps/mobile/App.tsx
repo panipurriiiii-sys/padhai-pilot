@@ -24,6 +24,7 @@ function App() {
 
   // Sign out when the server rejects the token, and never let one user's cached data reach the next.
   useEffect(() => {
+    void useAuthStore.getState().initializeAuth();
     apiClient.setUnauthorizedHandler(() => useAuthStore.getState().logout());
     const unsubscribe = useAuthStore.subscribe((state, prev) => {
       if (prev.isAuthenticated && !state.isAuthenticated) queryClient.clear();
