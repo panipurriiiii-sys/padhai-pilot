@@ -7,7 +7,25 @@
 .light {
   --pp-border-input: var(--border-input, #DDD8D2);
   --pp-focus: var(--border-focus, #1677FF);
+  --pp-brand: var(--brand-electric, #1677FF);
   --pp-brand-hover: var(--brand-hover, #0A6FE8);
+  --pp-brand-soft: var(--sticky-blue, #E1EDFF);
+  --pp-brand-line: var(--sticky-blue-border, #BBD4FC);
+  --pp-brand-deep: var(--sticky-blue-text, #0A3D78);
+  --pp-yellow: var(--sticky-yellow, #FFF3C4);
+  --pp-yellow-deep: var(--sticky-yellow-border, #F6E09E);
+  --pp-pink: var(--sticky-pink, #FDE2E4);
+  --pp-pink-deep: var(--sticky-pink-border, #F8BCC2);
+  --pp-mint: var(--sticky-mint, #DAF5E4);
+  --pp-mint-deep: var(--sticky-mint-border, #B2E6C4);
+  --pp-beige: var(--sticky-beige, #F2E8DC);
+  --pp-beige-deep: var(--sticky-beige-border, #DECDBD);
+  --pp-ink: var(--ink-primary, #1C1917);
+  --pp-ink-soft: var(--ink-muted, #78716C);
+  --pp-ink-faint: var(--ink-faint, #A8A29E);
+  --pp-success: #10B981;
+  --pp-danger: #F43F5E;
+  --pp-warning: #F59E0B;
   --pp-shadow-paper: var(--shadow-paper, 0 1px 2px rgba(60, 52, 40, 0.06), 0 6px 16px -4px rgba(60, 52, 40, 0.1));
   --pp-shadow-lift: var(--shadow-lift, 0 2px 4px rgba(60, 52, 40, 0.08), 0 14px 28px -6px rgba(60, 52, 40, 0.16));
   --pp-text: var(--ink-primary, #1C1917);
@@ -36,7 +54,25 @@
 [data-theme="dark"] {
   --pp-border-input: var(--border-input, rgba(255, 255, 255, 0.14));
   --pp-focus: var(--border-focus, #00D9FF);
+  --pp-brand: var(--brand-electric, #1677FF);
   --pp-brand-hover: var(--brand-hover, #3395FF);
+  --pp-brand-soft: rgba(22, 119, 255, 0.18);
+  --pp-brand-line: rgba(22, 119, 255, 0.35);
+  --pp-brand-deep: #7FB4FF;
+  --pp-yellow: rgba(245, 158, 11, 0.18);
+  --pp-yellow-deep: rgba(245, 158, 11, 0.35);
+  --pp-pink: rgba(244, 63, 94, 0.18);
+  --pp-pink-deep: rgba(244, 63, 94, 0.35);
+  --pp-mint: rgba(16, 185, 129, 0.18);
+  --pp-mint-deep: rgba(16, 185, 129, 0.35);
+  --pp-beige: rgba(242, 232, 220, 0.15);
+  --pp-beige-deep: rgba(242, 232, 220, 0.25);
+  --pp-ink: var(--ink-primary, #F5F7FA);
+  --pp-ink-soft: var(--ink-muted, #929BAA);
+  --pp-ink-faint: var(--ink-faint, #55595F);
+  --pp-success: #10B981;
+  --pp-danger: #F43F5E;
+  --pp-warning: #F59E0B;
   --pp-shadow-paper: var(--shadow-paper, 0 2px 8px rgba(0, 0, 0, 0.4));
   --pp-shadow-lift: var(--shadow-lift, 0 4px 20px rgba(0, 0, 0, 0.6));
   --pp-text: var(--ink-primary, #F5F7FA);
@@ -50,7 +86,11 @@
   --pp-subtle-bg: rgba(22, 119, 255, 0.12);
   --pp-subtle-border: rgba(22, 119, 255, 0.3);
   --pp-chart-1: #3395FF;
+  --pp-chart-2: #10B981;
+  --pp-chart-3: #F59E0B;
+  --pp-chart-4: #F43F5E;
   --pp-chart-5: #7FB4FF;
+  --pp-chart-6: #929BAA;
 }
 
 /* ---------- surfaces ---------- */
@@ -84,6 +124,17 @@
     linear-gradient(90deg, rgba(208, 205, 202, 0.25) 1px, transparent 1px),
     radial-gradient(rgba(107, 97, 87, 0.05) 1px, transparent 1px);
   background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px, 6px 6px;
+}
+.dark .pp-desk,
+.admin-dark .pp-desk,
+[data-theme="dark"] .pp-desk {
+  background-color: #050608;
+  background-image:
+    radial-gradient(60% 50% at 15% 0%, rgba(20, 26, 36, 0.8) 0%, transparent 70%),
+    radial-gradient(50% 40% at 90% 10%, rgba(16, 21, 29, 0.7) 0%, transparent 70%),
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
 }
 .pp-display { font-family: var(--pp-font-display); }
 .pp-data { font-family: var(--pp-font-data); font-variant-numeric: tabular-nums; }
@@ -160,6 +211,11 @@
 .pp-badge-warning { background: var(--pp-yellow); color: #5C3D00; border-color: var(--pp-yellow-deep); }
 .pp-badge-danger { background: var(--pp-pink); color: #6D1B28; border-color: var(--pp-pink-deep); }
 .pp-badge-neutral { background: var(--pp-surface-sunk); color: var(--pp-text-2); border-color: var(--pp-border); }
+
+.dark .pp-badge-brand, .admin-dark .pp-badge-brand, [data-theme="dark"] .pp-badge-brand { color: #60A5FA; }
+.dark .pp-badge-success, .admin-dark .pp-badge-success, [data-theme="dark"] .pp-badge-success { color: #34D399; }
+.dark .pp-badge-warning, .admin-dark .pp-badge-warning, [data-theme="dark"] .pp-badge-warning { color: #FBBF24; }
+.dark .pp-badge-danger, .admin-dark .pp-badge-danger, [data-theme="dark"] .pp-badge-danger { color: #FB7185; }
 .pp-dot { width: 0.5rem; height: 0.5rem; border-radius: 9999px; background: currentColor; display: inline-block; }
 .pp-dot-live { position: relative; }
 .pp-dot-live::after {

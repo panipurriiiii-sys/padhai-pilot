@@ -18,6 +18,7 @@
     "*.css"
   ],
   "scripts": {
+    "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "test": "node --test test/core.test.mjs"
   },
