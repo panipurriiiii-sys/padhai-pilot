@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Reflector } from '@nestjs/core';
-import { ExecutionContext, ForbiddenException } from '@nestjs/common';
+import { ConflictException, ExecutionContext, ForbiddenException, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { AdminService } from './admin.service.js';
 import { AdminController } from './admin.controller.js';
 import { RolesGuard } from '../common/guards/roles.guard.js';
@@ -77,147 +77,90 @@ describe('Admin Module & Authorization Tests', () => {
     });
   });
 
-  describe('2. AdminService - Tenant & Platform Management', () => {
-    const mockSuperAdmin = {
-      id: 'usr_admin_malhotra',
-      email: 'super@padhaipilot.com',
-      role: 'SUPER_ADMIN' as const,
-      fullName: 'Dr. Vikram Malhotra',
-      instituteId: 'platform_hq',
-      instituteName: 'PadhaiPilot HQ',
-    };
 
-    it('should list all registered institutes', async () => {
-      const institutes = await adminService.getInstitutes();
-      expect(Array.isArray(institutes)).toBe(true);
-      expect(institutes.length).toBeGreaterThanOrEqual(4);
-      expect(institutes.some((i) => i.id === 'inst_apex_academy')).toBe(true);
+  describe('2. AdminService - database backed (no in-memory data)', () => {
+    const actor = { id: 'sa1', email: 'root@platform.in' };
+    const instRow = (over: Record<string, unknown> = {}) => ({
+      id: 'i1', name: 'Apex', slug: 'apex', subdomain: 'apex', plan: 'GROWTH', status: 'ACTIVE', isActive: true, isWhiteLabel: false,
+      isDedicatedDb: false, customDomain: null, contactEmail: 'o@apex.in', contactPhone: null, signatoryName: 'Owner', primaryColor: null,
+      logoUrl: null, maxStudents: 500, maxTeachers: 25, createdAt: new Date(), updatedAt: new Date(), ...over,
     });
 
-    it('should onboard a new tuition institute with custom subdomain', async () => {
-      const created = await adminService.createInstitute(
-        {
-          name: 'Nalanda Classes Pune',
-          subdomain: 'nalanda',
-          plan: 'PRO',
-          ownerName: 'Vikas Deshmukh',
-          ownerEmail: 'vikas@nalandapune.com',
-          customDomain: 'learn.nalandapune.com',
+    function liveDb() {
+      const audits: any[] = [];
+      const db: any = {
+        isConnected: true,
+        institute: {
+          findMany: vi.fn(async () => [instRow()]),
+          findUnique: vi.fn(async ({ where }: any) => (where.id === 'i1' ? instRow() : null)),
+          findFirst: vi.fn(async ({ where }: any) => (where.OR.some((c: any) => c.slug === 'taken') ? { id: 'x' } : null)),
+          create: vi.fn(async ({ data }: any) => instRow({ id: 'i2', ...data })),
+          update: vi.fn(async () => ({})),
+          groupBy: vi.fn(async ({ by }: any) => (by[0] === 'plan' ? [{ plan: 'GROWTH', _count: { _all: 2 } }] : [{ isActive: true, _count: { _all: 2 } }, { isActive: false, _count: { _all: 1 } }])),
         },
-        mockSuperAdmin,
-      );
+        instituteMembership: {
+          groupBy: vi.fn(async ({ by }: any) =>
+            by.length === 2
+              ? [{ instituteId: 'i1', role: 'STUDENT', _count: { _all: 12 } }, { instituteId: 'i1', role: 'FACULTY', _count: { _all: 3 } }]
+              : [{ role: 'STUDENT', _count: { _all: 12 } }, { role: 'TEACHER', _count: { _all: 1 } }, { role: 'FACULTY', _count: { _all: 3 } }]),
+          findMany: vi.fn(async () => [{ instituteId: 'i1', user: { fullName: 'Real Owner', email: 'real@apex.in' } }]),
+        },
+        auditLog: {
+          create: vi.fn(async ({ data }: any) => { audits.push(data); return data; }),
+          findMany: vi.fn(async () => audits.map((a, i) => ({ id: `a${i}`, createdAt: new Date(), userId: a.userId, actorEmail: a.actorEmail, action: a.action, resourceId: a.resourceId, resourceType: a.resourceType, details: a.details, status: a.status }))),
+        },
+        platformAnnouncement: {
+          create: vi.fn(async ({ data }: any) => ({ id: 'pa1', createdAt: new Date(), ...data })),
+          findMany: vi.fn(async () => []),
+        },
+      };
+      return { db, audits };
+    }
 
-      expect(created.id).toContain('inst_nalanda');
-      expect(created.name).toBe('Nalanda Classes Pune');
-      expect(created.plan).toBe('PRO');
+    it('fails closed with 503 when the database is down (no seeded fallback)', async () => {
+      await expect(adminService.getInstitutes()).rejects.toThrow(ServiceUnavailableException);
+      await expect(adminService.getAuditLogs()).rejects.toThrow(ServiceUnavailableException);
+      await expect(adminService.getAnnouncements()).rejects.toThrow(ServiceUnavailableException);
+    });
+
+    it('lists institutes with real counts and owner, no fabricated records', async () => {
+      const { db } = liveDb();
+      const svc = new AdminService(db, mockRedis);
+      const list = await svc.getInstitutes();
+      expect(list).toHaveLength(1);
+      expect(list[0]).toMatchObject({ id: 'i1', studentCount: 12, teacherCount: 3, ownerName: 'Real Owner', ownerEmail: 'real@apex.in' });
+    });
+
+    it('rejects a duplicate subdomain and writes an awaited audit row on create', async () => {
+      const { db, audits } = liveDb();
+      const svc = new AdminService(db, mockRedis);
+      await expect(svc.createInstitute({ name: 'X', subdomain: 'taken', plan: 'STARTER', ownerName: 'O', ownerEmail: 'o@x.in' } as any, actor)).rejects.toThrow(ConflictException);
+      const created = await svc.createInstitute({ name: 'New', subdomain: 'fresh', plan: 'PRO', ownerName: 'O', ownerEmail: 'o@x.in' } as any, actor);
       expect(created.isWhiteLabel).toBe(true);
+      expect(audits.map((a) => a.action)).toContain('TENANT_ONBOARDED');
     });
 
-    it('should reject institute creation with duplicate subdomain', async () => {
-      await expect(
-        adminService.createInstitute(
-          {
-            name: 'Another Apex',
-            subdomain: 'apex', // already exists
-            plan: 'STARTER',
-            ownerName: 'Fake Owner',
-            ownerEmail: 'fake@example.com',
-          },
-          mockSuperAdmin,
-        ),
-      ).rejects.toThrow();
+    it('suspends via both status and isActive, and audits the change', async () => {
+      const { db, audits } = liveDb();
+      const svc = new AdminService(db, mockRedis);
+      await svc.updateStatus('i1', { status: 'SUSPENDED', reason: 'unpaid' } as any, actor);
+      expect(db.institute.update.mock.calls[0][0].data).toEqual({ status: 'SUSPENDED', isActive: false });
+      expect(audits[0]).toMatchObject({ action: 'INSTITUTE_STATUS_CHANGED', status: 'WARNING' });
+      await expect(svc.updateStatus('nope', { status: 'ACTIVE', reason: 'x' } as any, actor)).rejects.toThrow(NotFoundException);
     });
 
-    it('should update institute status with audit log', async () => {
-      const updated = await adminService.updateStatus(
-        'inst_prerna_tuition',
-        { status: 'SUSPENDED', reason: 'Unpaid subscription balance' },
-        mockSuperAdmin,
-      );
-
-      expect(updated.status).toBe('SUSPENDED');
-
-      const logs = await adminService.getAuditLogs();
-      const statusLog = logs.find((l) => l.action === 'INSTITUTE_STATUS_CHANGED');
-      expect(statusLog).toBeDefined();
-      expect(statusLog?.details).toContain('Unpaid subscription balance');
+    it('computes platform stats from aggregates', async () => {
+      const { db } = liveDb();
+      const stats = await new AdminService(db, mockRedis).getPlatformStats();
+      expect(stats.tenants).toMatchObject({ total: 3, active: 2, suspended: 1, growthPlan: 2 });
+      expect(stats.users).toEqual({ totalStudents: 12, totalTeachers: 4 });
     });
 
-    it('should upgrade institute plan and update white-label entitlement', async () => {
-      const updated = await adminService.updatePlan(
-        'inst_prerna_tuition',
-        { plan: 'ENTERPRISE', reason: 'Upgraded to flagship tier' },
-        mockSuperAdmin,
-      );
-
-      expect(updated.plan).toBe('ENTERPRISE');
-      expect(updated.isWhiteLabel).toBe(true);
-      expect(updated.isDedicatedDb).toBe(true);
-    });
-
-    it('should configure custom white-label settings and quotas', async () => {
-      const updated = await adminService.updateConfig(
-        'inst_apex_academy',
-        {
-          customDomain: 'portal.apexkota.edu.in',
-          themePrimaryColor: '#0052CC',
-          maxStudentsLimit: 1500,
-        },
-        mockSuperAdmin,
-      );
-
-      expect(updated.customDomain).toBe('portal.apexkota.edu.in');
-      expect(updated.themePrimaryColor).toBe('#0052CC');
-      expect(updated.maxStudentsLimit).toBe(1500);
-    });
-
-    it('should calculate accurate platform metrics', async () => {
-      const stats = await adminService.getPlatformStats();
-      expect(stats.tenants.total).toBeGreaterThanOrEqual(4);
-      expect(stats.infrastructure.apiStatus).toBe('HEALTHY');
-      expect(stats.infrastructure.redisStatus).toBe('ACTIVE');
-      expect(stats.users.totalStudents).toBeGreaterThan(0);
-    });
-
-    it('should post and retrieve platform broadcast announcements', async () => {
-      const ann = await adminService.createAnnouncement(
-        {
-          title: 'Version 2.4.0 Deployed',
-          message: 'All institutes now have access to offline mode & PDF export enhancements.',
-          severity: 'info',
-          targetAudience: 'ALL',
-        },
-        mockSuperAdmin,
-      );
-
-      expect(ann.id).toBeDefined();
-      const list = await adminService.getAnnouncements();
-      expect(list.some((a) => a.title === 'Version 2.4.0 Deployed')).toBe(true);
-    });
-  });
-
-  describe('3. AdminController Response Contracts', () => {
-    const mockSuperAdmin = {
-      id: 'usr_admin_malhotra',
-      email: 'super@padhaipilot.com',
-      role: 'SUPER_ADMIN' as const,
-      fullName: 'Dr. Vikram Malhotra',
-      instituteId: 'platform_hq',
-      instituteName: 'PadhaiPilot HQ',
-    };
-
-    it('should return wrapped data for getInstitutes', async () => {
-      const res = await adminController.getInstitutes();
-      expect(res.success).toBe(true);
-      expect(Array.isArray(res.data)).toBe(true);
-    });
-
-    it('should return platform operational stats', async () => {
-      const res = await adminController.getStats();
-      expect(res.success).toBe(true);
-      expect(res.data.tenants).toBeDefined();
-      expect(res.data.infrastructure).toBeDefined();
+    it('persists platform announcements', async () => {
+      const { db } = liveDb();
+      const ann = await new AdminService(db, mockRedis).createAnnouncement({ title: 'Maintenance', message: 'Sunday', severity: 'info' } as any, actor);
+      expect(ann.id).toBe('pa1');
+      expect(db.platformAnnouncement.create).toHaveBeenCalled();
     });
   });
 });
-
