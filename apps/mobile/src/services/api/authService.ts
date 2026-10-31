@@ -42,29 +42,32 @@ export interface TeacherRegisterPayload {
   invitationCode?: string;
 }
 
+const MOBILE_ROLES = ['STUDENT', 'TEACHER', 'FACULTY', 'TUITION_OWNER', 'INSTITUTE_MANAGER', 'INSTITUTE_ADMIN'];
+
+/** The mobile app serves students and faculty only. Platform administration is web-only. */
+function acceptSession(data: MobileUserSession): MobileUserSession {
+  if (!data?.token || !MOBILE_ROLES.includes(data.user?.role)) {
+    apiClient.setAuthToken(null);
+    throw new Error('This app is for students and faculty. Platform administration is available on the web.');
+  }
+  apiClient.setAuthToken(data.token);
+  return data;
+}
+
 export const authService = {
   async login(payload: LoginPayload): Promise<MobileUserSession> {
     const data = await apiClient.post<MobileUserSession>('/auth/login', payload);
-    if (data?.token) {
-      apiClient.setAuthToken(data.token);
-    }
-    return data;
+    return acceptSession(data);
   },
 
   async registerStudent(payload: StudentRegisterPayload): Promise<MobileUserSession> {
     const data = await apiClient.post<MobileUserSession>('/auth/register-student', payload);
-    if (data?.token) {
-      apiClient.setAuthToken(data.token);
-    }
-    return data;
+    return acceptSession(data);
   },
 
   async registerTeacher(payload: TeacherRegisterPayload): Promise<MobileUserSession> {
     const data = await apiClient.post<MobileUserSession>('/auth/register', payload);
-    if (data?.token) {
-      apiClient.setAuthToken(data.token);
-    }
-    return data;
+    return acceptSession(data);
   },
 
   async forgotPassword(email: string): Promise<{ success: boolean; message: string; resetToken?: string }> {
@@ -83,16 +86,12 @@ export const authService = {
   // client-side fallback: a failed login must never produce a fabricated session.
   async loginDemoStudent(): Promise<MobileUserSession> {
     if (!__DEV__) throw new Error('Demo access is not available.');
-    const data = await apiClient.post<MobileUserSession>('/auth/demo-student', {});
-    if (data?.token) apiClient.setAuthToken(data.token);
-    return data;
+    return acceptSession(await apiClient.post<MobileUserSession>('/auth/demo-student', {}));
   },
 
   async loginDemoTeacher(): Promise<MobileUserSession> {
     if (!__DEV__) throw new Error('Demo access is not available.');
-    const data = await apiClient.post<MobileUserSession>('/auth/demo-teacher', {});
-    if (data?.token) apiClient.setAuthToken(data.token);
-    return data;
+    return acceptSession(await apiClient.post<MobileUserSession>('/auth/demo-teacher', {}));
   },
 
   async getProfile(): Promise<MobileUserSession['user']> {

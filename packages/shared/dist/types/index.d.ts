@@ -340,3 +340,4 @@ export declare function calculateGradeAndPercentage(obtainedMarks: number | null
 };
 export * from './features.js';
 export * from './tuition.js';
+export * from './student.js';

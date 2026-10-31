@@ -20,130 +20,28 @@ import type {
   TestAnswerItemDto,
 } from './dto/student.dto.js';
 
-export interface StudentAttendanceSummary {
-  totalClasses: number;
-  attended: number;
-  absent: number;
-  late: number;
-  percentage: number;
-  records: Array<{
-    id: string;
-    date: string;
-    status: 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED';
-    subjectName?: string;
-    remarks?: string;
-  }>;
-}
-
-export interface StudentFeeSummary {
-  totalFees: number;
-  paidAmount: number;
-  balanceDue: number;
-  status: 'PAID' | 'PARTIAL' | 'OVERDUE';
-  receipts: Array<{
-    id: string;
-    title: string;
-    dueDate: string;
-    amount: number;
-    paidAmount: number;
-    status: 'PAID' | 'PENDING' | 'OVERDUE';
-    paidDate?: string;
-    receiptNumber?: string;
-  }>;
-}
-
-export interface StudentAnnouncementItem {
-  id: string;
-  title: string;
-  content: string;
-  date: string;
-  priority: 'NORMAL' | 'URGENT';
-  authorName?: string;
-}
-
-export interface StudentTeachingDiaryItem {
-  id: string;
-  lessonDate: string;
-  sessionTime?: string;
-  subject: string;
-  facultyName: string;
-  batchName: string;
-  chapterTitle: string;
-  conceptsTaught: string;
-  learningObjectives?: string;
-  homeworkAssigned?: string;
-  attachmentUrl?: string;
-  referenceLinks?: string[];
-  createdAt: string;
-}
-
-export interface StudentAssignmentItem {
-  id: string;
-  title: string;
-  instructions: string;
-  subject: string;
-  dueDate: string;
-  maxMarks: number;
-  attachmentUrl?: string;
-  status: 'PENDING' | 'SUBMITTED' | 'LATE' | 'GRADED' | 'RESUBMIT';
-  submission?: {
-    submittedAt: string;
-    content?: string;
-    attachmentUrl?: string;
-    marksObtained?: number;
-    feedback?: string;
-  };
-}
-
-export interface StudentTestItem {
-  id: string;
-  title: string;
-  instructions?: string;
-  subject: string;
-  scheduledDate: string;
-  durationMinutes: number;
-  totalMarks: number;
-  status: 'UPCOMING' | 'ACTIVE' | 'COMPLETED';
-  attempt?: {
-    submittedAt: string;
-    score: number;
-    status: string;
-    feedback?: string;
-  };
-}
-
-export interface AcademicQueryItem {
-  id: string;
-  subject: string;
-  topic?: string;
-  questionText: string;
-  attachmentUrl?: string;
-  status: 'PENDING' | 'ANSWERED';
-  facultyReply?: string;
-  repliedAt?: string;
-  facultyName?: string;
-  createdAt: string;
-}
-
-export interface PersonalStudyTaskItem {
-  id: string;
-  title: string;
-  subject?: string;
-  dueDate?: string;
-  priority: 'NORMAL' | 'HIGH' | 'LOW';
-  isCompleted: boolean;
-  createdAt: string;
-}
-
-export interface StudentDocumentItem {
-  id: string;
-  title: string;
-  category: 'REPORT_CARD' | 'FEE_RECEIPT' | 'STUDY_MATERIAL' | 'TIMETABLE_SCHEDULE' | 'CERTIFICATE';
-  issueDate: string;
-  academicPeriod: string;
-  downloadUrl: string;
-  fileSize?: string;
-}
+import type {
+  StudentAttendanceSummary,
+  StudentFeeSummary,
+  StudentAnnouncementItem,
+  StudentTeachingDiaryItem,
+  StudentAssignmentItem,
+  StudentTestItem,
+  AcademicQueryItem,
+  PersonalStudyTaskItem,
+  StudentDocumentItem,
+} from '@padhai-pilot/shared';
+export type {
+  StudentAttendanceSummary,
+  StudentFeeSummary,
+  StudentAnnouncementItem,
+  StudentTeachingDiaryItem,
+  StudentAssignmentItem,
+  StudentTestItem,
+  AcademicQueryItem,
+  PersonalStudyTaskItem,
+  StudentDocumentItem,
+} from '@padhai-pilot/shared';
 
 @Injectable()
 export class StudentService {
@@ -205,7 +103,7 @@ export class StudentService {
   // 1. DASHBOARD
   // ==========================================================================
   async getDashboard(user: AuthenticatedUser) {
-    const [results, materials, attendance, announcements, fees, diaries, assignments] =
+    const [results, materials, attendance, announcements, fees, diaries, assignments, tests, timetable] =
       await Promise.all([
         this.assessmentService.getStudentPublishedResults(user),
         this.assessmentService.getStudentStudyMaterials(user),
@@ -214,6 +112,8 @@ export class StudentService {
         this.getFees(user),
         this.getTeachingDiaries(user),
         this.getAssignments(user),
+        this.getTests(user),
+        this.getTimetable(user),
       ]);
 
     const scoredResults = results.filter((r) => r.resultStatus === 'SCORED' && r.percentage !== null);
@@ -244,17 +144,17 @@ export class StudentService {
         totalMaterials: materials.length,
         pendingAssignments,
         feeBalance: fees.balanceDue,
+        classesAttended: attendance.attended,
+        totalClasses: attendance.totalClasses,
+        upcomingTests: tests.filter((t) => t.status !== 'COMPLETED').length,
       },
       recentResults: results.slice(0, 3),
       recentMaterials: materials.slice(0, 3),
       recentDiaries: diaries.slice(0, 2),
       upcomingAssignments: assignments.slice(0, 3),
       announcements: announcements.slice(0, 2),
-      timetable: [
-        { time: '09:00 AM - 10:30 AM', subject: 'Mathematics (Calculus)', room: 'Lecture Hall 2', faculty: 'Prof. Rajesh Sharma' },
-        { time: '11:00 AM - 12:30 PM', subject: 'Physics (Optics)', room: 'Physics Lab A', faculty: 'Dr. Alok Verma' },
-        { time: '02:00 PM - 03:30 PM', subject: 'Daily Problem Practice (DPP)', room: 'Study Wing 3', faculty: 'Faculty Assistant' },
-      ],
+      timetable:
+        timetable.find((d) => d.day === new Date().toLocaleDateString('en-US', { weekday: 'long' }))?.slots ?? [],
     };
   }
 

@@ -22,3 +22,4 @@ export function calculateGradeAndPercentage(obtainedMarks, maxMarks) {
 }
 export * from './features.js';
 export * from './tuition.js';
+export * from './student.js';

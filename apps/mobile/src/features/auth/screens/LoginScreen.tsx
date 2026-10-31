@@ -207,6 +207,7 @@ export const LoginScreen: React.FC = () => {
           </View>
 
           {__DEV__ && (
+          <>
           {/* Quick Demo Access Bar (Matching Web Instant Demo Card) */}
           <View
             style={[
@@ -239,8 +240,8 @@ export const LoginScreen: React.FC = () => {
                 }}
               >
                 {activeRole === 'STUDENT'
-                  ? 'Aarav Patel (JEE Advanced Alpha)'
-                  : 'Prof. Rajesh Sharma (Faculty Alpha)'}
+                  ? 'Development demo student'
+                  : 'Development demo faculty'}
               </Caption>
             </View>
             <Button
@@ -250,6 +251,7 @@ export const LoginScreen: React.FC = () => {
               onPress={activeRole === 'STUDENT' ? handleDemoStudentLogin : handleDemoTeacherLogin}
             />
           </View>
+          </>
           )}
 
           {/* Role Selector Tabs */}
@@ -458,7 +460,7 @@ export const LoginScreen: React.FC = () => {
               <View style={[styles.inputGroup, { marginBottom: spacing.md }]}>
                 <Input
                   label="Full Name"
-                  placeholder="e.g. Aarav Patel"
+                  placeholder="Your full name"
                   value={fullName}
                   onChangeText={setFullName}
                   autoCapitalize="words"

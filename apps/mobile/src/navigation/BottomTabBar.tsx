@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigationStore, MainTabKey } from '../store/useNavigationStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { useTheme } from '../theme/ThemeContext';
+import { isStaffRole } from '../lib/format';
 
 interface TabItem {
   key: MainTabKey;
@@ -34,7 +35,7 @@ export const BottomTabBar: React.FC = () => {
   const { session } = useAuthStore();
   const insets = useSafeAreaInsets();
 
-  const isTeacher = session?.user?.role === 'TEACHER' || session?.user?.role === 'TUITION_OWNER' || session?.user?.role === 'FACULTY';
+  const isTeacher = isStaffRole(session?.user?.role);
   const tabs = isTeacher ? TEACHER_TABS : STUDENT_TABS;
 
   return (

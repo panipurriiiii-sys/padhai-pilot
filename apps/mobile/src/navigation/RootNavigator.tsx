@@ -21,17 +21,14 @@ import { StudentMoreScreen } from '../features/student/StudentMoreScreen';
 
 import { BottomTabBar } from './BottomTabBar';
 import { useTheme } from '../theme/ThemeContext';
+import { isStaffRole } from '../lib/format';
 
 export const RootNavigator: React.FC = () => {
   const { colors } = useTheme();
   const { isAuthenticated, session } = useAuthStore();
   const { currentTab, setTab } = useNavigationStore();
 
-  const isTeacher =
-    session?.user?.role === 'TEACHER' ||
-    session?.user?.role === 'TUITION_OWNER' ||
-    session?.user?.role === 'FACULTY' ||
-    session?.user?.role === 'INSTITUTE_MANAGER';
+  const isTeacher = isStaffRole(session?.user?.role);
 
   // Automatically ensure initial tab aligns with user role
   useEffect(() => {

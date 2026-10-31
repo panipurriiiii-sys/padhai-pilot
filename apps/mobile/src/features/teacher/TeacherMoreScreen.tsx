@@ -1,517 +1,289 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  ScrollView,
-  StyleSheet,
-  Pressable,
-  TextInput,
-  Modal,
-  Alert,
-} from 'react-native';
-import { ScreenContainer } from '../../components/common/ScreenContainer';
-import { Title, Subtitle, Body, Caption, Label } from '../../components/common/Typography';
+import React, { useState } from 'react';
+import { Alert, View, StyleSheet } from 'react-native';
+import { Screen, SectionTitle } from '../../components/common/Screen';
+import { QueryBoundary } from '../../components/common/QueryBoundary';
+import { BatchPicker } from '../../components/common/BatchPicker';
 import { Card } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
 import { Button } from '../../components/common/Button';
-import { useTheme } from '../../theme/ThemeContext';
-import { useAuthStore } from '../../store/useAuthStore';
+import { Input } from '../../components/common/Input';
+import { Body, Caption, Subtitle } from '../../components/common/Typography';
 import {
-  teacherService,
-  FacultyLeaveRecord,
-  FacultySalarySlip,
-  TeacherTimetableSlot,
-} from '../../services/api/teacherService';
+  useApplyLeave,
+  useCreateAnnouncement,
+  useCreateAssignment,
+  useGradeSubmission,
+  useLeaves,
+  useSalaries,
+  useSubmissions,
+  useTeacherAnnouncements,
+  useTeacherAssignments,
+  useTeacherTimetable,
+} from '../../hooks/useTeacherData';
+import { useAuthStore } from '../../store/useAuthStore';
+import { useTheme } from '../../theme/ThemeContext';
+import { errorMessage, formatDate, formatInr, todayIso } from '../../lib/format';
 
-type SubView = 'menu' | 'leave' | 'salary' | 'timetable';
+type View_ = 'menu' | 'homework' | 'announcements' | 'timetable' | 'leave' | 'salary' | 'profile';
+
+const MENU: Array<{ key: Exclude<View_, 'menu'>; label: string; hint: string }> = [
+  { key: 'homework', label: 'Homework & grading', hint: 'Create assignments, grade submissions' },
+  { key: 'announcements', label: 'Announcements', hint: 'Message your batches' },
+  { key: 'timetable', label: 'Timetable', hint: 'Your weekly schedule' },
+  { key: 'leave', label: 'My leave', hint: 'Apply and track decisions' },
+  { key: 'salary', label: 'My salary statements', hint: 'Visible only to you' },
+  { key: 'profile', label: 'Account', hint: 'Sign out' },
+];
+
+const Grading: React.FC<{ assignmentId: string }> = ({ assignmentId }) => {
+  const q = useSubmissions(assignmentId);
+  const grade = useGradeSubmission(assignmentId);
+  const [marks, setMarks] = useState<Record<string, string>>({});
+  return (
+    <QueryBoundary query={q} isEmpty={(s) => s.length === 0} emptyTitle="No submissions yet" emptyDescription="Student work will appear here.">
+      {(subs) =>
+        subs.map((s) => (
+          <Card key={s.id} style={{ marginTop: 8 }}>
+            <View style={styles.between}>
+              <Subtitle style={{ flex: 1 }}>{s.studentName}</Subtitle>
+              <Badge label={s.status} variant={s.status === 'GRADED' ? 'success' : 'warning'} />
+            </View>
+            {s.content ? <Body numberOfLines={4}>{s.content}</Body> : null}
+            <Input
+              label="Marks"
+              keyboardType="decimal-pad"
+              value={marks[s.id] ?? (s.marksObtained != null ? String(s.marksObtained) : '')}
+              onChangeText={(t) => setMarks((m) => ({ ...m, [s.id]: t }))}
+            />
+            <Button
+              title="Save grade"
+              size="sm"
+              loading={grade.isPending}
+              disabled={marks[s.id] === undefined || Number.isNaN(Number(marks[s.id]))}
+              onPress={() =>
+                grade.mutate(
+                  { submissionId: s.id, marksObtained: Number(marks[s.id]) },
+                  { onError: (e) => Alert.alert('Could not save grade', errorMessage(e)) },
+                )
+              }
+            />
+          </Card>
+        ))
+      }
+    </QueryBoundary>
+  );
+};
+
+const Homework: React.FC = () => {
+  const q = useTeacherAssignments();
+  const create = useCreateAssignment();
+  const [open, setOpen] = useState<string | null>(null);
+  const [batchId, setBatchId] = useState<string>();
+  const [title, setTitle] = useState('');
+  const [subject, setSubject] = useState('');
+  const [instructions, setInstructions] = useState('');
+  const [due, setDue] = useState(todayIso());
+  const ready = !!batchId && title.trim() && subject.trim() && instructions.trim() && /^\d{4}-\d{2}-\d{2}$/.test(due);
+  return (
+    <>
+      <Card style={{ marginBottom: 16 }}>
+        <Subtitle>New assignment</Subtitle>
+        <BatchPicker value={batchId} onChange={setBatchId} />
+        <Input label="Title" value={title} onChangeText={setTitle} />
+        <Input label="Subject" value={subject} onChangeText={setSubject} />
+        <Input label="Instructions" value={instructions} onChangeText={setInstructions} multiline />
+        <Input label="Due date (YYYY-MM-DD)" value={due} onChangeText={setDue} autoCapitalize="none" />
+        <Button
+          title="Publish to batch"
+          disabled={!ready}
+          loading={create.isPending}
+          onPress={() =>
+            create.mutate(
+              { batchId: batchId as string, title: title.trim(), subject: subject.trim(), instructions: instructions.trim(), dueDate: due },
+              {
+                onSuccess: () => { setTitle(''); setInstructions(''); },
+                onError: (e) => Alert.alert('Could not create', errorMessage(e)),
+              },
+            )
+          }
+        />
+      </Card>
+      <QueryBoundary query={q} isEmpty={(a) => a.length === 0} emptyTitle="No assignments" emptyDescription="Create one above.">
+        {(items) =>
+          items.map((a) => (
+            <Card key={a.id} style={{ marginBottom: 8 }} onPress={() => setOpen(open === a.id ? null : a.id)}>
+              <Subtitle>{a.title}</Subtitle>
+              <Caption>{`${a.batchName ?? ''} · due ${formatDate(a.dueDate)} · ${a.submissionCount}/${a.totalStudents} submitted`}</Caption>
+              {open === a.id ? <Grading assignmentId={a.id} /> : null}
+            </Card>
+          ))
+        }
+      </QueryBoundary>
+    </>
+  );
+};
+
+const Announcements: React.FC = () => {
+  const q = useTeacherAnnouncements();
+  const create = useCreateAnnouncement();
+  const [batchId, setBatchId] = useState<string>();
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  return (
+    <>
+      <Card style={{ marginBottom: 16 }}>
+        <BatchPicker value={batchId} onChange={setBatchId} />
+        <Input label="Title" value={title} onChangeText={setTitle} />
+        <Input label="Message" value={content} onChangeText={setContent} multiline />
+        <Button
+          title="Post"
+          disabled={!title.trim() || !content.trim()}
+          loading={create.isPending}
+          onPress={() =>
+            create.mutate(
+              { batchId, title: title.trim(), content: content.trim() },
+              { onSuccess: () => { setTitle(''); setContent(''); }, onError: (e) => Alert.alert('Could not post', errorMessage(e)) },
+            )
+          }
+        />
+      </Card>
+      <QueryBoundary query={q} isEmpty={(a) => a.length === 0} emptyTitle="No announcements" emptyDescription="Post one above.">
+        {(items) =>
+          items.map((a) => (
+            <Card key={a.id} style={{ marginBottom: 8 }}>
+              <Subtitle>{a.title}</Subtitle>
+              <Body numberOfLines={3}>{a.content}</Body>
+              <Caption>{`${a.authorName} · ${formatDate(a.createdAt)}`}</Caption>
+            </Card>
+          ))
+        }
+      </QueryBoundary>
+    </>
+  );
+};
+
+const Timetable: React.FC = () => {
+  const q = useTeacherTimetable();
+  return (
+    <QueryBoundary query={q} isEmpty={(t) => t.length === 0} emptyTitle="No timetable" emptyDescription="Your owner has not scheduled classes for you yet.">
+      {(slots) =>
+        slots.map((s) => (
+          <Card key={s.id} style={{ marginBottom: 8 }}>
+            <Subtitle>{`${s.subject} · ${s.batchName}`}</Subtitle>
+            <Caption>{`${s.dayOfWeek} ${s.startTime}–${s.endTime}${s.room ? ` · ${s.room}` : ''}`}</Caption>
+          </Card>
+        ))
+      }
+    </QueryBoundary>
+  );
+};
+
+const Leave: React.FC = () => {
+  const q = useLeaves();
+  const apply = useApplyLeave();
+  const [start, setStart] = useState(todayIso());
+  const [end, setEnd] = useState(todayIso());
+  const [reason, setReason] = useState('');
+  const days = Math.max(1, Math.round((new Date(end).getTime() - new Date(start).getTime()) / 86400000) + 1);
+  const valid = /^\d{4}-\d{2}-\d{2}$/.test(start) && /^\d{4}-\d{2}-\d{2}$/.test(end) && end >= start && !!reason.trim();
+  return (
+    <>
+      <Card style={{ marginBottom: 16 }}>
+        <Input label="From (YYYY-MM-DD)" value={start} onChangeText={setStart} autoCapitalize="none" />
+        <Input label="To (YYYY-MM-DD)" value={end} onChangeText={setEnd} autoCapitalize="none" />
+        <Input label="Reason" value={reason} onChangeText={setReason} multiline />
+        <Button
+          title={`Apply for ${valid ? days : '—'} day(s)`}
+          disabled={!valid}
+          loading={apply.isPending}
+          onPress={() =>
+            apply.mutate(
+              { leaveType: 'CASUAL', startDate: start, endDate: end, totalDays: days, reason: reason.trim() },
+              { onSuccess: () => setReason(''), onError: (e) => Alert.alert('Could not apply', errorMessage(e)) },
+            )
+          }
+        />
+      </Card>
+      <QueryBoundary query={q} isEmpty={(l) => l.length === 0} emptyTitle="No leave applications" emptyDescription="Your requests and your owner's decisions appear here.">
+        {(items) =>
+          items.map((l) => (
+            <Card key={l.id} style={{ marginBottom: 8 }}>
+              <View style={styles.between}>
+                <Subtitle>{`${formatDate(l.startDate)} – ${formatDate(l.endDate)}`}</Subtitle>
+                <Badge label={l.status} variant={l.status === 'APPROVED' ? 'success' : l.status === 'REJECTED' ? 'error' : 'warning'} />
+              </View>
+              <Caption>{l.reason}</Caption>
+              {l.reviewerRemarks ? <Caption>{`Owner: ${l.reviewerRemarks}`}</Caption> : null}
+            </Card>
+          ))
+        }
+      </QueryBoundary>
+    </>
+  );
+};
+
+const Salary: React.FC = () => {
+  const q = useSalaries();
+  return (
+    <QueryBoundary query={q} isEmpty={(s) => s.length === 0} emptyTitle="No statements" emptyDescription="Salary statements appear here once your owner issues them.">
+      {(items) =>
+        items.map((s) => (
+          <Card key={s.id} style={{ marginBottom: 8 }}>
+            <View style={styles.between}>
+              <Subtitle>{s.payPeriod}</Subtitle>
+              <Badge label={s.status} variant={s.status === 'PAID' ? 'success' : 'warning'} />
+            </View>
+            <Body>{`Net payable ${formatInr(s.netPayable)}`}</Body>
+            <Caption>{`Base ${formatInr(s.baseAmount)} + ${formatInr(s.additions)} − ${formatInr(s.deductions + s.advances)}`}</Caption>
+            {s.paymentDate ? <Caption>{`Paid ${formatDate(s.paymentDate)}`}</Caption> : null}
+          </Card>
+        ))
+      }
+    </QueryBoundary>
+  );
+};
 
 export const TeacherMoreScreen: React.FC = () => {
-  const { colors, spacing, radii, typography, isDark, setPreference, preference } = useTheme();
+  const { spacing } = useTheme();
   const { session, logout } = useAuthStore();
-
-  const [activeSubView, setActiveSubView] = useState<SubView>('menu');
-  const [leaves, setLeaves] = useState<FacultyLeaveRecord[]>([]);
-  const [salaries, setSalaries] = useState<FacultySalarySlip[]>([]);
-  const [timetable, setTimetable] = useState<TeacherTimetableSlot[]>([]);
-  const [announcements, setAnnouncements] = useState<any[]>([]);
-
-  // Apply Leave Modal
-  const [showLeaveModal, setShowLeaveModal] = useState(false);
-  const [leaveStart, setLeaveStart] = useState('2026-11-10');
-  const [leaveEnd, setLeaveEnd] = useState('2026-11-11');
-  const [leaveType, setLeaveType] = useState<'CASUAL' | 'MEDICAL' | 'ACADEMIC' | 'EMERGENCY'>('CASUAL');
-  const [leaveReason, setLeaveReason] = useState('');
-  const [isApplying, setIsApplying] = useState(false);
-  const [toastMsg, setToastMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
-
-  useEffect(() => {
-    loadAll();
-  }, []);
-
-  const loadAll = async () => {
-    try {
-      const [lList, sList, tList, aList] = await Promise.all([
-        teacherService.getLeaves(),
-        teacherService.getSalaries(),
-        teacherService.getTimetable(),
-        teacherService.getAnnouncements(),
-      ]);
-      setLeaves(lList);
-      setSalaries(sList);
-      setTimetable(tList);
-      setAnnouncements(aList);
-    } catch {}
-  };
-
-  const handleApplyLeave = async () => {
-    if (!leaveReason.trim()) return;
-    setIsApplying(true);
-    try {
-      await teacherService.applyLeave({
-        startDate: leaveStart,
-        endDate: leaveEnd,
-        leaveType,
-        reason: leaveReason.trim(),
-      });
-      setToastMsg({ text: 'Leave application submitted for approval.', type: 'success' });
-      setShowLeaveModal(false);
-      setLeaveReason('');
-      const updated = await teacherService.getLeaves();
-      setLeaves(updated);
-    } catch {
-      setToastMsg({ text: 'Failed to submit leave application.', type: 'error' });
-    } finally {
-      setIsApplying(false);
-    }
-  };
-
-  const facultyName = session?.user?.fullName || session?.user?.name || 'Prof. Rajesh Sharma';
-  const email = session?.user?.email || 'teacher@padhaipilot.com';
-  const instituteName = session?.user?.instituteName || 'Apex IIT-JEE & Medical Academy';
+  const [view, setView] = useState<View_>('menu');
+  const current = MENU.find((m) => m.key === view);
 
   return (
-    <ScreenContainer>
-      <ScrollView contentContainerStyle={[styles.content, { padding: spacing.lg }]}>
-        {/* Navigation Breadcrumb / Top Bar */}
-        {activeSubView !== 'menu' && (
-          <Pressable
-            onPress={() => setActiveSubView('menu')}
-            style={[styles.backBtn, { marginBottom: spacing.md }]}
-          >
-            <Caption style={{ color: colors.primary, fontWeight: 'bold' }}>◀ Back to Faculty Services</Caption>
-          </Pressable>
-        )}
-
-        {toastMsg && (
-          <View
-            style={[
-              styles.msgBanner,
-              {
-                backgroundColor: toastMsg.type === 'success' ? colors.successSubtle : colors.errorSubtle,
-                borderRadius: radii.md,
-                marginBottom: spacing.md,
-              },
-            ]}
-          >
-            <Caption style={{ color: toastMsg.type === 'success' ? colors.success : colors.error, fontWeight: 'bold' }}>
-              {toastMsg.text}
-            </Caption>
-          </View>
-        )}
-
-        {/* 1. MAIN MENU VIEW */}
-        {activeSubView === 'menu' && (
-          <>
-            {/* Faculty Profile Summary Card */}
-            <Card variant="elevated" style={{ marginBottom: spacing.lg }}>
-              <View style={styles.profileHeader}>
-                <View
-                  style={[
-                    styles.avatar,
-                    { backgroundColor: colors.primary, borderRadius: radii.full },
-                  ]}
-                >
-                  <Title style={{ color: '#FFF', fontSize: 20 }}>{facultyName.charAt(0)}</Title>
-                </View>
-                <View style={{ flex: 1, marginLeft: spacing.md }}>
-                  <Subtitle style={{ fontFamily: typography.fonts.display }}>{facultyName}</Subtitle>
-                  <Caption>{email}</Caption>
-                  <Caption style={{ color: colors.primary, fontWeight: 'bold', marginTop: 2 }}>
-                    {instituteName}
-                  </Caption>
-                </View>
-              </View>
-            </Card>
-
-            {/* Quick Links Menu */}
-            <Subtitle style={{ fontFamily: typography.fonts.display, marginBottom: spacing.sm }}>
-              Faculty Services & Records
-            </Subtitle>
-
-            <Card onPress={() => setActiveSubView('timetable')} style={{ marginBottom: spacing.sm }}>
-              <View style={styles.menuRow}>
-                <View style={{ flex: 1 }}>
-                  <Label style={{ fontWeight: '700', color: colors.textPrimary }}>Weekly Teaching Timetable</Label>
-                  <Caption>Daily lecture slots, rooms & schedules</Caption>
-                </View>
-                <Label style={{ color: colors.primary }}>▶</Label>
-              </View>
-            </Card>
-
-            <Card onPress={() => setActiveSubView('leave')} style={{ marginBottom: spacing.sm }}>
-              <View style={styles.menuRow}>
-                <View style={{ flex: 1 }}>
-                  <Label style={{ fontWeight: '700', color: colors.textPrimary }}>Faculty Leave Self-Service</Label>
-                  <Caption>Apply for leave, check approval status & history</Caption>
-                </View>
-                <Label style={{ color: colors.primary }}>▶</Label>
-              </View>
-            </Card>
-
-            <Card onPress={() => setActiveSubView('salary')} style={{ marginBottom: spacing.sm }}>
-              <View style={styles.menuRow}>
-                <View style={{ flex: 1 }}>
-                  <Label style={{ fontWeight: '700', color: colors.textPrimary }}>Salary Slips & Pay Statements</Label>
-                  <Caption>Monthly salary breakdown & payment receipts</Caption>
-                </View>
-                <Label style={{ color: colors.primary }}>▶</Label>
-              </View>
-            </Card>
-
-            {/* Announcements Card */}
-            <Subtitle style={{ fontFamily: typography.fonts.display, marginTop: spacing.md, marginBottom: spacing.sm }}>
-              Institute Announcements ({announcements.length})
-            </Subtitle>
-            {announcements.map((anc) => (
-              <Card key={anc.id} style={{ marginBottom: spacing.sm }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <Label style={{ fontWeight: '700', color: colors.textPrimary }}>{anc.title}</Label>
-                  {anc.priority && <Badge variant="warning" label={anc.priority} />}
-                </View>
-                <Caption>{anc.content}</Caption>
-              </Card>
-            ))}
-
-            {/* Theme & Logout Section */}
-            <View style={{ marginTop: spacing.xl }}>
-              <Subtitle style={{ fontFamily: typography.fonts.display, marginBottom: spacing.sm }}>
-                App Preferences
-              </Subtitle>
-
+    <Screen eyebrow="MORE" title={current?.label ?? 'More'} subtitle={current?.hint}>
+      {view === 'menu' ? (
+        MENU.map((m) => (
+          <Card key={m.key} style={{ marginBottom: spacing.sm }} onPress={() => setView(m.key)}>
+            <Subtitle>{m.label}</Subtitle>
+            <Caption>{m.hint}</Caption>
+          </Card>
+        ))
+      ) : (
+        <>
+          <Button title="‹ Back" variant="ghost" size="sm" onPress={() => setView('menu')} style={{ alignSelf: 'flex-start', marginBottom: spacing.sm }} />
+          {view === 'homework' ? <Homework /> : null}
+          {view === 'announcements' ? <Announcements /> : null}
+          {view === 'timetable' ? <Timetable /> : null}
+          {view === 'leave' ? <Leave /> : null}
+          {view === 'salary' ? <Salary /> : null}
+          {view === 'profile' ? (
+            <>
               <Card style={{ marginBottom: spacing.md }}>
-                <View style={styles.menuRow}>
-                  <Label style={{ fontWeight: '600', color: colors.textPrimary }}>Theme Appearance</Label>
-                  <Pressable
-                    onPress={() => setPreference(isDark ? 'light' : 'dark')}
-                    style={[styles.themeToggle, { backgroundColor: colors.surfaceSubtle, borderRadius: radii.md }]}
-                  >
-                    <Caption style={{ fontWeight: 'bold', color: colors.primary }}>
-                      {isDark ? '🌙 Dark Mode' : '☀️ Light Mode'}
-                    </Caption>
-                  </Pressable>
-                </View>
+                <Subtitle>{session?.user?.fullName || session?.user?.name}</Subtitle>
+                <Caption>{session?.user?.email}</Caption>
+                <Caption>{`${session?.user?.instituteName ?? ''} · ${session?.user?.role ?? ''}`}</Caption>
               </Card>
-
-              <Button
-                title="Sign Out from Mobile"
-                variant="outline"
-                onPress={logout}
-                style={{ borderColor: colors.error }}
-              />
-            </View>
-          </>
-        )}
-
-        {/* 2. LEAVE SELF-SERVICE VIEW */}
-        {activeSubView === 'leave' && (
-          <View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-              <View>
-                <Title style={{ fontFamily: typography.fonts.display }}>Leave Applications</Title>
-                <Caption>Casual, medical and academic leave records</Caption>
-              </View>
-              <Button
-                title="+ Apply"
-                variant="primary"
-                size="small"
-                onPress={() => setShowLeaveModal(true)}
-              />
-            </View>
-
-            {/* Leave Balance Chips */}
-            <View style={[styles.balanceRow, { backgroundColor: colors.surfaceElevated, borderRadius: radii.lg, marginBottom: spacing.md }]}>
-              <View style={styles.balanceItem}>
-                <Label style={{ fontWeight: 'bold', color: colors.primary }}>10</Label>
-                <Caption style={{ fontSize: 10 }}>Casual Left</Caption>
-              </View>
-              <View style={styles.balanceItem}>
-                <Label style={{ fontWeight: 'bold', color: colors.success }}>7</Label>
-                <Caption style={{ fontSize: 10 }}>Sick / Medical</Caption>
-              </View>
-              <View style={styles.balanceItem}>
-                <Label style={{ fontWeight: 'bold', color: colors.accent }}>3</Label>
-                <Caption style={{ fontSize: 10 }}>Academic</Caption>
-              </View>
-            </View>
-
-            {/* Leave Requests List */}
-            {leaves.map((lv) => (
-              <Card key={lv.id} style={{ marginBottom: spacing.sm }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <Label style={{ fontWeight: '700', color: colors.textPrimary }}>
-                    {lv.leaveType} LEAVE ({lv.totalDays} Days)
-                  </Label>
-                  <Badge
-                    variant={lv.status === 'APPROVED' ? 'success' : lv.status === 'REJECTED' ? 'error' : 'warning'}
-                    label={lv.status}
-                  />
-                </View>
-                <Caption style={{ fontVariant: ['tabular-nums'] }}>
-                  {lv.startDate} to {lv.endDate}
-                </Caption>
-                <Caption style={{ marginTop: 2, color: colors.textSecondary }}>Reason: &quot;{lv.reason}&quot;</Caption>
-                {lv.adminRemarks && (
-                  <Caption style={{ color: colors.primary, fontStyle: 'italic', marginTop: 2 }}>
-                    Admin Note: &quot;{lv.adminRemarks}&quot;
-                  </Caption>
-                )}
-              </Card>
-            ))}
-          </View>
-        )}
-
-        {/* 3. SALARY STATEMENTS VIEW */}
-        {activeSubView === 'salary' && (
-          <View>
-            <Title style={{ fontFamily: typography.fonts.display, marginBottom: spacing.xs }}>
-              Salary Statements
-            </Title>
-            <Caption style={{ marginBottom: spacing.md }}>
-              Confidential monthly salary slips and payment records
-            </Caption>
-
-            {salaries.map((sal) => (
-              <Card key={sal.id} variant="elevated" style={{ marginBottom: spacing.md }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
-                  <Subtitle style={{ fontFamily: typography.fonts.display }}>{sal.payPeriod}</Subtitle>
-                  <Badge variant={sal.status === 'PAID' ? 'success' : 'warning'} label={sal.status} />
-                </View>
-
-                <View style={[styles.salaryDetails, { borderColor: colors.borderSubtle, borderTopWidth: 1, borderBottomWidth: 1, paddingVertical: 8 }]}>
-                  <View style={styles.salLine}>
-                    <Caption>Basic Salary</Caption>
-                    <Caption style={{ fontVariant: ['tabular-nums'], fontWeight: '600' }}>₹{sal.basicSalary.toLocaleString()}</Caption>
-                  </View>
-                  <View style={styles.salLine}>
-                    <Caption>HRA</Caption>
-                    <Caption style={{ fontVariant: ['tabular-nums'], fontWeight: '600' }}>₹{sal.hra.toLocaleString()}</Caption>
-                  </View>
-                  <View style={styles.salLine}>
-                    <Caption>Special Allowances</Caption>
-                    <Caption style={{ fontVariant: ['tabular-nums'], fontWeight: '600' }}>₹{sal.specialAllowance.toLocaleString()}</Caption>
-                  </View>
-                  <View style={styles.salLine}>
-                    <Caption style={{ color: colors.error }}>Statutory Deductions (PF/Tax)</Caption>
-                    <Caption style={{ fontVariant: ['tabular-nums'], color: colors.error }}>- ₹{sal.deductions.toLocaleString()}</Caption>
-                  </View>
-                </View>
-
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.sm }}>
-                  <Label style={{ fontWeight: 'bold' }}>Net Remitted</Label>
-                  <Label style={{ color: colors.success, fontSize: 16, fontWeight: 'bold', fontVariant: ['tabular-nums'] }}>
-                    ₹{sal.netPayable.toLocaleString()}
-                  </Label>
-                </View>
-                {sal.transactionRef && (
-                  <Caption style={{ fontSize: 10, color: colors.textMuted, marginTop: 4 }}>
-                    Txn Ref: {sal.transactionRef} • Paid on {sal.paidOn}
-                  </Caption>
-                )}
-              </Card>
-            ))}
-          </View>
-        )}
-
-        {/* 4. TIMETABLE VIEW */}
-        {activeSubView === 'timetable' && (
-          <View>
-            <Title style={{ fontFamily: typography.fonts.display, marginBottom: spacing.xs }}>
-              Teaching Schedule
-            </Title>
-            <Caption style={{ marginBottom: spacing.md }}>Assigned lecture timetable for this week</Caption>
-
-            {timetable.map((tt) => (
-              <Card key={tt.id} style={{ marginBottom: spacing.sm }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <View style={{ flex: 1 }}>
-                    <Label style={{ fontWeight: '700', color: colors.textPrimary }}>{tt.batchName}</Label>
-                    <Caption>{tt.subject} • {tt.room}</Caption>
-                  </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <Badge variant="primary" label={tt.dayOfWeek} />
-                    <Caption style={{ marginTop: 2, fontVariant: ['tabular-nums'] }}>{tt.timeSlot}</Caption>
-                  </View>
-                </View>
-              </Card>
-            ))}
-          </View>
-        )}
-      </ScrollView>
-
-      {/* Modal: Apply for Leave */}
-      <Modal visible={showLeaveModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalBox, { backgroundColor: colors.surface, borderRadius: radii.xl, borderColor: colors.border }]}>
-            <Subtitle style={{ fontFamily: typography.fonts.display, marginBottom: spacing.xs }}>
-              Apply for Faculty Leave
-            </Subtitle>
-            <Caption style={{ marginBottom: spacing.md }}>Select leave category and dates</Caption>
-
-            <View style={{ marginBottom: spacing.sm }}>
-              <Label style={{ marginBottom: 4 }}>Leave Type</Label>
-              <View style={{ flexDirection: 'row', gap: 6 }}>
-                {(['CASUAL', 'MEDICAL', 'ACADEMIC'] as const).map((t) => (
-                  <Pressable
-                    key={t}
-                    onPress={() => setLeaveType(t)}
-                    style={[
-                      styles.typePill,
-                      {
-                        backgroundColor: leaveType === t ? colors.primary : colors.surfaceSubtle,
-                        borderRadius: radii.sm,
-                      },
-                    ]}
-                  >
-                    <Caption style={{ color: leaveType === t ? '#FFF' : colors.textPrimary, fontWeight: 'bold' }}>
-                      {t}
-                    </Caption>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-
-            <View style={{ flexDirection: 'row', gap: 8, marginBottom: spacing.sm }}>
-              <View style={{ flex: 1 }}>
-                <Label style={{ marginBottom: 4 }}>From Date</Label>
-                <TextInput
-                  value={leaveStart}
-                  onChangeText={setLeaveStart}
-                  style={[styles.modalInput, { borderColor: colors.border, color: colors.textPrimary, borderRadius: radii.md }]}
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Label style={{ marginBottom: 4 }}>To Date</Label>
-                <TextInput
-                  value={leaveEnd}
-                  onChangeText={setLeaveEnd}
-                  style={[styles.modalInput, { borderColor: colors.border, color: colors.textPrimary, borderRadius: radii.md }]}
-                />
-              </View>
-            </View>
-
-            <View style={{ marginBottom: spacing.md }}>
-              <Label style={{ marginBottom: 4 }}>Reason for Leave *</Label>
-              <TextInput
-                multiline
-                numberOfLines={3}
-                placeholder="Details of absence and lecture adjustment..."
-                placeholderTextColor={colors.textMuted}
-                value={leaveReason}
-                onChangeText={setLeaveReason}
-                style={[styles.modalInput, { borderColor: colors.border, color: colors.textPrimary, borderRadius: radii.md, height: 70 }]}
-              />
-            </View>
-
-            <View style={styles.modalBtnRow}>
-              <Button
-                title="Cancel"
-                variant="outline"
-                size="small"
-                onPress={() => setShowLeaveModal(false)}
-                style={{ flex: 1, marginRight: spacing.xs }}
-              />
-              <Button
-                title={isApplying ? 'Submitting...' : 'Submit Application'}
-                variant="primary"
-                size="small"
-                onPress={handleApplyLeave}
-                loading={isApplying}
-                style={{ flex: 1, marginLeft: spacing.xs }}
-              />
-            </View>
-          </View>
-        </View>
-      </Modal>
-    </ScreenContainer>
+              <Button title="Sign out" variant="outline" onPress={logout} />
+            </>
+          ) : null}
+        </>
+      )}
+      {view === 'menu' ? <SectionTitle>Account</SectionTitle> : null}
+      {view === 'menu' ? <Caption>{session?.user?.email}</Caption> : null}
+    </Screen>
   );
 };
 
 const styles = StyleSheet.create({
-  content: {
-    paddingBottom: 40,
-  },
-  backBtn: {
-    paddingVertical: 4,
-  },
-  msgBanner: {
-    padding: 10,
-  },
-  profileHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  menuRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  themeToggle: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  balanceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 12,
-  },
-  balanceItem: {
-    alignItems: 'center',
-  },
-  salaryDetails: {
-    gap: 4,
-  },
-  salLine: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  modalBox: {
-    borderWidth: 1,
-    padding: 20,
-    elevation: 8,
-  },
-  typePill: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  modalInput: {
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 14,
-  },
-  modalBtnRow: {
-    flexDirection: 'row',
-  },
+  between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
 });
-

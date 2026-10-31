@@ -193,3 +193,19 @@ Not run: `npm ci` from clean, lint, mobile jest, Android build, any Vercel deplo
 3. Persist the session in Keychain/Keystore-backed storage (no library installed) and handle 401 by signing out.
 4. Remove the remaining sample-data defaults in screens, then run on an emulator against a staging API with seeded non-demo data.
 5. Android release build + signing, push notifications, deep links (none started).
+
+
+### Mobile status after the third pass (2026-10-31)
+
+**Done (verified by `tsc --noEmit` = 0 errors and `jest` = 44/44):** the mobile data layer and all screens were rebuilt on the real server contract.
+- `@padhai-pilot/shared` now owns the student API contract (`types/student.ts`); the API's `StudentService`, the web client and the mobile app can all import it. Mobile `studentService`/`teacherService` map 1:1 onto real controller routes with no `catch → sample data` fallbacks (jest asserts routes, bearer header, 401 sign-out, and that failures reject).
+- Student: Home, Vault (diary + notes), Tests (homework submit/draft, server-scored tests), Results + Attendance (+ correction request), More (timetable, notifications, fees, planner, ask-a-teacher, documents, profile + join batch + sign out).
+- Faculty: Home, Classes (roster + invite codes), Attendance, Bulk marks (draft → publish), Vault (diary + materials), More (homework + grading, announcements, timetable, own leave, own salary, sign out). Owner-only operations are deliberately absent from mobile.
+- Every data screen uses one `QueryBoundary` (loading / error + retry / empty), pull-to-refresh, no polling; 401 signs the user out and clears the query cache; platform-admin sessions are refused; demo UI is development-only.
+
+**Not done / not verified:**
+1. **The backend still serves fabricated data** (A2): student endpoints return hard-coded values, the teacher/tuition/assessment services are in-memory and process-local (on Vercel, writes vanish between invocations). The app is *connected* to the real routes, but "real data end to end" requires rewriting those services on Prisma plus the missing tables (academic queries, study tasks, attendance corrections, support requests, documents) and a first migration. This is the next work item and needs a non-production database.
+2. Session is memory-only (user signs in on every launch): needs Keychain/Keystore storage (native dependency, requires an Android build to verify).
+3. Fonts: Playfair Display / Raleway / Inter are referenced but **not bundled** on Android (falls back to system serif/sans).
+4. Android debug/release build and emulator run were **not** performed; push notifications, deep links, offline drafts not started.
+5. `StatusBar.backgroundColor` removed (unsupported on RN 0.88); `GET /tuition/diaries` returns every faculty member's entries in the institute to any staff role (privacy review needed).

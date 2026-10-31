@@ -41,6 +41,13 @@ class ApiClient {
     this.authToken = token;
   }
 
+  private unauthorizedHandler: (() => void) | null = null;
+
+  /** Called when the server rejects the current token (expired, revoked, or membership removed). */
+  public setUnauthorizedHandler(handler: (() => void) | null) {
+    this.unauthorizedHandler = handler;
+  }
+
   public getAuthToken(): string | null {
     return this.authToken;
   }
@@ -87,6 +94,9 @@ class ApiClient {
           }
         } catch {
           // Response body was not JSON
+        }
+        if (response.status === 401 && this.authToken && !endpoint.startsWith('/auth/')) {
+          this.unauthorizedHandler?.();
         }
         throw new ApiError(errorMsg, response.status, payload);
       }

@@ -1,240 +1,124 @@
 import React from 'react';
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-  RefreshControl,
-  FlatList,
-} from 'react-native';
-import { ScreenContainer } from '../../../components/common/ScreenContainer';
-import { Title, Subtitle, Body, Caption, StatValue } from '../../../components/common/Typography';
+import { View, StyleSheet } from 'react-native';
+import { Screen, SectionTitle } from '../../../components/common/Screen';
+import { QueryBoundary } from '../../../components/common/QueryBoundary';
 import { Card } from '../../../components/common/Card';
 import { Badge } from '../../../components/common/Badge';
-import { Skeleton } from '../../../components/common/Skeleton';
-import { ErrorState } from '../../../components/common/ErrorState';
-import { useAuthStore } from '../../../store/useAuthStore';
+import { Body, Caption, StatValue, Subtitle } from '../../../components/common/Typography';
+import { useDashboardData } from '../../../hooks/useStudentData';
 import { useNavigationStore } from '../../../store/useNavigationStore';
-import {
-  useAttendanceData,
-  useResultsData,
-  useAnnouncementsData,
-} from '../../../hooks/useStudentData';
+import { useAuthStore } from '../../../store/useAuthStore';
 import { useTheme } from '../../../theme/ThemeContext';
+import { formatDate, formatInr } from '../../../lib/format';
 
 export const DashboardScreen: React.FC = () => {
   const { colors, spacing } = useTheme();
-  const { session } = useAuthStore();
   const { setTab } = useNavigationStore();
-
-  const {
-    data: attendance,
-    isLoading: isAttendanceLoading,
-    error: attendanceError,
-    refetch: refetchAttendance,
-  } = useAttendanceData();
-
-  const {
-    data: results,
-    isLoading: isResultsLoading,
-    error: resultsError,
-    refetch: refetchResults,
-  } = useResultsData();
-
-  const {
-    data: announcements,
-    isLoading: isAnnounceLoading,
-    refetch: refetchAnnouncements,
-  } = useAnnouncementsData();
-
-  const isRefreshing = isAttendanceLoading || isResultsLoading || isAnnounceLoading;
-
-  const onRefresh = () => {
-    refetchAttendance();
-    refetchResults();
-    refetchAnnouncements();
-  };
-
-  const studentName = session?.user?.name || 'Student';
-  const instituteName = session?.user?.instituteName || 'Tuition Institute';
-  const rollNumber = session?.user?.rollNumber || 'Roll #--';
-
-  const latestResult = results && results.length > 0 ? results[0] : null;
+  const session = useAuthStore((s) => s.session);
+  const query = useDashboardData();
 
   return (
-    <ScreenContainer edges={['top', 'left', 'right']}>
-      <ScrollView
-        contentContainerStyle={[styles.scrollContent, { padding: spacing.lg }]}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.primary}
-          />
-        }
-      >
-        {/* Header Greeting */}
-        <View style={[styles.headerRow, { marginBottom: spacing.xl }]}>
-          <View style={{ flex: 1 }}>
-            <Caption style={{ textTransform: 'uppercase', letterSpacing: 0.8 }}>
-              {instituteName}
-            </Caption>
-            <Title style={{ marginTop: spacing.xxs }}>{studentName}</Title>
-          </View>
-          <Badge label={rollNumber} variant="primary" />
-        </View>
+    <Screen
+      eyebrow={session?.user?.instituteName?.toUpperCase()}
+      title={session?.user?.fullName || session?.user?.name || 'Student'}
+      subtitle="Your day at a glance"
+      refreshing={query.isRefetching}
+      onRefresh={() => query.refetch()}
+    >
+      <QueryBoundary query={query}>
+        {(d) => (
+          <>
+            <View style={styles.grid}>
+              <Card style={styles.kpi} onPress={() => setTab('student_results')}>
+                <Caption>Attendance</Caption>
+                <StatValue color={d.stats.attendanceRate < 75 ? colors.warning : colors.primary}>
+                  {`${Math.round(d.stats.attendanceRate)}%`}
+                </StatValue>
+                <Caption>{`${d.stats.classesAttended}/${d.stats.totalClasses} classes`}</Caption>
+              </Card>
+              <Card style={styles.kpi} onPress={() => setTab('student_results')}>
+                <Caption>Average score</Caption>
+                <StatValue>{d.stats.totalTests ? `${d.stats.avgPercentage}%` : '—'}</StatValue>
+                <Caption>{`${d.stats.totalTests} published results`}</Caption>
+              </Card>
+              <Card style={styles.kpi} onPress={() => setTab('student_academics')}>
+                <Caption>Homework due</Caption>
+                <StatValue>{String(d.stats.pendingAssignments)}</StatValue>
+                <Caption>{`${d.stats.upcomingTests} upcoming tests`}</Caption>
+              </Card>
+              <Card style={styles.kpi} onPress={() => setTab('student_fees')}>
+                <Caption>Fee balance</Caption>
+                <StatValue color={d.stats.feeBalance > 0 ? colors.warning : colors.success}>
+                  {formatInr(d.stats.feeBalance)}
+                </StatValue>
+                <Caption>{d.stats.feeBalance > 0 ? 'Payment pending' : 'All clear'}</Caption>
+              </Card>
+            </View>
 
-        {/* Primary Metric Row */}
-        <View style={[styles.statsRow, { marginBottom: spacing.xl, gap: spacing.md }]}>
-          {/* Attendance KPI */}
-          <Card
-            style={styles.statCard}
-            onPress={() => setTab('attendance')}
-            variant="flat"
-          >
-            <Caption style={{ marginBottom: spacing.xs }}>Attendance</Caption>
-            {isAttendanceLoading ? (
-              <Skeleton width={60} height={32} />
+            <SectionTitle>Today&apos;s classes</SectionTitle>
+            {d.timetable.length === 0 ? (
+              <Caption>No classes scheduled today.</Caption>
             ) : (
-              <StatValue color={attendance && attendance.percentage < 75 ? colors.warning : colors.primary}>
-                {attendance ? `${Math.round(attendance.percentage)}%` : '--'}
-              </StatValue>
+              d.timetable.map((slot) => (
+                <Card key={`${slot.time}-${slot.subject}`} style={{ marginBottom: spacing.sm }}>
+                  <Subtitle>{slot.subject}</Subtitle>
+                  <Caption>{`${slot.time} · ${slot.room} · ${slot.faculty}`}</Caption>
+                </Card>
+              ))
             )}
-            <Caption style={{ marginTop: spacing.xs }}>
-              {attendance ? `${attendance.attended}/${attendance.totalClasses} classes` : 'View records'}
-            </Caption>
-          </Card>
 
-          {/* Latest Test KPI */}
-          <Card
-            style={styles.statCard}
-            onPress={() => setTab('results')}
-            variant="flat"
-          >
-            <Caption style={{ marginBottom: spacing.xs }}>Latest Score</Caption>
-            {isResultsLoading ? (
-              <Skeleton width={60} height={32} />
-            ) : latestResult ? (
-              <StatValue color={colors.textPrimary}>
-                {`${latestResult.marksObtained}/${latestResult.maxMarks}`}
-              </StatValue>
+            <SectionTitle>Homework</SectionTitle>
+            {d.upcomingAssignments.length === 0 ? (
+              <Caption>Nothing pending.</Caption>
             ) : (
-              <StatValue color={colors.textMuted}>--</StatValue>
+              d.upcomingAssignments.map((a) => (
+                <Card key={a.id} style={{ marginBottom: spacing.sm }} onPress={() => setTab('student_academics')}>
+                  <View style={styles.row}>
+                    <Subtitle style={{ flex: 1 }}>{a.title}</Subtitle>
+                    <Badge label={a.status} variant={a.status === 'GRADED' ? 'success' : 'warning'} />
+                  </View>
+                  <Caption>{`${a.subject} · due ${formatDate(a.dueDate)}`}</Caption>
+                </Card>
+              ))
             )}
-            <Caption style={{ marginTop: spacing.xs }} numberOfLines={1}>
-              {latestResult ? latestResult.subject : 'No tests recorded'}
-            </Caption>
-          </Card>
-        </View>
 
-        {/* Tuition Announcements */}
-        <View style={{ marginBottom: spacing.xl }}>
-          <View style={[styles.sectionHeader, { marginBottom: spacing.md }]}>
-            <Subtitle>Noticeboard</Subtitle>
-          </View>
-
-          {isAnnounceLoading ? (
-            <View style={{ gap: spacing.sm }}>
-              <Skeleton height={60} />
-              <Skeleton height={60} />
-            </View>
-          ) : announcements && announcements.length > 0 ? (
-            <View style={{ gap: spacing.sm }}>
-              {announcements.slice(0, 3).map((notice) => (
-                <Card key={notice.id} variant="outlined" style={{ padding: spacing.md }}>
-                  <View style={[styles.noticeRow, { marginBottom: spacing.xxs }]}>
-                    <Body style={{ fontWeight: '600', flex: 1 }}>{notice.title}</Body>
-                    {notice.priority === 'URGENT' && (
-                      <Badge label="Urgent" variant="error" />
-                    )}
-                  </View>
-                  <Caption style={{ marginBottom: spacing.xs }}>
-                    {notice.content}
-                  </Caption>
-                  <Caption>{notice.date}</Caption>
+            <SectionTitle>Latest from your teachers</SectionTitle>
+            {d.recentDiaries.length === 0 ? (
+              <Caption>No diary entries published yet.</Caption>
+            ) : (
+              d.recentDiaries.map((e) => (
+                <Card key={e.id} style={{ marginBottom: spacing.sm }} onPress={() => setTab('student_diary')}>
+                  <Subtitle>{e.chapterTitle}</Subtitle>
+                  <Caption>{`${e.subject} · ${e.facultyName} · ${formatDate(e.lessonDate)}`}</Caption>
+                  <Body numberOfLines={2}>{e.conceptsTaught}</Body>
                 </Card>
-              ))}
-            </View>
-          ) : (
-            <Card variant="flat" style={{ padding: spacing.lg }}>
-              <Caption align="center">No announcements posted today.</Caption>
-            </Card>
-          )}
-        </View>
+              ))
+            )}
 
-        {/* Quick Links / Recent Results preview */}
-        <View style={{ marginBottom: spacing.xxl }}>
-          <View style={[styles.sectionHeader, { marginBottom: spacing.md }]}>
-            <Subtitle>Recent Evaluations</Subtitle>
-          </View>
-
-          {isResultsLoading ? (
-            <Skeleton height={80} />
-          ) : results && results.length > 0 ? (
-            <View style={{ gap: spacing.sm }}>
-              {results.slice(0, 3).map((result) => (
-                <Card
-                  key={result.id}
-                  variant="outlined"
-                  onPress={() => setTab('results')}
-                  style={{ padding: spacing.md }}
-                >
-                  <View style={styles.resultItemRow}>
-                    <View style={{ flex: 1 }}>
-                      <Body style={{ fontWeight: '600' }}>{result.title}</Body>
-                      <Caption style={{ marginTop: spacing.xxs }}>
-                        {result.subject} • {result.examDate}
-                      </Caption>
-                    </View>
-                    <View style={{ alignItems: 'flex-end' }}>
-                      <Body style={{ fontWeight: '700', color: colors.primary }}>
-                        {result.marksObtained}/{result.maxMarks}
-                      </Body>
-                      <Caption>{Math.round(result.percentage)}%</Caption>
-                    </View>
+            <SectionTitle>Announcements</SectionTitle>
+            {d.announcements.length === 0 ? (
+              <Caption>No announcements.</Caption>
+            ) : (
+              d.announcements.map((a) => (
+                <Card key={a.id} style={{ marginBottom: spacing.sm }}>
+                  <View style={styles.row}>
+                    <Subtitle style={{ flex: 1 }}>{a.title}</Subtitle>
+                    {a.priority === 'URGENT' ? <Badge label="URGENT" variant="error" /> : null}
                   </View>
+                  <Body numberOfLines={3}>{a.content}</Body>
+                  <Caption>{formatDate(a.date)}</Caption>
                 </Card>
-              ))}
-            </View>
-          ) : (
-            <Card variant="flat" style={{ padding: spacing.lg }}>
-              <Caption align="center">No published results available yet.</Caption>
-            </Card>
-          )}
-        </View>
-      </ScrollView>
-    </ScreenContainer>
+              ))
+            )}
+          </>
+        )}
+      </QueryBoundary>
+    </Screen>
   );
 };
 
 const styles = StyleSheet.create({
-  scrollContent: {
-    paddingBottom: 40,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  statsRow: {
-    flexDirection: 'row',
-  },
-  statCard: {
-    flex: 1,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  noticeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  resultItemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  kpi: { flexGrow: 1, flexBasis: '45%' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 });
-
