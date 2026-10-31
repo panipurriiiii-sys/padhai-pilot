@@ -166,7 +166,7 @@ export class TuitionController {
     @Query('batchId') batchId?: string,
     @Query('facultyId') facultyId?: string,
   ) {
-    return this.tuitionService.getTeachingDiaries(user.instituteId, batchId, facultyId);
+    return this.tuitionService.getTeachingDiaries(user, batchId, facultyId);
   }
 
   @Roles(...MANAGEMENT_ROLES)
@@ -181,7 +181,7 @@ export class TuitionController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateTeachingDiaryDto,
   ) {
-    return this.tuitionService.createTeachingDiary(user.instituteId, user.id, dto);
+    return this.tuitionService.createTeachingDiary(user, dto);
   }
 
   @Put('diaries/:id')
@@ -205,7 +205,7 @@ export class TuitionController {
     if (user.role === 'STUDENT') {
       return this.tuitionService.getStudentStudyMaterials(user, batchId);
     }
-    return this.tuitionService.getStudyMaterials(user.instituteId, batchId);
+    return this.tuitionService.getStudyMaterials(user, batchId);
   }
 
   @Post('materials')
@@ -214,7 +214,7 @@ export class TuitionController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateStudyMaterialDto,
   ) {
-    return this.tuitionService.createStudyMaterial(user.instituteId, user.id, dto);
+    return this.tuitionService.createStudyMaterial(user, dto);
   }
 
   @Post('media-upload')
@@ -235,8 +235,9 @@ export class TuitionController {
   async getFees(
     @CurrentUser() user: AuthenticatedUser,
     @Query('batchId') batchId?: string,
+    @Query('limit') limit?: string,
   ) {
-    return this.tuitionService.getFeeRecords(user.instituteId, batchId);
+    return this.tuitionService.getFeeRecords(user.instituteId, batchId, limit);
   }
 
   @Roles(...MANAGEMENT_ROLES)

@@ -4,11 +4,13 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  ForbiddenException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import crypto from 'crypto';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { assertDb } from '../common/db/db.js';
-import { hashPassword, passwordPolicyError } from '../common/security/password.js';
+import { hashPassword, verifyPassword, passwordPolicyError } from '../common/security/password.js';
 import type {
   CreateFacultyInvitationDto,
   AcceptFacultyInvitationDto,
@@ -52,13 +54,20 @@ export class FacultyInvitationsService {
 
     const rawToken = crypto.randomBytes(32).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
-    const expiryDays = dto.expiryDays || 7;
+    const expiryDays = Math.min(30, Math.max(1, Math.floor(Number(dto.expiryDays) || 7)));
     const expiresAt = new Date(Date.now() + expiryDays * 24 * 3600 * 1000);
+
+    const email = dto.email.toLowerCase().trim();
+    // A new invitation supersedes earlier pending ones for the same person in this institute.
+    await this.db.facultyInvitation.updateMany({
+      where: { instituteId, email, status: 'PENDING' },
+      data: { status: 'REVOKED', revokedAt: new Date(), revokedById: invitedById },
+    });
 
     const invitation = await this.db.facultyInvitation.create({
       data: {
         instituteId,
-        email: dto.email.toLowerCase().trim(),
+        email,
         fullName: dto.fullName || null,
         tokenHash,
         role: 'FACULTY',
@@ -79,9 +88,44 @@ export class FacultyInvitationsService {
       success: true,
       invitationId: invitation.id,
       token: rawToken,
+      acceptPath: `/join-faculty?token=${rawToken}`,
       email: invitation.email,
       expiresAt: invitation.expiresAt,
+      deliveryStatus: 'NOT_SENT',
     };
+  }
+
+  /** Owner view. Never returns token hashes. */
+  async listInvitations(instituteId: string) {
+    const rows = await this.db.facultyInvitation.findMany({
+      where: { instituteId },
+      select: { id: true, email: true, fullName: true, designation: true, status: true, expiresAt: true, createdAt: true, acceptedAt: true, deliveryStatus: true, resendCount: true },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    });
+    return rows;
+  }
+
+  async revokeInvitation(instituteId: string, id: string, actorId: string) {
+    const res = await this.db.facultyInvitation.updateMany({
+      where: { id, instituteId, status: 'PENDING' },
+      data: { status: 'REVOKED', revokedAt: new Date(), revokedById: actorId },
+    });
+    if (res.count !== 1) throw new NotFoundException('Pending invitation not found.');
+    return { success: true };
+  }
+
+  /** Rotates the token (the old link stops working) and extends the expiry. The new raw token is shown once. */
+  async resendInvitation(instituteId: string, id: string) {
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+    const expiresAt = new Date(Date.now() + 7 * 86_400_000);
+    const res = await this.db.facultyInvitation.updateMany({
+      where: { id, instituteId, status: 'PENDING' },
+      data: { tokenHash, expiresAt, resendCount: { increment: 1 } },
+    });
+    if (res.count !== 1) throw new NotFoundException('Pending invitation not found.');
+    return { success: true, token: rawToken, acceptPath: `/join-faculty?token=${rawToken}`, expiresAt, deliveryStatus: 'NOT_SENT' };
   }
 
   /**
@@ -162,35 +206,40 @@ export class FacultyInvitationsService {
       throw new BadRequestException('This faculty invitation has expired.');
     }
 
-    const passwordHash = await hashPassword(dto.password);
-
     const performAccept = async (tx: any) => {
-      // 1. User creation or linking
-      let user = await tx.user.findUnique({
-        where: { email: invitation.email },
+      // Atomic single-use claim: only one concurrent request can flip PENDING -> ACCEPTED.
+      const claim = await tx.facultyInvitation.updateMany({
+        where: { id: invitation.id, status: 'PENDING', expiresAt: { gt: new Date() } },
+        data: { status: 'ACCEPTED', acceptedAt: new Date() },
       });
+      if (claim.count !== 1) throw new NotFoundException('Invalid or inactive faculty invitation.');
 
+      let user = await tx.user.findUnique({ where: { email: invitation.email } });
       if (!user) {
         user = await tx.user.create({
           data: {
             email: invitation.email,
-            passwordHash,
+            passwordHash: await hashPassword(dto.password),
             fullName: dto.fullName || invitation.fullName || 'Faculty Member',
             role: 'FACULTY',
-            instituteId: invitation.instituteId,
             phone: dto.phone || null,
           },
         });
       } else {
-        user = await tx.user.update({
-          where: { id: user.id },
-          data: {
-            passwordHash,
-            role: 'FACULTY',
-            ...(dto.fullName ? { fullName: dto.fullName } : {}),
-            ...(dto.phone ? { phone: dto.phone } : {}),
-          },
-        });
+        // An existing account is never taken over by whoever holds the link: it must prove ownership with its
+        // current password, which is left unchanged, and its global role is not modified.
+        if (!(await verifyPassword(dto.password, user.passwordHash))) {
+          throw new UnauthorizedException('An account with this email already exists. Enter its current password to accept.');
+        }
+        if (!user.isActive) throw new ForbiddenException('This account is deactivated.');
+      }
+
+      const existingMembership = await tx.instituteMembership.findUnique({
+        where: { instituteId_userId: { instituteId: invitation.instituteId, userId: user.id } },
+        select: { role: true },
+      });
+      if (existingMembership && !['FACULTY', 'TEACHER'].includes(existingMembership.role)) {
+        throw new ForbiddenException('This account already holds a different role in the institute.');
       }
 
       // 2. Upsert InstituteMembership
@@ -214,13 +263,10 @@ export class FacultyInvitationsService {
       });
 
       // 3. Upsert FacultyProfile
-      const staffId = `FAC-${Date.now().toString().slice(-4)}`;
+      const staffId = `FAC-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
       await tx.facultyProfile.upsert({
-        where: {
-          userId: user.id,
-        },
+        where: { instituteId_userId: { instituteId: invitation.instituteId, userId: user.id } },
         update: {
-          instituteId: invitation.instituteId,
           designation: invitation.designation,
           assignedSubjects: invitation.assignedSubjects,
           delegatedPermissions: invitation.delegatedPermissions,
@@ -245,7 +291,8 @@ export class FacultyInvitationsService {
 
       // 4. Assign batch faculty if batches were delegated
       if (invitation.batchIds && invitation.batchIds.length > 0 && tx.batchFaculty?.upsert) {
-        for (const batchId of invitation.batchIds) {
+        const valid = await tx.batch.findMany({ where: { id: { in: invitation.batchIds }, instituteId: invitation.instituteId }, select: { id: true } });
+        for (const { id: batchId } of valid) {
           await tx.batchFaculty.upsert({
             where: {
               batchId_facultyId: {
@@ -258,6 +305,7 @@ export class FacultyInvitationsService {
               batchId,
               facultyId: user.id,
               instituteId: invitation.instituteId,
+              assignedBy: invitation.invitedById,
             },
           });
         }
@@ -266,11 +314,7 @@ export class FacultyInvitationsService {
       // 5. Mark invitation accepted
       await tx.facultyInvitation.update({
         where: { id: invitation.id },
-        data: {
-          status: 'ACCEPTED',
-          acceptedAt: new Date(),
-          acceptedUserId: user.id,
-        },
+        data: { acceptedUserId: user.id },
       });
 
       return {

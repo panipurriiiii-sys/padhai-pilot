@@ -16,6 +16,7 @@ describe('TuitionService', () => {
       facultyProfile: {
         findMany: vi.fn(),
         findUnique: vi.fn(),
+        findFirst: vi.fn().mockResolvedValue({ id: 'fp_1' }),
         upsert: vi.fn(),
         update: vi.fn(),
       },
@@ -29,10 +30,14 @@ describe('TuitionService', () => {
       },
       batch: {
         updateMany: vi.fn(),
+        findFirst: vi.fn().mockResolvedValue({ id: 'batch_1', instituteId: 'inst_1', name: 'JEE Advanced Physics', teacherId: 'faculty_1', isActive: true }),
       },
       salaryRecord: {
         findMany: vi.fn(),
         findUnique: vi.fn(),
+        findUniqueOrThrow: vi.fn(),
+        create: vi.fn(),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
         upsert: vi.fn(),
         update: vi.fn(),
       },
@@ -140,7 +145,7 @@ describe('TuitionService', () => {
   // --------------------------------------------------------------------------
   describe('Salary Calculations & Net Payable', () => {
     it('should calculate net payable correctly: base + additions - deductions - advances', async () => {
-      mockPrisma.salaryRecord.upsert.mockResolvedValue({
+      mockPrisma.salaryRecord.create.mockResolvedValue({
         id: 'sal_1',
         instituteId: 'inst_1',
         facultyId: 'user_1',
@@ -182,7 +187,7 @@ describe('TuitionService', () => {
         remarks: 'October Salary',
       });
 
-      mockPrisma.salaryRecord.update.mockResolvedValue({
+      mockPrisma.salaryRecord.findUniqueOrThrow.mockResolvedValue({
         id: 'sal_1',
         instituteId: 'inst_1',
         facultyId: 'user_1',
@@ -325,7 +330,7 @@ describe('TuitionService', () => {
         faculty: { id: 'faculty_1', fullName: 'Prof. Rajesh Sharma' },
       });
 
-      const diary = await service.createTeachingDiary('inst_1', 'faculty_1', {
+      const diary = await service.createTeachingDiary({ id: 'faculty_1', role: 'TUITION_OWNER', instituteId: 'inst_1' } as any, {
         batchId: 'batch_1',
         lessonDate: '2026-10-29',
         subject: 'Physics',

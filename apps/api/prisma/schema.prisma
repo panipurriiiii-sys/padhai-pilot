@@ -117,6 +117,7 @@ model Institute {
   studentDocuments      StudentDocument[]
   facultyInvitations    FacultyInvitation[]
   outboxMessages        NotificationOutbox[]
+  batchPromotions       BatchPromotion[]
 
   @@index([slug])
   @@index([ownerId])
@@ -194,17 +195,21 @@ model InstituteMembership {
 }
 
 model Batch {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   instituteId String
   name        String
   code        String
   subject     String
   gradeLevel  String
   room        String?
+  // Free-text weekly schedule summary shown on batch cards (e.g. "Mon/Wed/Fri 6-7:30 PM"). Optional.
+  schedule    String?
   teacherId   String
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isActive    Boolean   @default(true)
+  // Set when the batch is archived (isActive=false). Archiving never deletes enrolments or history.
+  archivedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   institute             Institute                     @relation(fields: [instituteId], references: [id], onDelete: Cascade)
   teacher               User                          @relation("TeacherBatches", fields: [teacherId], references: [id])
@@ -223,6 +228,8 @@ model Batch {
   facultyAssignments    BatchFaculty[]
   attendanceCorrections AttendanceCorrectionRequest[]
   academicQueries       AcademicQuery[]
+  promotionsOut         BatchPromotion[]              @relation("PromotionSource")
+  promotionsIn          BatchPromotion[]              @relation("PromotionTarget")
 
   @@index([instituteId])
   @@index([teacherId])
@@ -230,13 +237,16 @@ model Batch {
 }
 
 model Enrollment {
-  id          String   @id @default(cuid())
-  instituteId String
-  batchId     String
-  studentId   String
-  rollNumber  String
-  status      String   @default("ACTIVE")
-  joinedAt    DateTime @default(now())
+  id                  String    @id @default(cuid())
+  instituteId         String
+  batchId             String
+  studentId           String
+  rollNumber          String
+  status              String    @default("ACTIVE") // ACTIVE, PROMOTED (moved to the next batch), REMOVED
+  joinedAt            DateTime  @default(now())
+  // Promotion history: a PROMOTED row is closed with endedAt; the new row records where it came from.
+  endedAt             DateTime?
+  promotedFromBatchId String?
 
   institute Institute @relation(fields: [instituteId], references: [id], onDelete: Cascade)
   batch     Batch     @relation(fields: [batchId], references: [id], onDelete: Cascade)
@@ -251,16 +261,20 @@ model Enrollment {
 }
 
 model InvitationCode {
-  id          String   @id @default(cuid())
-  code        String   @unique
+  id          String    @id @default(cuid())
+  code        String    @unique
   instituteId String
   batchId     String?
   issuerId    String
-  maxUses     Int      @default(100)
-  usedCount   Int      @default(0)
-  expiresAt   DateTime
-  isRevoked   Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  maxUses     Int       @default(100)
+  usedCount   Int       @default(0)
+  // null = the code never expires (the default). A teacher may set or clear the expiry at any time.
+  expiresAt   DateTime?
+  isRevoked   Boolean   @default(false)
+  revokedAt   DateTime?
+  label       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now()) @updatedAt
 
   institute Institute @relation(fields: [instituteId], references: [id], onDelete: Cascade)
   batch     Batch?    @relation(fields: [batchId], references: [id], onDelete: SetNull)
@@ -269,6 +283,7 @@ model InvitationCode {
   @@index([instituteId])
   @@index([code])
   @@index([issuerId])
+  @@index([batchId])
 }
 
 model AttendanceSession {
@@ -445,7 +460,9 @@ model TimetableSlot {
   startTime   String
   endTime     String
   room        String?
+  notes       String?
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
 
   institute Institute @relation(fields: [instituteId], references: [id], onDelete: Cascade)
   batch     Batch     @relation(fields: [batchId], references: [id], onDelete: Cascade)
@@ -454,6 +471,7 @@ model TimetableSlot {
   @@index([instituteId])
   @@index([batchId])
   @@index([teacherId])
+  @@index([instituteId, dayOfWeek])
 }
 
 model Announcement {
@@ -472,6 +490,7 @@ model Announcement {
 
   @@index([instituteId])
   @@index([batchId])
+  @@index([instituteId, createdAt])
 }
 
 model AuditLog {
@@ -1138,6 +1157,28 @@ model TestAttemptAnswer {
   @@unique([attemptId, questionId])
   @@index([questionId])
   @@index([studentId])
+}
+
+/// Audit/history row for "promote batch to next class". Enrolment history itself lives on Enrollment
+/// (status PROMOTED + endedAt on the source row, promotedFromBatchId on the new row).
+model BatchPromotion {
+  id             String   @id @default(cuid())
+  instituteId    String
+  sourceBatchId  String
+  targetBatchId  String
+  promotedById   String
+  movedCount     Int      @default(0)
+  skippedCount   Int      @default(0)
+  archivedSource Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  institute Institute @relation(fields: [instituteId], references: [id], onDelete: Cascade)
+  source    Batch     @relation("PromotionSource", fields: [sourceBatchId], references: [id], onDelete: Cascade)
+  target    Batch     @relation("PromotionTarget", fields: [targetBatchId], references: [id], onDelete: Cascade)
+
+  @@index([instituteId, createdAt])
+  @@index([sourceBatchId])
+  @@index([targetBatchId])
 }
 
 model PlatformAnnouncement {

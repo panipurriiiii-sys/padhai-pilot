@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { FacultyInvitationsService } from './faculty-invitations.service.js';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import crypto from 'crypto';
 
 describe('FacultyInvitationsService', () => {
@@ -17,6 +17,7 @@ describe('FacultyInvitationsService', () => {
         create: vi.fn(),
         findUnique: vi.fn(),
         update: vi.fn(),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       user: {
         findUnique: vi.fn(),
@@ -25,6 +26,7 @@ describe('FacultyInvitationsService', () => {
       },
       instituteMembership: {
         upsert: vi.fn(),
+        findUnique: vi.fn().mockResolvedValue(null),
       },
       facultyProfile: {
         upsert: vi.fn(),
@@ -192,12 +194,36 @@ describe('FacultyInvitationsService', () => {
         }),
       );
       expect(mockPrisma.facultyProfile.upsert).toHaveBeenCalled();
-      expect(mockPrisma.facultyInvitation.update).toHaveBeenCalledWith(
+      expect(mockPrisma.facultyInvitation.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: 'inv_accept_1' },
+          where: expect.objectContaining({ id: 'inv_accept_1', status: 'PENDING' }),
           data: expect.objectContaining({ status: 'ACCEPTED' }),
         }),
       );
+      expect(mockPrisma.facultyProfile.upsert.mock.calls[0][0].where).toEqual({
+        instituteId_userId: { instituteId: 'inst_apex', userId: 'usr_new_fac' },
+      });
+    });
+
+    const pendingInvite = (rawToken: string) => ({
+      id: 'inv_2', instituteId: 'inst_apex', email: 'existing@example.com', fullName: 'E', tokenHash: crypto.createHash('sha256').update(rawToken).digest('hex'),
+      designation: 'Lecturer', assignedSubjects: [], batchIds: [], delegatedPermissions: [], compensationType: 'FIXED_MONTHLY',
+      baseSalary: 0, hourlyRate: 0, status: 'PENDING', expiresAt: new Date(Date.now() + 86400000),
+    });
+
+    it('does not let the link holder take over an existing account (password must match, hash untouched)', async () => {
+      mockPrisma.facultyInvitation.findUnique.mockResolvedValue(pendingInvite('tok_existing_account_0123456789'));
+      mockPrisma.user.findUnique.mockResolvedValue({ id: 'u9', email: 'existing@example.com', passwordHash: 'not-a-real-hash', isActive: true });
+      await expect(service.acceptInvitation({ token: 'tok_existing_account_0123456789', password: 'SomeOtherPass123!' })).rejects.toThrow(UnauthorizedException);
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+      expect(mockPrisma.instituteMembership.upsert).not.toHaveBeenCalled();
+    });
+
+    it('is single use: a lost atomic claim rejects the second acceptance', async () => {
+      mockPrisma.facultyInvitation.findUnique.mockResolvedValue(pendingInvite('tok_single_use_0123456789abcdef'));
+      mockPrisma.facultyInvitation.updateMany.mockResolvedValue({ count: 0 });
+      await expect(service.acceptInvitation({ token: 'tok_single_use_0123456789abcdef', password: 'SecurePassword123!' })).rejects.toThrow(NotFoundException);
+      expect(mockPrisma.user.create).not.toHaveBeenCalled();
     });
 
     it('should reject passwords that do not meet policy', async () => {

@@ -144,7 +144,7 @@ export class StudentService {
   // ==========================================================================
   async validateInvitation(code: string) {
     const db = this.access.db();
-    const clean = requireString(code, 'Invitation code', 64);
+    const clean = requireString(code, 'Invitation code', 64).toUpperCase();
     const inv = await db.invitationCode.findUnique({
       where: { code: clean },
       select: {
@@ -156,10 +156,10 @@ export class StudentService {
         usedCount: true,
         maxUses: true,
         institute: { select: { name: true, isActive: true } },
-        batch: { select: { name: true, subject: true, gradeLevel: true } },
+        batch: { select: { name: true, subject: true, gradeLevel: true, isActive: true } },
       },
     });
-    if (!inv || inv.isRevoked || !inv.institute.isActive || inv.expiresAt < new Date() || inv.usedCount >= inv.maxUses) {
+    if (!inv || inv.isRevoked || !inv.institute.isActive || (inv.batch && !inv.batch.isActive) || (inv.expiresAt && inv.expiresAt < new Date()) || inv.usedCount >= inv.maxUses) {
       throw new BadRequestException('This invitation code is invalid, expired, or has reached its usage limit.');
     }
     return {
@@ -171,7 +171,7 @@ export class StudentService {
       batchName: inv.batch?.name || 'Classroom Batch',
       subject: inv.batch?.subject || 'All Subjects',
       gradeLevel: inv.batch?.gradeLevel || 'Standard Batch',
-      expiresAt: inv.expiresAt.toISOString(),
+      expiresAt: inv.expiresAt ? inv.expiresAt.toISOString() : null,
     };
   }
 
@@ -182,7 +182,7 @@ export class StudentService {
    */
   async joinInstitute(user: AuthenticatedUser, code: string): Promise<StudentJoinBatchResult> {
     const db = this.access.db();
-    const clean = requireString(code, 'Invitation code', 64);
+    const clean = requireString(code, 'Invitation code', 64).toUpperCase();
     const invalid = () => new BadRequestException('This invitation code is invalid, expired, or has reached its usage limit.');
 
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -196,10 +196,10 @@ export class StudentService {
               batchId: true,
               maxUses: true,
               institute: { select: { name: true, isActive: true } },
-              batch: { select: { name: true } },
+              batch: { select: { name: true, isActive: true } },
             },
           });
-          if (!inv || !inv.institute.isActive) throw invalid();
+          if (!inv || !inv.institute.isActive || (inv.batch && !inv.batch.isActive)) throw invalid();
 
           // Staff of an institute can never be turned into (or mixed up with) a student of it.
           const membership = await tx.instituteMembership.findUnique({
@@ -220,7 +220,12 @@ export class StudentService {
 
           if (!alreadyEnrolled) {
             const claimed = await tx.invitationCode.updateMany({
-              where: { id: inv.id, isRevoked: false, expiresAt: { gt: new Date() }, usedCount: { lt: inv.maxUses } },
+              where: {
+                id: inv.id,
+                isRevoked: false,
+                OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+                usedCount: { lt: inv.maxUses },
+              },
               data: { usedCount: { increment: 1 } },
             });
             if (claimed.count !== 1) throw invalid();
