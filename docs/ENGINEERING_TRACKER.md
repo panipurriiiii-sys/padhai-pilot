@@ -22,6 +22,20 @@ API project env: `DATABASE_URL`, `DATABASE_URL_POOLED`, `JWT_SECRET` (production
 https://adminpadhai-pilot-pi.vercel.app,https://adminpadhai-pilot-bhau-ki-team.vercel.app,https://studentpadhai-pilot.vercel.app,https://studentpadhai-pilot-bhau-ki-team.vercel.app,https://padhai-pilot-grwp.vercel.app,https://padhai-pilot-grwp-bhau-ki-team.vercel.app,https://padhaipilot.vercel.app,https://padhaipilot-bhau-ki-team.vercel.app
 ```
 
+## Status update (end of session 1)
+
+Verified live on 2026-10-31: `CORS_ORIGINS` is set on the API project and deployed (commit `75782fc` on `main`); `/api/health` 200; the four portal origins pass preflight; an unlisted origin gets 403; every portal URL returns 200. A browser login through each portal has not been tested. `JWT_SECRET` was rotated by the owner.
+
+Background agents were started and push to their own branches (never `main`). When they finish, review and merge in this order — the backend owns `schema.prisma`, so it goes first:
+
+1. `backend-core` — real Prisma services, offline migrations, faculty invitations, analytics endpoints. Needs the owner-run migration steps in `docs/database-and-migrations.md` (backup, rehearse on a throwaway DB, `migrate resolve`, `migrate deploy`) before it can be deployed.
+2. `design-system-sync` — shared tokens, runtime theme config. Its theme-config Prisma models must be merged into the schema through the backend branch.
+3. `premium-components` — SVG library, motion, charts, 3D. Merge after 2 (it builds on the shared tokens).
+
+Owner actions still open: create the first Super Admin (`SUPER_ADMIN_EMAIL`, `SUPER_ADMIN_PASSWORD` of 12+ characters, `npm run bootstrap:admin --workspace=@padhai-pilot/api`, run locally against production); set the API function `maxDuration` to 30 s in Project Settings → Functions; provide a throwaway PostgreSQL URL to rehearse migrations; later, object storage, email/push provider, Android signing keystore.
+
+Not started: T-07 to T-12 (Teacher/Student/Admin portal completion on the real services, mobile secure storage + push + Android release build, independent QA, DevOps runbook). They depend on `backend-core`.
+
 ## Ownership (to avoid conflicting versions of shared contracts)
 
 | Area | Owner |
