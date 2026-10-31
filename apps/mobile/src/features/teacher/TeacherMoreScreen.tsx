@@ -19,7 +19,9 @@ import {
   useTeacherAnnouncements,
   useTeacherAssignments,
   useTeacherTimetable,
+  useTimetableMutations,
 } from '../../hooks/useTeacherData';
+import type { TimetableConflictError, WeekDay } from '@padhai-pilot/shared';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useTheme } from '../../theme/ThemeContext';
 import { errorMessage, formatDate, formatInr, todayIso } from '../../lib/format';
@@ -162,19 +164,95 @@ const Announcements: React.FC = () => {
   );
 };
 
+const DAYS: WeekDay[] = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
+const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+
 const Timetable: React.FC = () => {
-  const q = useTeacherTimetable();
+  const { spacing } = useTheme();
+  const [batchId, setBatchId] = useState<string>();
+  const q = useTeacherTimetable(batchId);
+  const { create, update, remove } = useTimetableMutations();
+  const [editId, setEditId] = useState<string | null>(null);
+  const [subject, setSubject] = useState('');
+  const [day, setDay] = useState<WeekDay>('MONDAY');
+  const [start, setStart] = useState('16:00');
+  const [end, setEnd] = useState('17:00');
+  const [room, setRoom] = useState('');
+  const valid = !!batchId && !!subject.trim() && HHMM.test(start) && HHMM.test(end) && end > start;
+  const reset = () => { setEditId(null); setSubject(''); setRoom(''); };
+  const conflictText = (e: unknown) => {
+    const payload = (e as { errorPayload?: TimetableConflictError })?.errorPayload;
+    if (payload?.conflicts?.length) {
+      return payload.conflicts
+        .map((c) => `${c.kind.toLowerCase()} clash with ${c.batchName} ${c.startTime}-${c.endTime}`)
+        .join(', ');
+    }
+    return errorMessage(e);
+  };
+  const submit = () => {
+    const data = { subject: subject.trim(), dayOfWeek: day, startTime: start, endTime: end, room: room.trim() || undefined };
+    const opts = { onSuccess: reset, onError: (e: unknown) => Alert.alert('Could not save slot', conflictText(e)) };
+    if (editId) update.mutate({ slotId: editId, data }, opts);
+    else create.mutate({ batchId: batchId as string, data }, opts);
+  };
   return (
-    <QueryBoundary query={q} isEmpty={(t) => t.length === 0} emptyTitle="No timetable" emptyDescription="Your owner has not scheduled classes for you yet.">
-      {(slots) =>
-        slots.map((s) => (
-          <Card key={s.id} style={{ marginBottom: 8 }}>
-            <Subtitle>{`${s.subject} Â· ${s.batchName}`}</Subtitle>
-            <Caption>{`${s.dayOfWeek} ${s.startTime}â€“${s.endTime}${s.room ? ` Â· ${s.room}` : ''}`}</Caption>
-          </Card>
-        ))
-      }
-    </QueryBoundary>
+    <>
+      <BatchPicker value={batchId} onChange={setBatchId} />
+      <Card style={{ marginBottom: 16 }}>
+        <Subtitle>{editId ? 'Edit slot' : 'New weekly slot'}</Subtitle>
+        <Input label="Subject" value={subject} onChangeText={setSubject} />
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: spacing.md }}>
+          {DAYS.map((d) => (
+            <Button key={d} size="sm" variant={day === d ? 'primary' : 'outline'} title={d.slice(0, 3)} onPress={() => setDay(d)} />
+          ))}
+        </View>
+        <Input label="Start (HH:mm)" value={start} onChangeText={setStart} autoCapitalize="none" />
+        <Input label="End (HH:mm)" value={end} onChangeText={setEnd} autoCapitalize="none" />
+        <Input label="Room" value={room} onChangeText={setRoom} />
+        <Button
+          title={editId ? 'Save slot' : 'Add slot'}
+          disabled={!valid}
+          loading={create.isPending || update.isPending}
+          onPress={submit}
+        />
+        {editId ? <Button title="Cancel edit" variant="ghost" size="sm" onPress={reset} /> : null}
+        {!batchId ? <Caption>Select a batch above to add slots.</Caption> : null}
+      </Card>
+      <QueryBoundary query={q} isEmpty={(t) => t.length === 0} emptyTitle="No timetable" emptyDescription="Add the weekly classes for a batch; students see them instantly.">
+        {(slots) =>
+          [...slots]
+            .sort((a, b) => DAYS.indexOf(a.dayOfWeek) - DAYS.indexOf(b.dayOfWeek) || a.startTime.localeCompare(b.startTime))
+            .map((s) => (
+              <Card key={s.id} style={{ marginBottom: 8 }}>
+                <Subtitle>{`${s.subject} · ${s.batchName}`}</Subtitle>
+                <Caption>{`${s.dayOfWeek} ${s.startTime}–${s.endTime}${s.room ? ` · ${s.room}` : ''}`}</Caption>
+                <View style={[styles.between, { justifyContent: 'flex-start', marginTop: 8 }]}>
+                  <Button
+                    title="Edit"
+                    size="sm"
+                    variant="outline"
+                    onPress={() => {
+                      setBatchId(s.batchId); setEditId(s.id); setSubject(s.subject); setDay(s.dayOfWeek);
+                      setStart(s.startTime); setEnd(s.endTime); setRoom(s.room ?? '');
+                    }}
+                  />
+                  <Button
+                    title="Delete"
+                    size="sm"
+                    variant="outline"
+                    onPress={() =>
+                      Alert.alert('Delete slot?', `${s.subject} on ${s.dayOfWeek}`, [
+                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'Delete', style: 'destructive', onPress: () => remove.mutate(s.id, { onError: (e) => Alert.alert('Could not delete', errorMessage(e)) }) },
+                      ])
+                    }
+                  />
+                </View>
+              </Card>
+            ))
+        }
+      </QueryBoundary>
+    </>
   );
 };
 

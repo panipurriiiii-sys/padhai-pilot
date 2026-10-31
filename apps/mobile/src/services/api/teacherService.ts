@@ -22,6 +22,21 @@ import type {
   TeacherDashboardMetrics,
   TestQuiz,
   TimetableSlot,
+  BatchRoster,
+  BroadcastItem,
+  CreateBatchPayload,
+  CreateBroadcastPayload,
+  CreateBroadcastResult,
+  CreateEnrollmentCodePayload,
+  CreateTimetableSlotPayload,
+  EnrollmentCode,
+  PromoteBatchPayload,
+  PromoteBatchResult,
+  TeacherBatch,
+  TimetableSlotItem,
+  UpdateBatchPayload,
+  UpdateEnrollmentCodePayload,
+  UpdateTimetableSlotPayload,
 } from '@padhai-pilot/shared';
 
 export type {
@@ -47,12 +62,22 @@ export type {
   TeacherDashboardMetrics,
   TestQuiz,
   TimetableSlot,
+  BatchRoster,
+  BroadcastItem,
+  CreateBatchPayload,
+  CreateBroadcastPayload,
+  CreateBroadcastResult,
+  CreateEnrollmentCodePayload,
+  CreateTimetableSlotPayload,
+  EnrollmentCode,
+  PromoteBatchPayload,
+  PromoteBatchResult,
+  TeacherBatch,
+  TimetableSlotItem,
+  UpdateBatchPayload,
+  UpdateEnrollmentCodePayload,
+  UpdateTimetableSlotPayload,
 };
-
-export interface BatchRoster {
-  batch: BatchSummary;
-  students: StudentRosterItem[];
-}
 
 const list = <T>(value: T[] | null | undefined): T[] => (Array.isArray(value) ? value : []);
 
@@ -64,7 +89,11 @@ const list = <T>(value: T[] | null | undefined): T[] => (Array.isArray(value) ? 
  */
 export const teacherService = {
   getDashboard: () => apiClient.get<TeacherDashboardMetrics>('/teacher/dashboard'),
-  getBatches: async () => list(await apiClient.get<BatchSummary[]>('/teacher/batches')),
+  getBatches: async () => list(await apiClient.get<TeacherBatch[]>('/teacher/batches')),
+  createBatch: (data: CreateBatchPayload) => apiClient.post<TeacherBatch>('/teacher/batches', data),
+  updateBatch: (batchId: string, data: UpdateBatchPayload) => apiClient.patch<TeacherBatch>(`/teacher/batches/${batchId}`, data),
+  promoteBatch: (batchId: string, data: PromoteBatchPayload) =>
+    apiClient.post<PromoteBatchResult>(`/teacher/batches/${batchId}/promote`, data),
   getRoster: (batchId: string) => apiClient.get<BatchRoster>(`/teacher/batches/${batchId}/students`),
 
   // Attendance
@@ -92,6 +121,7 @@ export const teacherService = {
     subject: string;
     dueDate: string;
     maxMarks?: number;
+    attachmentUrl?: string;
   }) => apiClient.post<Assignment>('/teacher/assignments', data),
   getSubmissions: async (assignmentId: string) =>
     list(await apiClient.get<AssignmentSubmission[]>(`/teacher/assignments/${assignmentId}/submissions`)),
@@ -108,17 +138,30 @@ export const teacherService = {
     apiClient.post<LessonPlan>('/teacher/lesson-plans', data),
   toggleLessonPlan: (planId: string) => apiClient.put<LessonPlan>(`/teacher/lesson-plans/${planId}/toggle`, {}),
 
-  // Invitations
-  getInvitations: async () => list(await apiClient.get<InvitationCode[]>('/teacher/invitations')),
-  createInvitation: (data: { batchId?: string; maxUses?: number; expiryDays?: number }) =>
-    apiClient.post<InvitationCode>('/teacher/invitations', data),
-  revokeInvitation: (code: string) => apiClient.post<unknown>(`/teacher/invitations/${encodeURIComponent(code)}/revoke`, {}),
+  // Enrolment codes (no default expiry; share text/link come from the server)
+  getInvitations: async (batchId?: string) =>
+    list(await apiClient.get<EnrollmentCode[]>(`/teacher/invitations${batchId ? `?batchId=${batchId}` : ''}`)),
+  createInvitation: (data: CreateEnrollmentCodePayload) => apiClient.post<EnrollmentCode>('/teacher/invitations', data),
+  updateInvitation: (id: string, data: UpdateEnrollmentCodePayload) =>
+    apiClient.patch<EnrollmentCode>(`/teacher/invitations/${id}`, data),
+  revokeInvitation: (id: string) => apiClient.post<unknown>(`/teacher/invitations/${encodeURIComponent(id)}/revoke`, {}),
+  reactivateInvitation: (id: string) => apiClient.post<EnrollmentCode>(`/teacher/invitations/${id}/reactivate`, {}),
+  regenerateInvitation: (id: string) => apiClient.post<EnrollmentCode>(`/teacher/invitations/${id}/regenerate`, {}),
 
-  // Timetable & announcements
-  getTimetable: async () => list(await apiClient.get<TimetableSlot[]>('/teacher/timetable')),
-  getAnnouncements: async () => list(await apiClient.get<AnnouncementItem[]>('/teacher/announcements')),
-  createAnnouncement: (data: { batchId?: string; title: string; content: string; priority?: 'NORMAL' | 'URGENT' }) =>
-    apiClient.post<AnnouncementItem>('/teacher/announcements', data),
+  // Weekly timetable CRUD (per batch)
+  getTimetable: async (batchId?: string) =>
+    list(await apiClient.get<TimetableSlotItem[]>(`/teacher/timetable${batchId ? `?batchId=${batchId}` : ''}`)),
+  createSlot: (batchId: string, data: CreateTimetableSlotPayload) =>
+    apiClient.post<TimetableSlotItem>(`/teacher/batches/${batchId}/timetable`, data),
+  updateSlot: (slotId: string, data: UpdateTimetableSlotPayload) =>
+    apiClient.patch<TimetableSlotItem>(`/teacher/timetable/${slotId}`, data),
+  deleteSlot: (slotId: string) => apiClient.delete<{ success: boolean }>(`/teacher/timetable/${slotId}`),
+
+  // Academic broadcast
+  getAnnouncements: async (batchId?: string) =>
+    list(await apiClient.get<BroadcastItem[]>(`/teacher/announcements${batchId ? `?batchId=${batchId}` : ''}`)),
+  createAnnouncement: (data: CreateBroadcastPayload) => apiClient.post<CreateBroadcastResult>('/teacher/announcements', data),
+  deleteAnnouncement: (id: string) => apiClient.delete<{ success: boolean }>(`/teacher/announcements/${id}`),
 
   // Daily teaching diary & study material (tuition module)
   getDiaries: async () => list(await apiClient.get<DailyTeachingDiaryEntry[]>('/tuition/diaries')),
