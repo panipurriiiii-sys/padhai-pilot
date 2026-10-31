@@ -377,3 +377,4 @@ export * from './student.js';
 export * from './academic.js';
 
 export * from './analytics.js';
+export * from './finance.js';
