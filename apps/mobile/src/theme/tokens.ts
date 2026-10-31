@@ -44,7 +44,7 @@ export interface ThemeColors {
 
 // Light AK Paper-Desk Palette (Exact 1:1 match with Web apps/teacher & apps/student)
 export const lightColors: ThemeColors = {
-  background: '#F8F6F0',        // --bg-desk (warm paper desk surface)
+  background: '#F8F7F4',        // --bg-desk (warm paper desk surface)
   surface: '#FFFFFF',           // --bg-paper (crisp white sheet, card base)
   surfaceSubtle: '#FAF8F5',     // --bg-paper-warm (warm cream container base)
   surfaceElevated: '#F3EFE9',   // --bg-surface-subtle (recessed tag surface)
@@ -143,37 +143,24 @@ export const radii = {
   none: 0,
   xs: 4,
   sm: 6,
-  md: 10,
-  lg: 14,
+  md: 12,
+  lg: 16,
   xl: 20,
   full: 9999,
 } as const;
 
 export const typography = {
   fonts: {
-    // 1. Playfair Display — for premium headings and titles
-    display: Platform.select({
-      ios: 'Playfair Display',
-      android: 'serif',
-      default: 'serif',
-    }),
-    // 2. Raleway — for primary interface, labels, buttons, navigation
-    ui: Platform.select({
-      ios: 'Raleway',
-      android: 'sans-serif',
-      default: 'sans-serif',
-    }),
-    uiBold: Platform.select({
-      ios: 'Raleway-Bold',
-      android: 'sans-serif-medium',
-      default: 'sans-serif',
-    }),
-    // 3. Inter — for data, numbers, marks, tables, and compact metadata
-    data: Platform.select({
-      ios: 'Inter',
-      android: 'sans-serif',
-      default: 'monospace',
-    }),
+    // The three permitted families, bundled from assets/fonts (same faces the web portals load).
+    // Android resolves fonts/<Family>.ttf (regular) and fonts/<Family>_bold.ttf (fontWeight 700);
+    // iOS resolves the family name registered in Info.plist.
+    // 1. Playfair Display: premium headings and titles
+    display: Platform.select({ ios: 'Playfair Display', default: 'PlayfairDisplay' }),
+    // 2. Raleway: primary interface, labels, buttons, navigation
+    ui: 'Raleway',
+    uiBold: 'Raleway',
+    // 3. Inter: data, numbers, marks, tables, compact metadata
+    data: 'Inter',
   },
   sizes: {
     xs: 11,
