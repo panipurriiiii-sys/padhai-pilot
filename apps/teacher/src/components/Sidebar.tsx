@@ -58,8 +58,8 @@ interface SidebarProps {
 export function Sidebar({
   currentTab,
   onSelectTab,
-  teacherName = 'Faculty Member',
-  instituteName = 'PadhaiPilot Academy',
+  teacherName = '',
+  instituteName = '',
   userRole = 'TEACHER',
   onOpenAuthModal,
 }: SidebarProps) {
@@ -84,6 +84,7 @@ export function Sidebar({
         { id: 'invitations' as NavTab, label: 'Student Invites', icon: KeyRound },
         { id: 'timetable' as NavTab, label: 'Timetable', icon: Clock },
         { id: 'announcements' as NavTab, label: 'Announcements', icon: Megaphone },
+        { id: 'reports' as NavTab, label: 'Reports & Charts', icon: BarChart3 },
       ],
     },
 
@@ -98,7 +99,6 @@ export function Sidebar({
               { id: 'facultySalary' as NavTab, label: 'Salary & Payroll', icon: CreditCard, badge: 'Ledger' },
               { id: 'facultyLeave' as NavTab, label: 'Leave Applications', icon: CalendarDays },
               { id: 'studentFees' as NavTab, label: 'Fee Dues & Alerts', icon: IndianRupee },
-              { id: 'reports' as NavTab, label: 'Reports & Analytics', icon: BarChart3 },
             ],
           },
         ]

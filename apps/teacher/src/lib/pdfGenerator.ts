@@ -26,7 +26,7 @@ export interface GeneratePdfOptions {
 export function generateAssessmentResultPdf({
   assessment,
   roster,
-  instituteName = 'PadhaiPilot Tuition Institute',
+  instituteName = '',
 }: GeneratePdfOptions): jsPDF {
   // Use landscape if more than 3 subjects for wide table readability
   const isMulti = assessment.isMultiSubject && (assessment.subjects?.length ?? 0) > 0;

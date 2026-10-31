@@ -15,6 +15,7 @@ import {
   Filter,
 } from 'lucide-react';
 import { teacherApi } from '../lib/api';
+import { LoadError } from './LoadError';
 import type {
   FacultyLeaveItem,
   ApplyFacultyLeaveDto,
@@ -35,6 +36,7 @@ export function FacultyLeaveView({
   const [leaves, setLeaves] = useState<FacultyLeaveItem[]>([]);
   const [faculties, setFaculties] = useState<FacultyMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'roster' | 'apply'>('roster');
 
   // Review Modal
@@ -60,6 +62,7 @@ export function FacultyLeaveView({
 
   async function loadData() {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const [leaveList, facList] = await Promise.all([
         teacherApi.getLeaves(),
@@ -70,6 +73,8 @@ export function FacultyLeaveView({
       if (facList.length > 0) {
         setSubstituteFacultyId(facList[0].userId);
       }
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : 'Could not load this section.');
     } finally {
       setIsLoading(false);
     }
@@ -201,7 +206,9 @@ export function FacultyLeaveView({
       {/* ------------------------------------------------------------------- */}
       {activeTab === 'roster' && (
         <div className="paper-card overflow-hidden">
-          {isLoading ? (
+          {loadError ? (
+            <LoadError message={loadError} onRetry={loadData} />
+          ) : isLoading ? (
             <div className="p-12 text-center text-xs font-['Raleway'] text-[var(--ink-muted)]">
               Loading leave applications...
             </div>

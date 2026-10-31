@@ -19,6 +19,7 @@ import {
   Plus,
 } from 'lucide-react';
 import { teacherApi } from '../lib/api';
+import { LoadError } from './LoadError';
 import type {
   SalaryStatementItem,
   FacultyMember,
@@ -32,13 +33,14 @@ interface FacultySalaryViewProps {
 }
 
 export function FacultySalaryView({
-  instituteName = 'PadhaiPilot Academy',
+  instituteName = '',
 }: FacultySalaryViewProps) {
   const [salaries, setSalaries] = useState<SalaryStatementItem[]>([]);
   const [faculties, setFaculties] = useState<FacultyMember[]>([]);
   const [profile, setProfile] = useState<TuitionBrandingProfile | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<string>('2026-10');
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Modals
   const [showGenerateModal, setShowGenerateModal] = useState(false);
@@ -75,6 +77,7 @@ export function FacultySalaryView({
 
   async function loadData() {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const [salList, facList, prof] = await Promise.all([
         teacherApi.getSalaries(selectedPeriod),
@@ -92,6 +95,8 @@ export function FacultySalaryView({
           compensationModel: facList[0].compensationType,
         }));
       }
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : 'Could not load this section.');
     } finally {
       setIsLoading(false);
     }
@@ -241,7 +246,11 @@ export function FacultySalaryView({
           </span>
         </div>
 
-        {isLoading ? (
+        {loadError ? (
+
+          <LoadError message={loadError} onRetry={loadData} />
+
+        ) : isLoading ? (
           <div className="p-12 text-center text-xs font-['Raleway'] text-[var(--ink-muted)]">
             Loading salary records...
           </div>
@@ -499,7 +508,7 @@ export function FacultySalaryView({
             <div className="flex items-end justify-between pt-8 border-t border-[var(--border-paper)] text-xs font-['Raleway']">
               <div>
                 <p className="text-[10px] text-[var(--ink-muted)]">
-                  System Generated via PadhaiPilot Coaching ERP
+                  System generated
                 </p>
                 <p className="font-['Inter'] text-[10px] text-[var(--ink-faint)]">
                   Generated: {new Date().toLocaleDateString('en-IN')}

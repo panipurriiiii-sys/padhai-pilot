@@ -55,27 +55,6 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
     }
   };
 
-  const handleQuickDemo = async (role: 'TEACHER' | 'TUITION_OWNER' | 'SUPER_ADMIN') => {
-    setIsLoading(true);
-    setErrorMsg('');
-    try {
-      let res: { user: UserSession; token: string };
-      if (role === 'TUITION_OWNER') {
-        res = await teacherApi.loginDemoOwner();
-      } else if (role === 'SUPER_ADMIN') {
-        res = await teacherApi.loginDemoAdmin();
-      } else {
-        res = await teacherApi.loginDemoTeacher();
-      }
-      onAuthSuccess(res.user);
-      onClose();
-    } catch (err) {
-      setErrorMsg((err as Error).message || 'Demo login failed.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -155,56 +134,6 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
             {mode === 'reset' && 'Enter your authorization token and set a new password'}
           </p>
         </div>
-
-        {/* 1-Click Role Fast-Switches */}
-        {mode === 'login' && (
-          <div className="mb-5 p-3 rounded-xl bg-[var(--bg-paper-warm)] border border-[var(--border-paper)]">
-            <div className="text-[10px] font-['Raleway'] font-bold uppercase tracking-wider text-[var(--ink-muted)] mb-2 flex items-center gap-1.5">
-              <Sparkles className="w-3 h-3 text-[var(--brand-electric)]" />
-              <span>Instant Demo Switcher (1-Click)</span>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => handleQuickDemo('TEACHER')}
-                disabled={isLoading}
-                className="p-2 rounded-lg bg-[var(--bg-paper)] border border-[var(--border-paper)] hover:border-[var(--brand-electric)] text-left transition-all group shadow-2xs"
-              >
-                <div className="flex items-center gap-1.5 mb-1 text-[var(--brand-electric)]">
-                  <GraduationCap className="w-3.5 h-3.5" />
-                  <span className="font-bold font-['Raleway'] text-[10px]">Faculty</span>
-                </div>
-                <div className="text-[10px] text-[var(--ink-muted)] truncate">Teacher Demo</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickDemo('TUITION_OWNER')}
-                disabled={isLoading}
-                className="p-2 rounded-lg bg-[var(--bg-paper)] border border-[var(--border-paper)] hover:border-[var(--brand-electric)] text-left transition-all group shadow-2xs"
-              >
-                <div className="flex items-center gap-1.5 mb-1 text-emerald-600">
-                  <Building2 className="w-3.5 h-3.5" />
-                  <span className="font-bold font-['Raleway'] text-[10px]">Owner</span>
-                </div>
-                <div className="text-[10px] text-[var(--ink-muted)] truncate">Owner Demo</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickDemo('SUPER_ADMIN')}
-                disabled={isLoading}
-                className="p-2 rounded-lg bg-[var(--bg-paper)] border border-[var(--border-paper)] hover:border-[var(--brand-electric)] text-left transition-all group shadow-2xs"
-              >
-                <div className="flex items-center gap-1.5 mb-1 text-purple-600">
-                  <ShieldAlert className="w-3.5 h-3.5" />
-                  <span className="font-bold font-['Raleway'] text-[10px]">Admin</span>
-                </div>
-                <div className="text-[10px] text-[var(--ink-muted)] truncate">Admin Demo</div>
-              </button>
-            </div>
-          </div>
-        )}
 
         {errorMsg && (
           <div className="mb-4 p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 flex items-center gap-2">

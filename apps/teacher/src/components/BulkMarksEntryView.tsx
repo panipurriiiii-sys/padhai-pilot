@@ -48,10 +48,12 @@ interface BulkMarksEntryViewProps {
   batches: BatchSummary[];
   selectedBatchId?: string;
   onSelectBatch?: (batchId: string) => void;
+  instituteName?: string;
 }
 
 export function BulkMarksEntryView({
   batches,
+  instituteName,
   selectedBatchId: initialBatchId,
 }: BulkMarksEntryViewProps) {
   // 1. Class & Assessment Setup State
@@ -609,9 +611,8 @@ export function BulkMarksEntryView({
   // -------------------------------------------------------------
   const handleDownloadPdf = () => {
     const currentBatch = batches.find((b) => b.id === selectedBatchId);
-    const instituteName = currentBatch?.name
-      ? `${currentBatch.name} • PadhaiPilot Institute`
-      : 'Apex Academy Kota';
+    // The sheet is branded with the teacher's own institute, never the platform name.
+    const resolvedInstituteName = instituteName || '';
 
     downloadAssessmentResultPdf({
       assessment: {
@@ -626,7 +627,7 @@ export function BulkMarksEntryView({
         passingMarks,
       },
       roster: filteredRoster,
-      instituteName,
+      instituteName: resolvedInstituteName,
     });
   };
 

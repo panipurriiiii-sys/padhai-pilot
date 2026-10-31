@@ -19,6 +19,7 @@ import {
   Plus,
 } from 'lucide-react';
 import { teacherApi } from '../lib/api';
+import { LoadError } from './LoadError';
 import type {
   FacultyMember,
   CreateFacultyDto,
@@ -43,10 +44,11 @@ const ALL_PERMISSIONS: { key: DelegatedPermission; label: string; desc: string }
 
 export function FacultyManagementView({
   batches,
-  instituteName = 'PadhaiPilot Academy',
+  instituteName = '',
 }: FacultyManagementViewProps) {
   const [faculties, setFaculties] = useState<FacultyMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [selectedFaculty, setSelectedFaculty] = useState<FacultyMember | null>(null);
@@ -75,12 +77,15 @@ export function FacultyManagementView({
 
   async function loadFaculties() {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const data = await teacherApi.getFaculties();
       setFaculties(data);
       if (data.length > 0 && !selectedFaculty) {
         setSelectedFaculty(data[0]);
       }
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : 'Could not load this section.');
     } finally {
       setIsLoading(false);
     }
@@ -184,7 +189,11 @@ export function FacultyManagementView({
             />
           </div>
 
-          {isLoading ? (
+          {loadError ? (
+
+            <LoadError message={loadError} onRetry={loadFaculties} />
+
+          ) : isLoading ? (
             <div className="paper-card p-12 text-center text-xs font-['Raleway'] text-[var(--ink-muted)]">
               Loading faculty members...
             </div>

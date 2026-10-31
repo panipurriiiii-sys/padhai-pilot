@@ -16,11 +16,13 @@ import {
 } from 'lucide-react';
 import { teacherApi } from '../lib/api';
 import type { TuitionBrandingProfile, UpdateTuitionBrandingDto } from '@padhai-pilot/shared';
+import { LoadError } from './LoadError';
 
 export function TuitionBrandingView() {
   const [profile, setProfile] = useState<TuitionBrandingProfile | null>(null);
   const [formData, setFormData] = useState<UpdateTuitionBrandingDto>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -30,6 +32,7 @@ export function TuitionBrandingView() {
 
   async function loadProfile() {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const data = await teacherApi.getTuitionProfile();
       setProfile(data);
@@ -47,6 +50,8 @@ export function TuitionBrandingView() {
         signatoryTitle: data.signatoryTitle,
         academicYear: data.academicYear,
       });
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : 'Could not load this section.');
     } finally {
       setIsLoading(false);
     }
@@ -93,7 +98,11 @@ export function TuitionBrandingView() {
         </div>
       </div>
 
-      {isLoading ? (
+      {loadError ? (
+
+        <LoadError message={loadError} onRetry={loadProfile} />
+
+      ) : isLoading ? (
         <div className="paper-card p-12 text-center text-xs font-['Raleway'] text-[var(--ink-muted)]">
           Loading tuition branding profile...
         </div>
@@ -290,7 +299,7 @@ export function TuitionBrandingView() {
                 <div className="flex items-end justify-between pt-4 border-t border-[var(--border-paper)] text-[10px] font-['Raleway']">
                   <div>
                     <span className="text-[var(--ink-faint)] block text-[9px]">
-                      {formData.footerText || 'PadhaiPilot Verified Tuition Institute'}
+                      {formData.footerText || ''}
                     </span>
                     <span className="font-['Inter'] text-[9px] text-[var(--ink-faint)]">
                       Session: {formData.academicYear || '2026-2027'}

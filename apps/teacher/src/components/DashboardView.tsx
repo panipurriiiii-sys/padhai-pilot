@@ -12,19 +12,22 @@ import {
   AlertCircle,
   Plus,
 } from 'lucide-react';
-import type { TeacherDashboardMetrics, TeacherReports } from '@padhai-pilot/shared';
-import { AttendanceTrendCard, BatchAttendanceCard } from './charts';
+import type { TeacherDashboardMetrics, TeacherReports, TeacherAnalyticsSummary } from '@padhai-pilot/shared';
+import { AttendanceTrendCard, BatchAttendanceCard, GradeDistributionCard, SubjectComparisonCard, SubmissionRatesCard, SyllabusCoverageApiCard } from './charts';
 import type { NavTab } from './Sidebar';
 import { CountUp } from './ui/CountUp';
 
 interface DashboardViewProps {
   metrics: TeacherDashboardMetrics;
   reports?: TeacherReports | null;
+  analytics?: TeacherAnalyticsSummary | null;
+  reportsError?: string;
+  analyticsError?: string;
   onNavigate: (tab: NavTab) => void;
   onQuickAttendance: (batchId: string) => void;
 }
 
-export function DashboardView({ metrics, reports, onNavigate, onQuickAttendance }: DashboardViewProps) {
+export function DashboardView({ metrics, reports, analytics, reportsError, analyticsError, onNavigate, onQuickAttendance }: DashboardViewProps) {
   const currentDate = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'short',
@@ -163,12 +166,20 @@ export function DashboardView({ metrics, reports, onNavigate, onQuickAttendance 
       </div>
 
       {/* Attendance trend: from the already-loaded /teacher/reports payload (no extra request) */}
+      {reportsError && <p role="alert" className="text-xs text-rose-700">Attendance charts unavailable: {reportsError}</p>}
       {reports && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <AttendanceTrendCard trends={reports.attendanceTrends} />
           <BatchAttendanceCard rows={reports.batchPerformance} />
         </div>
       )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <GradeDistributionCard analytics={analytics} error={analyticsError} />
+        <SubjectComparisonCard analytics={analytics} error={analyticsError} />
+        <SubmissionRatesCard analytics={analytics} error={analyticsError} />
+        <SyllabusCoverageApiCard analytics={analytics} error={analyticsError} />
+      </div>
 
       {/* Main Content Grid: Schedule & Noticeboard */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

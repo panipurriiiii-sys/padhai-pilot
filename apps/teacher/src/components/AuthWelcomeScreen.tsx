@@ -21,10 +21,11 @@ import type { UserSession } from '@padhai-pilot/shared';
 type AuthTab = 'login' | 'register' | 'forgot' | 'reset';
 
 interface AuthWelcomeScreenProps {
+  notice?: string | null;
   onAuthSuccess: (user: UserSession) => void;
 }
 
-export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
+export function AuthWelcomeScreen({ onAuthSuccess, notice }: AuthWelcomeScreenProps) {
   const [activeTab, setActiveTab] = useState<AuthTab>('login');
 
   // Sign in state
@@ -165,26 +166,6 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
     }
   };
 
-  const handleQuickDemo = async (demoRole: 'TEACHER' | 'TUITION_OWNER' | 'SUPER_ADMIN') => {
-    setIsLoading(true);
-    setErrorMsg('');
-    try {
-      let res;
-      if (demoRole === 'TUITION_OWNER') {
-        res = await teacherApi.loginDemoOwner();
-      } else if (demoRole === 'SUPER_ADMIN') {
-        res = await teacherApi.loginDemoAdmin();
-      } else {
-        res = await teacherApi.loginDemoTeacher();
-      }
-      onAuthSuccess(res.user);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Demo login failed.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-[#FBFBF9] flex flex-col justify-between items-center p-4 sm:p-6 md:p-8 font-['Raleway'] select-none">
       
@@ -261,6 +242,9 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
           )}
 
           {/* Alert Messages */}
+          {notice && !errorMsg && (
+            <div role="status" className="mb-4 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-xs">{notice}</div>
+          )}
           {errorMsg && (
             <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
@@ -651,48 +635,12 @@ export function AuthWelcomeScreen({ onAuthSuccess }: AuthWelcomeScreenProps) {
             </form>
           )}
 
-          {/* Quick 1-Click Sandbox Test Bar */}
-          <div className="mt-6 pt-4 border-t border-[#F0ECE6] flex items-center justify-between text-xs text-stone-400">
-            <span className="font-semibold text-stone-600 flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              <span>Demo Accounts:</span>
-            </span>
-            <div className="flex items-center gap-2 text-stone-600 font-medium text-xs">
-              <button
-                type="button"
-                onClick={() => handleQuickDemo('TEACHER')}
-                disabled={isLoading}
-                className="hover:text-[var(--brand-electric)] hover:underline"
-              >
-                Teacher
-              </button>
-              <span>•</span>
-              <button
-                type="button"
-                onClick={() => handleQuickDemo('TUITION_OWNER')}
-                disabled={isLoading}
-                className="hover:text-[var(--brand-electric)] hover:underline"
-              >
-                Tuition Owner
-              </button>
-              <span>•</span>
-              <button
-                type="button"
-                onClick={() => handleQuickDemo('SUPER_ADMIN')}
-                disabled={isLoading}
-                className="hover:text-[var(--brand-electric)] hover:underline"
-              >
-                Admin
-              </button>
-            </div>
-          </div>
-
         </div>
       </main>
 
       {/* 3. FOOTER */}
       <footer className="w-full max-w-4xl mx-auto py-3 text-center text-xs text-stone-400">
-        <span>PadhaiPilot • Session 2026–27</span>
+        <span>PadhaiPilot Faculty Studio</span>
       </footer>
 
     </div>

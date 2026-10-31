@@ -102,7 +102,7 @@ export function SettingsView({ user, onUpdateUser, onLogout }: SettingsViewProps
               Affiliated Institution
             </span>
             <span className="text-sm font-bold text-stone-900 block">
-              {user.instituteName || 'PadhaiPilot Academy'}
+              {user.instituteName || 'No institute linked'}
             </span>
           </div>
         </div>

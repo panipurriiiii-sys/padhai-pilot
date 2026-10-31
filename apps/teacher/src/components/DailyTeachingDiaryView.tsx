@@ -20,6 +20,7 @@ import {
   FileCheck2,
 } from 'lucide-react';
 import { teacherApi } from '../lib/api';
+import { LoadError } from './LoadError';
 import type {
   DailyTeachingDiaryEntry,
   TeachingDiaryOverview,
@@ -36,12 +37,13 @@ interface DailyTeachingDiaryViewProps {
 
 export function DailyTeachingDiaryView({
   batches,
-  teacherName = 'Faculty Member',
-  instituteName = 'PadhaiPilot Academy',
+  teacherName = '',
+  instituteName = '',
 }: DailyTeachingDiaryViewProps) {
   const [diaries, setDiaries] = useState<DailyTeachingDiaryEntry[]>([]);
   const [overview, setOverview] = useState<TeachingDiaryOverview | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'journal' | 'newEntry' | 'coverage'>('journal');
   const [selectedBatchFilter, setSelectedBatchFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -74,6 +76,7 @@ export function DailyTeachingDiaryView({
 
   async function loadData() {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const batchParam = selectedBatchFilter === 'ALL' ? undefined : selectedBatchFilter;
       const [list, stats] = await Promise.all([
@@ -85,33 +88,10 @@ export function DailyTeachingDiaryView({
       if (list.length > 0 && !previewEntry) {
         setPreviewEntry(list[0]);
       }
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : 'Could not load this section.');
     } finally {
       setIsLoading(false);
-    }
-  }
-
-  function handlePrefillToday() {
-    const todayBatch = batches[0];
-    if (todayBatch) {
-      setFormData((prev) => ({
-        ...prev,
-        batchId: todayBatch.id,
-        lessonDate: new Date().toISOString().split('T')[0],
-        sessionTime: '09:00 - 10:30',
-        subject: todayBatch.subject,
-        chapterTitle: 'Definite Integration & Leibniz Integral Rule',
-        conceptsTaught: 'Properties of definite integrals, Leibniz differentiation under integral sign, and symmetric bounds.',
-        learningObjectives: 'Students should master applying Leibniz theorem to multi-step JEE Advanced questions.',
-        teachingMethods: 'Interactive derivation with 4 live problem models.',
-        durationMinutes: 90,
-        homeworkAssigned: 'Solve Advanced DPP #14: Questions 1 to 18; verify symmetric bounds.',
-        referenceLinks: ['https://mathworld.wolfram.com/LeibnizIntegralRule.html'],
-        followUpPlan: 'Evaluate double integrals & area under curves in next lecture.',
-        audience: 'BATCH',
-        status: 'PUBLISHED',
-      }));
-      setSuccessToast("Pre-filled lesson details from today's scheduled timetable slot!");
-      setTimeout(() => setSuccessToast(null), 3500);
     }
   }
 
@@ -313,7 +293,9 @@ export function DailyTeachingDiaryView({
             </div>
 
             {/* Entries Roster */}
-            {isLoading ? (
+            {loadError ? (
+              <LoadError message={loadError} onRetry={loadData} />
+            ) : isLoading ? (
               <div className="paper-card p-12 text-center text-xs font-['Raleway'] text-[var(--ink-muted)]">
                 Loading lesson journal entries...
               </div>
@@ -427,7 +409,7 @@ export function DailyTeachingDiaryView({
                       {instituteName}
                     </span>
                     <p className="font-['Raleway'] text-[10px] text-[var(--ink-muted)]">
-                      Official Academic Record • PadhaiPilot Lesson Journal
+                      Official Academic Record • Lesson Journal
                     </p>
                   </div>
                   <div className="w-7 h-7 rounded-lg bg-[var(--brand-electric)] flex items-center justify-center text-white font-['Playfair_Display'] font-bold text-xs shadow-sm">
@@ -573,14 +555,6 @@ export function DailyTeachingDiaryView({
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={handlePrefillToday}
-              className="btn-secondary text-xs font-['Raleway'] font-bold px-3.5 py-2 flex items-center gap-2 self-start"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-[var(--brand-electric)]" />
-              Pre-fill from Today's Timetable
-            </button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">

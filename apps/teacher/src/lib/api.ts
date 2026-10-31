@@ -20,14 +20,6 @@ import {
   ClassroomAssessment,
   AssessmentMarkItem,
   BulkMarksSaveDraftPayload,
-  FeatureKey,
-  FeatureDefinition,
-  InstituteEffectiveFeatures,
-  FeatureAuditLogItem,
-  UpdateGlobalFeatureFlagDto,
-  EmergencyKillSwitchDto,
-  UpdatePlanEntitlementDto,
-  UpdateInstituteFeatureConfigDto,
   TuitionBrandingProfile,
   UpdateTuitionBrandingDto,
   FacultyMember,
@@ -48,6 +40,7 @@ import {
   StudentFeeItem,
   DispatchFeeReminderDto,
   FeeSummaryOverview,
+  TeacherAnalyticsSummary,
 } from '@padhai-pilot/shared';
 
 const PRODUCTION_API_URL = 'https://padhai-pilot.vercel.app/api';
@@ -107,22 +100,40 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   const url = endpoint.startsWith('http') ? endpoint : `${baseUrl}${cleanEndpoint}`;
 
+  let res: Response;
   try {
-    const res = await fetch(url, {
+    res = await fetch(url, {
       ...options,
       headers,
       credentials: 'include',
     });
+  } catch {
+    throw new ApiError('Cannot reach the server. Check your connection and try again.', 0);
+  }
 
-    if (!res.ok) {
-      const errorData = await res.json().catch(() => ({}));
-      throw new Error(errorData.message || `API error: ${res.statusText}`);
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    const raw = (errorData as { message?: string | string[] }).message;
+    const message = Array.isArray(raw) ? raw.join(', ') : raw || `Request failed (${res.status})`;
+    if (res.status === 401 && token && !endpoint.startsWith('/auth/')) {
+      clearAuthToken();
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('pp:unauthorized'));
     }
+    throw new ApiError(message, res.status);
+  }
 
-    return await res.json();
-  } catch (err) {
-    console.warn(`API call to ${endpoint} failed:`, (err as Error).message);
-    throw err;
+  if (res.status === 204) return undefined as T;
+  return (await res.json()) as T;
+}
+
+/** Normalised API failure: `status` 0 means the server could not be reached. */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+    this.name = 'ApiError';
   }
 }
 
@@ -135,24 +146,6 @@ export const teacherApi = {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
-    if (res.token) setAuthToken(res.token);
-    return res;
-  },
-
-  async loginDemoTeacher(): Promise<{ user: UserSession; token: string }> {
-    const res = await request<{ user: UserSession; token: string }>('/auth/demo-teacher');
-    if (res.token) setAuthToken(res.token);
-    return res;
-  },
-
-  async loginDemoOwner(): Promise<{ user: UserSession; token: string }> {
-    const res = await request<{ user: UserSession; token: string }>('/auth/demo-owner');
-    if (res.token) setAuthToken(res.token);
-    return res;
-  },
-
-  async loginDemoAdmin(): Promise<{ user: UserSession; token: string }> {
-    const res = await request<{ user: UserSession; token: string }>('/auth/demo-admin');
     if (res.token) setAuthToken(res.token);
     return res;
   },
@@ -192,11 +185,21 @@ export const teacherApi = {
     });
   },
 
-  async changePassword(oldPassword: string, newPassword: string): Promise<{ success: boolean }> {
-    return request<{ success: boolean }>('/auth/change-password', {
+  /** The API rotates the session on password change: it returns a fresh token that replaces the old one. */
+  async changePassword(oldPassword: string, newPassword: string): Promise<{ success: boolean; user: UserSession; token: string }> {
+    const res = await request<{ success: boolean; user: UserSession; token: string }>('/auth/change-password', {
       method: 'POST',
       body: JSON.stringify({ oldPassword, newPassword }),
     });
+    if (res.token) setAuthToken(res.token);
+    return res;
+  },
+
+  // -------------------------------------------------------------
+  // ANALYTICS (null values mean "no data": render an empty state, never zero)
+  // -------------------------------------------------------------
+  async getAnalytics(): Promise<TeacherAnalyticsSummary> {
+    return request<TeacherAnalyticsSummary>('/analytics/teacher');
   },
 
   async updateProfile(data: { fullName?: string; phone?: string }): Promise<{ success: boolean; user: UserSession }> {
@@ -222,52 +225,17 @@ export const teacherApi = {
   // DASHBOARD & BATCHES
   // -------------------------------------------------------------
   async getDashboard(): Promise<TeacherDashboardMetrics> {
-    try {
-      return await request<TeacherDashboardMetrics>('/teacher/dashboard');
-    } catch {
-      return {
-        todayClassesCount: 0,
-        assignedBatchesCount: 0,
-        totalStudentsCount: 0,
-        pendingAttendanceCount: 0,
-        pendingReviewsCount: 0,
-        todaySchedule: [],
-        activeBatches: [],
-        recentAnnouncements: [],
-      };
-    }
+    return await request<TeacherDashboardMetrics>('/teacher/dashboard');
   },
 
   async getBatches(): Promise<BatchSummary[]> {
-    try {
-      return await request<BatchSummary[]>('/teacher/batches');
-    } catch {
-      return [];
-    }
+    return await request<BatchSummary[]>('/teacher/batches');
   },
 
   async getBatchRoster(batchId: string): Promise<{ batch: BatchSummary; students: StudentRosterItem[] }> {
-    try {
-      return await request<{ batch: BatchSummary; students: StudentRosterItem[] }>(
-        `/teacher/batches/${batchId}/students`,
-      );
-    } catch {
-      return {
-        batch: {
-          id: batchId,
-          instituteId: '',
-          teacherId: '',
-          name: '',
-          code: '',
-          subject: '',
-          gradeLevel: '',
-          room: '',
-          studentCount: 0,
-          createdAt: '',
-        },
-        students: [],
-      };
-    }
+    return await request<{ batch: BatchSummary; students: StudentRosterItem[] }>(
+      `/teacher/batches/${batchId}/students`,
+    );
   },
 
   async createBatch(data: { name: string; code: string; subject: string; gradeLevel: string; room?: string }): Promise<BatchSummary> {
@@ -281,11 +249,7 @@ export const teacherApi = {
   // INVITATIONS
   // -------------------------------------------------------------
   async getInvitations(): Promise<InvitationCode[]> {
-    try {
-      return await request<InvitationCode[]>('/teacher/invitations');
-    } catch {
-      return [];
-    }
+    return await request<InvitationCode[]>('/teacher/invitations');
   },
 
   async createInvitation(data: { batchId?: string; maxUses?: number; expiryDays?: number }): Promise<InvitationCode> {
@@ -305,16 +269,7 @@ export const teacherApi = {
   // ATTENDANCE
   // -------------------------------------------------------------
   async getAttendanceSession(batchId: string, date: string): Promise<any> {
-    try {
-      return await request<any>(`/teacher/attendance/${batchId}/${date}`);
-    } catch {
-      return {
-        isRecorded: false,
-        batchName: '',
-        date,
-        records: [],
-      };
-    }
+    return await request<any>(`/teacher/attendance/${batchId}/${date}`);
   },
 
   async saveAttendance(data: {
@@ -339,11 +294,7 @@ export const teacherApi = {
   // ASSIGNMENTS
   // -------------------------------------------------------------
   async getAssignments(): Promise<Assignment[]> {
-    try {
-      return await request<Assignment[]>('/teacher/assignments');
-    } catch {
-      return [];
-    }
+    return await request<Assignment[]>('/teacher/assignments');
   },
 
   async createAssignment(data: {
@@ -361,30 +312,9 @@ export const teacherApi = {
   },
 
   async getSubmissions(assignmentId: string): Promise<{ assignment: Assignment; submissions: AssignmentSubmission[] }> {
-    try {
-      return await request<{ assignment: Assignment; submissions: AssignmentSubmission[] }>(
-        `/teacher/assignments/${assignmentId}/submissions`,
-      );
-    } catch {
-      return {
-        assignment: {
-          id: assignmentId,
-          batchId: '',
-          batchName: '',
-          teacherId: '',
-          title: '',
-          instructions: '',
-          subject: '',
-          dueDate: '',
-          maxMarks: 0,
-          status: 'DRAFT',
-          submissionCount: 0,
-          totalStudents: 0,
-          createdAt: '',
-        },
-        submissions: [],
-      };
-    }
+    return await request<{ assignment: Assignment; submissions: AssignmentSubmission[] }>(
+      `/teacher/assignments/${assignmentId}/submissions`,
+    );
   },
 
   async gradeSubmission(
@@ -401,11 +331,7 @@ export const teacherApi = {
   // TESTS & QUIZZES
   // -------------------------------------------------------------
   async getTests(): Promise<TestQuiz[]> {
-    try {
-      return await request<TestQuiz[]>('/teacher/tests');
-    } catch {
-      return [];
-    }
+    return await request<TestQuiz[]>('/teacher/tests');
   },
 
   async createTest(data: {
@@ -432,11 +358,7 @@ export const teacherApi = {
   // LESSON PLANS & SYLLABUS
   // -------------------------------------------------------------
   async getLessonPlans(): Promise<LessonPlan[]> {
-    try {
-      return await request<LessonPlan[]>('/teacher/lesson-plans');
-    } catch {
-      return [];
-    }
+    return await request<LessonPlan[]>('/teacher/lesson-plans');
   },
 
   async createLessonPlan(data: {
@@ -463,19 +385,11 @@ export const teacherApi = {
   // TIMETABLE & ANNOUNCEMENTS
   // -------------------------------------------------------------
   async getTimetable(): Promise<TimetableSlot[]> {
-    try {
-      return await request<TimetableSlot[]>('/teacher/timetable');
-    } catch {
-      return [];
-    }
+    return await request<TimetableSlot[]>('/teacher/timetable');
   },
 
   async getAnnouncements(): Promise<AnnouncementItem[]> {
-    try {
-      return await request<AnnouncementItem[]>('/teacher/announcements');
-    } catch {
-      return [];
-    }
+    return await request<AnnouncementItem[]>('/teacher/announcements');
   },
 
   async createAnnouncement(data: {
@@ -494,67 +408,19 @@ export const teacherApi = {
   // REPORTS
   // -------------------------------------------------------------
   async getReports(): Promise<TeacherReports> {
-    try {
-      return await request<TeacherReports>('/teacher/reports');
-    } catch {
-      return {
-        summary: {
-          totalBatches: 0,
-          totalStudents: 0,
-          averageClassAttendance: '0%',
-          totalTestsConducted: 0,
-        },
-        attendanceTrends: [],
-        batchPerformance: [],
-        submissionMetrics: {
-          totalAssigned: 0,
-          submittedCount: 0,
-          gradedCount: 0,
-          pendingReviewCount: 0,
-        },
-      };
-    }
+    return await request<TeacherReports>('/teacher/reports');
   },
 
   // -------------------------------------------------------------
   // BULK ATTENDANCE & MARKS ENTRY (CLASSROOM ASSESSMENTS)
   // -------------------------------------------------------------
   async getAssessments(batchId?: string): Promise<ClassroomAssessment[]> {
-    try {
-      const q = batchId ? `?batchId=${batchId}` : '';
-      return await request<ClassroomAssessment[]>(`/assessment${q}`);
-    } catch {
-      return [];
-    }
+    const q = batchId ? `?batchId=${batchId}` : '';
+    return await request<ClassroomAssessment[]>(`/assessment${q}`);
   },
 
   async getAssessmentDetails(id: string): Promise<{ assessment: ClassroomAssessment; roster: AssessmentMarkItem[] }> {
-    try {
-      return await request<{ assessment: ClassroomAssessment; roster: AssessmentMarkItem[] }>(`/assessment/${id}`);
-    } catch {
-      return {
-        assessment: {
-          id,
-          batchId: '',
-          batchName: '',
-          instituteId: '',
-          teacherId: '',
-          teacherName: '',
-          title: '',
-          subject: '',
-          category: 'UNIT_TEST',
-          assessmentDate: new Date().toISOString(),
-          maxMarks: 50,
-          passingMarks: 20,
-          instructions: '',
-          status: 'DRAFT',
-          gradingPrecision: 0.5,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        roster: [],
-      };
-    }
+    return await request<{ assessment: ClassroomAssessment; roster: AssessmentMarkItem[] }>(`/assessment/${id}`);
   },
 
   async saveDraftMarks(payload: BulkMarksSaveDraftPayload): Promise<{ success: boolean; assessmentId: string; message: string; savedCount?: number }> {
@@ -590,107 +456,10 @@ export const teacherApi = {
   },
 
   // -------------------------------------------------------------
-  // GLOBAL FEATURE FLAGS & PLATFORM CONTROL PLANE
-  // -------------------------------------------------------------
-  async getFeatureRegistry(): Promise<FeatureDefinition[]> {
-    try {
-      const res = await request<{ success: boolean; data: FeatureDefinition[] }>('/features/registry');
-      return res.data || [];
-    } catch {
-      return [];
-    }
-  },
-
-  async getInstituteEffectiveFeatures(instituteId = ''): Promise<InstituteEffectiveFeatures> {
-    try {
-      const res = await request<{ success: boolean; data: InstituteEffectiveFeatures }>(`/features/institute/${instituteId}`);
-      return res.data;
-    } catch {
-      return {
-        instituteId,
-        instituteName: '',
-        plan: 'GROWTH',
-        isInstituteActive: true,
-        evaluatedFeatures: {} as any,
-        evaluatedAt: new Date().toISOString(),
-      };
-    }
-  },
-
-  async updateGlobalFeature(data: UpdateGlobalFeatureFlagDto): Promise<{ success: boolean; message: string }> {
-    return await request<{ success: boolean; message: string }>('/features/global', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-
-  async emergencyKillFeature(data: EmergencyKillSwitchDto): Promise<{ success: boolean; message: string }> {
-    return await request<{ success: boolean; message: string }>('/features/emergency-kill', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-
-  async emergencyRestoreFeature(data: { featureKey: FeatureKey; reason: string }): Promise<{ success: boolean; message: string }> {
-    return await request<{ success: boolean; message: string }>('/features/emergency-restore', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-
-  async updatePlanEntitlements(data: UpdatePlanEntitlementDto): Promise<{ success: boolean; message: string }> {
-    return await request<{ success: boolean; message: string }>('/features/plan-entitlements', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-
-  async updateInstituteFeatureConfig(data: UpdateInstituteFeatureConfigDto): Promise<{ success: boolean; message: string }> {
-    return await request<{ success: boolean; message: string }>('/features/institute-config', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-
-  async getFeatureAuditLogs(params?: { featureKey?: string; instituteId?: string }): Promise<FeatureAuditLogItem[]> {
-    try {
-      const q = new URLSearchParams();
-      if (params?.featureKey) q.set('featureKey', params.featureKey);
-      if (params?.instituteId) q.set('instituteId', params.instituteId);
-      const res = await request<{ success: boolean; data: FeatureAuditLogItem[] }>(`/features/audit-logs?${q.toString()}`);
-      return res.data || [];
-    } catch {
-      return [];
-    }
-  },
-
-  // -------------------------------------------------------------
   // ADVANCED TUITION MANAGEMENT & FACULTY METHODS
   // -------------------------------------------------------------
   async getTuitionProfile(): Promise<TuitionBrandingProfile> {
-    try {
-      return await request<TuitionBrandingProfile>('/tuition/profile');
-    } catch {
-      return {
-        id: '',
-        name: '',
-        slug: '',
-        logoUrl: '',
-        primaryColor: '#1677FF',
-        address: '',
-        contactPhone: '',
-        contactEmail: '',
-        website: '',
-        description: '',
-        footerText: '',
-        signatoryName: '',
-        signatoryTitle: '',
-        academicYear: '2026–2027',
-        totalStudents: 0,
-        totalFaculty: 0,
-        totalBatches: 0,
-      };
-    }
+    return await request<TuitionBrandingProfile>('/tuition/profile');
   },
 
   async updateTuitionProfile(dto: UpdateTuitionBrandingDto): Promise<TuitionBrandingProfile> {
@@ -701,11 +470,7 @@ export const teacherApi = {
   },
 
   async getFaculties(): Promise<FacultyMember[]> {
-    try {
-      return await request<FacultyMember[]>('/tuition/faculties');
-    } catch {
-      return [];
-    }
+    return await request<FacultyMember[]>('/tuition/faculties');
   },
 
   async createFaculty(dto: CreateFacultyDto): Promise<FacultyMember> {
@@ -723,14 +488,10 @@ export const teacherApi = {
   },
 
   async getSalaries(payPeriod?: string, facultyId?: string): Promise<SalaryStatementItem[]> {
-    try {
-      const q = new URLSearchParams();
-      if (payPeriod) q.set('payPeriod', payPeriod);
-      if (facultyId) q.set('facultyId', facultyId);
-      return await request<SalaryStatementItem[]>(`/tuition/salaries?${q.toString()}`);
-    } catch {
-      return [];
-    }
+    const q = new URLSearchParams();
+    if (payPeriod) q.set('payPeriod', payPeriod);
+    if (facultyId) q.set('facultyId', facultyId);
+    return await request<SalaryStatementItem[]>(`/tuition/salaries?${q.toString()}`);
   },
 
   async generateSalary(dto: GenerateSalaryDto): Promise<SalaryStatementItem> {
@@ -748,12 +509,8 @@ export const teacherApi = {
   },
 
   async getLeaves(facultyId?: string): Promise<FacultyLeaveItem[]> {
-    try {
-      const q = facultyId ? `?facultyId=${facultyId}` : '';
-      return await request<FacultyLeaveItem[]>(`/tuition/leaves${q}`);
-    } catch {
-      return [];
-    }
+    const q = facultyId ? `?facultyId=${facultyId}` : '';
+    return await request<FacultyLeaveItem[]>(`/tuition/leaves${q}`);
   },
 
   async applyLeave(dto: ApplyFacultyLeaveDto): Promise<FacultyLeaveItem> {
@@ -771,28 +528,14 @@ export const teacherApi = {
   },
 
   async getDiaries(batchId?: string, facultyId?: string): Promise<DailyTeachingDiaryEntry[]> {
-    try {
-      const q = new URLSearchParams();
-      if (batchId) q.set('batchId', batchId);
-      if (facultyId) q.set('facultyId', facultyId);
-      return await request<DailyTeachingDiaryEntry[]>(`/tuition/diaries?${q.toString()}`);
-    } catch {
-      return [];
-    }
+    const q = new URLSearchParams();
+    if (batchId) q.set('batchId', batchId);
+    if (facultyId) q.set('facultyId', facultyId);
+    return await request<DailyTeachingDiaryEntry[]>(`/tuition/diaries?${q.toString()}`);
   },
 
   async getDiariesOverview(): Promise<TeachingDiaryOverview> {
-    try {
-      return await request<TeachingDiaryOverview>('/tuition/diaries/overview');
-    } catch {
-      return {
-        totalEntriesThisMonth: 0,
-        batchesCovered: 0,
-        activeFacultyCount: 0,
-        recentEntries: [],
-        subjectCoverageMap: {},
-      };
-    }
+    return await request<TeachingDiaryOverview>('/tuition/diaries/overview');
   },
 
   async createDiary(dto: CreateTeachingDiaryDto): Promise<DailyTeachingDiaryEntry> {
@@ -810,12 +553,8 @@ export const teacherApi = {
   },
 
   async getStudyMaterials(batchId?: string): Promise<StudyMaterialItem[]> {
-    try {
-      const q = batchId ? `?batchId=${batchId}` : '';
-      return await request<StudyMaterialItem[]>(`/tuition/materials${q}`);
-    } catch {
-      return [];
-    }
+    const q = batchId ? `?batchId=${batchId}` : '';
+    return await request<StudyMaterialItem[]>(`/tuition/materials${q}`);
   },
 
   async createStudyMaterial(dto: CreateStudyMaterialDto): Promise<StudyMaterialItem> {
@@ -844,26 +583,12 @@ export const teacherApi = {
   },
 
   async getFeeRecords(batchId?: string): Promise<StudentFeeItem[]> {
-    try {
-      const q = batchId ? `?batchId=${batchId}` : '';
-      return await request<StudentFeeItem[]>(`/tuition/fees${q}`);
-    } catch {
-      return [];
-    }
+    const q = batchId ? `?batchId=${batchId}` : '';
+    return await request<StudentFeeItem[]>(`/tuition/fees${q}`);
   },
 
   async getFeeSummary(): Promise<FeeSummaryOverview> {
-    try {
-      return await request<FeeSummaryOverview>('/tuition/fees/summary');
-    } catch {
-      return {
-        totalReceivable: 0,
-        totalCollected: 0,
-        totalPending: 0,
-        overdueCount: 0,
-        remindersSentThisMonth: 0,
-      };
-    }
+    return await request<FeeSummaryOverview>('/tuition/fees/summary');
   },
 
   async dispatchFeeReminder(dto: DispatchFeeReminderDto): Promise<{ success: boolean; message: string; reminderId: string }> {
