@@ -1224,7 +1224,7 @@ model PlatformThemeRevision {
 
 // ==========================================================================
 // api-finance-docs BLOCK (batch fees, receipts, student leaves). Own migration folder:
-// 20261031000300_finance_leaves. instituteId/studentId are plain scoped columns (no FK relation
+// 20261031000400_finance_leaves. instituteId/studentId are plain scoped columns (no FK relation
 // declared) so this block does not need back-relations on Institute/User/Batch.
 // ==========================================================================
 

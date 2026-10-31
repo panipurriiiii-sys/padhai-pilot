@@ -19,7 +19,10 @@ export class ApiError extends Error {
 const REQUEST_TIMEOUT_MS = 20000;
 
 // Configurable endpoint with production default
-const DEFAULT_API_BASE_URL = 'https://padhai-pilot.vercel.app/api';
+export const PROD_API_BASE_URL = 'https://padhai-pilot.vercel.app/api';
+/** Android emulator alias for the host machine's localhost (local stack: `npm run local:*`). */
+export const DEV_API_BASE_URL = 'http://10.0.2.2:3001/api';
+export const DEFAULT_API_BASE_URL = __DEV__ ? DEV_API_BASE_URL : PROD_API_BASE_URL;
 
 class ApiClient {
   private baseUrl: string = DEFAULT_API_BASE_URL;
@@ -46,6 +49,11 @@ class ApiClient {
   /** Called when the server rejects the current token (expired, revoked, or membership removed). */
   public setUnauthorizedHandler(handler: (() => void) | null) {
     this.unauthorizedHandler = handler;
+  }
+
+  /** For code paths that bypass `request` (e.g. native PDF downloads) and see a 401. */
+  public notifyUnauthorized() {
+    if (this.authToken) this.unauthorizedHandler?.();
   }
 
   public getAuthToken(): string | null {
@@ -136,6 +144,14 @@ class ApiClient {
     return this.request<T>(endpoint, {
       ...options,
       method: 'PUT',
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  }
+
+  public patch<T>(endpoint: string, body?: unknown, options?: RequestInit): Promise<T> {
+    return this.request<T>(endpoint, {
+      ...options,
+      method: 'PATCH',
       body: body ? JSON.stringify(body) : undefined,
     });
   }

@@ -1,5 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { teacherService } from '../services/api/teacherService';
+import type {
+  CreateTimetableSlotPayload,
+  PromoteBatchPayload,
+  UpdateBatchPayload,
+  UpdateEnrollmentCodePayload,
+  UpdateTimetableSlotPayload,
+} from '../services/api/teacherService';
 
 const MIN = 60 * 1000;
 
@@ -51,12 +58,12 @@ export const useSubmissions = (assignmentId?: string) =>
     enabled: !!assignmentId,
     staleTime: MIN,
   });
-export const useInvitations = () =>
-  useQuery({ queryKey: teacherKeys.invitations, queryFn: teacherService.getInvitations, staleTime: 2 * MIN });
-export const useTeacherTimetable = () =>
-  useQuery({ queryKey: teacherKeys.timetable, queryFn: teacherService.getTimetable, staleTime: 30 * MIN });
+export const useInvitations = (batchId?: string) =>
+  useQuery({ queryKey: [...teacherKeys.invitations, batchId ?? 'all'], queryFn: () => teacherService.getInvitations(batchId), staleTime: MIN });
+export const useTeacherTimetable = (batchId?: string) =>
+  useQuery({ queryKey: [...teacherKeys.timetable, batchId ?? 'all'], queryFn: () => teacherService.getTimetable(batchId), staleTime: 5 * MIN });
 export const useTeacherAnnouncements = () =>
-  useQuery({ queryKey: teacherKeys.announcements, queryFn: teacherService.getAnnouncements, staleTime: 2 * MIN });
+  useQuery({ queryKey: teacherKeys.announcements, queryFn: () => teacherService.getAnnouncements(), staleTime: 2 * MIN });
 export const useDiaries = () =>
   useQuery({ queryKey: teacherKeys.diaries, queryFn: teacherService.getDiaries, staleTime: 2 * MIN });
 export const useTeacherMaterials = () =>
@@ -122,7 +129,47 @@ export const useInvitationMutations = () => {
   const refresh = () => qc.invalidateQueries({ queryKey: teacherKeys.invitations });
   return {
     create: useMutation({ mutationFn: teacherService.createInvitation, onSuccess: refresh }),
+    update: useMutation({
+      mutationFn: (v: { id: string; data: UpdateEnrollmentCodePayload }) => teacherService.updateInvitation(v.id, v.data),
+      onSuccess: refresh,
+    }),
     revoke: useMutation({ mutationFn: teacherService.revokeInvitation, onSuccess: refresh }),
+    reactivate: useMutation({ mutationFn: teacherService.reactivateInvitation, onSuccess: refresh }),
+    regenerate: useMutation({ mutationFn: teacherService.regenerateInvitation, onSuccess: refresh }),
+  };
+};
+
+export const useBatchMutations = () => {
+  const qc = useQueryClient();
+  const refresh = () => {
+    qc.invalidateQueries({ queryKey: teacherKeys.batches });
+    qc.invalidateQueries({ queryKey: ['teacher', 'roster'] });
+  };
+  return {
+    update: useMutation({
+      mutationFn: (v: { batchId: string; data: UpdateBatchPayload }) => teacherService.updateBatch(v.batchId, v.data),
+      onSuccess: refresh,
+    }),
+    promote: useMutation({
+      mutationFn: (v: { batchId: string; data: PromoteBatchPayload }) => teacherService.promoteBatch(v.batchId, v.data),
+      onSuccess: refresh,
+    }),
+  };
+};
+
+export const useTimetableMutations = () => {
+  const qc = useQueryClient();
+  const refresh = () => qc.invalidateQueries({ queryKey: teacherKeys.timetable });
+  return {
+    create: useMutation({
+      mutationFn: (v: { batchId: string; data: CreateTimetableSlotPayload }) => teacherService.createSlot(v.batchId, v.data),
+      onSuccess: refresh,
+    }),
+    update: useMutation({
+      mutationFn: (v: { slotId: string; data: UpdateTimetableSlotPayload }) => teacherService.updateSlot(v.slotId, v.data),
+      onSuccess: refresh,
+    }),
+    remove: useMutation({ mutationFn: teacherService.deleteSlot, onSuccess: refresh }),
   };
 };
 

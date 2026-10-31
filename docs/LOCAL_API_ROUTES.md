@@ -109,4 +109,4 @@ Fetch with the bearer token as a blob and open/save it (a plain `<a href>` canno
 - `GET /student/assignments` already returns `attachmentUrl` per assignment.
 
 ### Schema / migration
-Models `BatchFeeStructure`, `FeePayment`, `InstituteCounter`, `StudentLeaveApplication` in a separated block at the end of `schema.prisma`; additive columns on `StudentFeeRecord` (`structureId`, `instalmentNo`, `voidedAt`, `voidReason`, unique `[structureId, studentId, instalmentNo]`). Migration `20261031000300_finance_leaves` (offline `migrate diff`, not applied anywhere).
+Models `BatchFeeStructure`, `FeePayment`, `InstituteCounter`, `StudentLeaveApplication` in a separated block at the end of `schema.prisma`; additive columns on `StudentFeeRecord` (`structureId`, `instalmentNo`, `voidedAt`, `voidReason`, unique `[structureId, studentId, instalmentNo]`). Migration `20261031000400_finance_leaves` (offline `migrate diff`, not applied anywhere).

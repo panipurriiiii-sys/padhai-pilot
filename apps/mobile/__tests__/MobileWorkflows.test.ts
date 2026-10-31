@@ -15,7 +15,7 @@ const okJson = (body: unknown, status = 200): Partial<Response> => ({
 let fetchMock: FetchMock;
 const lastCall = () => {
   const [url, init] = fetchMock.mock.calls[fetchMock.mock.calls.length - 1];
-  return { url: url.replace('https://padhai-pilot.vercel.app/api', ''), method: init?.method ?? 'GET', init };
+  return { url: url.replace(apiClient.getBaseUrl(), ''), method: init?.method ?? 'GET', init };
 };
 
 beforeEach(() => {

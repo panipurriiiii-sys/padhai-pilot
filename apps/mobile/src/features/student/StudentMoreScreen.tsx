@@ -8,6 +8,7 @@ import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
 import { Body, Caption, Subtitle } from '../../components/common/Typography';
 import { FeesScreen } from './FeesScreen';
+import { StudentLeaveApply } from '../leave/StudentLeavePanels';
 import {
   useAskQuery,
   useDocumentsData,
@@ -26,12 +27,13 @@ import { useTheme } from '../../theme/ThemeContext';
 import { errorMessage, formatDate, formatDateTime } from '../../lib/format';
 import { openUrl } from '../../lib/links';
 
-type View_ = 'menu' | 'timetable' | 'planner' | 'doubts' | 'documents' | 'notifications' | 'fees' | 'profile';
+type View_ = 'menu' | 'timetable' | 'planner' | 'doubts' | 'documents' | 'notifications' | 'fees' | 'leave' | 'profile';
 
 const MENU: Array<{ key: Exclude<View_, 'menu'>; label: string; hint: string }> = [
   { key: 'timetable', label: 'Timetable', hint: 'Weekly class schedule' },
   { key: 'notifications', label: 'Notifications', hint: 'Results, fees and announcements' },
   { key: 'fees', label: 'Fees & receipts', hint: 'Dues and payment status' },
+  { key: 'leave', label: 'Leave', hint: 'Apply and track decisions' },
   { key: 'planner', label: 'Study planner', hint: 'Your personal task list' },
   { key: 'doubts', label: 'Ask a teacher', hint: 'Doubts and answers' },
   { key: 'documents', label: 'Documents', hint: 'Report cards and receipts' },
@@ -253,6 +255,7 @@ export const StudentMoreScreen: React.FC = () => {
         <>
           <Button title="‹ Back" variant="ghost" size="sm" onPress={() => setView('menu')} style={{ alignSelf: 'flex-start', marginBottom: spacing.sm }} />
           {view === 'timetable' ? <Timetable /> : null}
+          {view === 'leave' ? <StudentLeaveApply /> : null}
           {view === 'planner' ? <Planner /> : null}
           {view === 'doubts' ? <Doubts /> : null}
           {view === 'documents' ? <Documents /> : null}
