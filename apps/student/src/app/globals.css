@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "@padhai-pilot/ui/styles.css";
+@import "@padhai-pilot/assets/styles.css";
 
 :root {
   /* Three strictly permitted font families */

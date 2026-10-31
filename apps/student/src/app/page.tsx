@@ -92,7 +92,7 @@ const MATERIAL_CATEGORIES: { key: string; label: string }[] = [
   { key: 'PRACTICE_PAPER', label: 'Practice Papers' },
 ];
 
-export default function StudentPortal() {
+function StudentPortal() {
   const [student, setStudent] = useState<UserSession | null>(null);
   const [activeTab, setActiveTab] = useState<PortalTab>('OVERVIEW');
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -168,6 +168,18 @@ export default function StudentPortal() {
       authorName?: string;
     }>
   >([]);
+
+  // Computed average percentage from verified assessment scores
+  const avgScorePercentage = useMemo(() => {
+    if (dashboardData?.stats?.avgPercentage !== undefined && dashboardData.stats.avgPercentage > 0) {
+      return dashboardData.stats.avgPercentage;
+    }
+    const scored = results.filter(
+      (r) => (r.resultStatus === 'SCORED' || !r.resultStatus) && r.percentage !== null && r.percentage !== undefined,
+    );
+    if (!scored.length) return null;
+    return Math.round(scored.reduce((acc, curr) => acc + (curr.percentage || 0), 0) / scored.length);
+  }, [dashboardData, results]);
 
   // Filter States
   const [selectedSubject, setSelectedSubject] = useState<string>('ALL');
@@ -848,14 +860,14 @@ export default function StudentPortal() {
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-display font-bold text-base tracking-tight text-[#F5F7FA]">
-                  {student.instituteName || 'Apex IIT-JEE Academy'}
+                  {student.instituteName || 'Institute'}
                 </span>
                 <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[rgba(22,119,255,0.12)] text-[#1677FF] border border-[rgba(22,119,255,0.25)]">
                   Student Vault
                 </span>
               </div>
               <div className="text-[11px] text-[#929BAA] font-sans">
-                {profileData?.batchName || 'JEE Advanced — Mathematics Alpha'} • Roll: {profileData?.rollNumber || 'APX-2026-001'}
+                {profileData?.batchName || 'Enrolled Batch'}{profileData?.rollNumber ? ` • Roll: ${profileData.rollNumber}` : ''}
               </div>
             </div>
           </div>
@@ -957,7 +969,7 @@ export default function StudentPortal() {
                       Welcome back, {student.fullName}
                     </h2>
                     <p className="font-sans text-xs text-[#929BAA] mt-1">
-                      Enrolled in {profileData?.batchName || 'JEE Advanced Mathematics'} • Next lecture today at 09:00 AM
+                      Enrolled in {profileData?.batchName || student.instituteName || 'All Batches'}
                     </p>
                   </div>
 
@@ -1000,7 +1012,7 @@ export default function StudentPortal() {
                       <TrendingUp className="w-4 h-4 text-[#1677FF]" />
                     </div>
                     <div className="font-data text-2xl font-bold text-[#F5F7FA]">
-                      {dashboardData?.stats?.avgPercentage || 94}%
+                      {avgScorePercentage !== null ? `${avgScorePercentage}%` : '—'}
                     </div>
                     <div className="text-[10px] text-[#929BAA] mt-1">
                       Across {results.length} published exams
@@ -1029,7 +1041,7 @@ export default function StudentPortal() {
                       ₹{feesData.balanceDue.toLocaleString()}
                     </div>
                     <div className="text-[10px] text-[#929BAA] mt-1">
-                      {feesData.status === 'PAID' ? 'All dues cleared' : 'Due by 15 Nov 2026'}
+                      {feesData.status === 'PAID' ? 'All dues cleared' : feesData.balanceDue > 0 ? 'Outstanding balance due' : 'No dues'}
                     </div>
                   </div>
                 </div>
@@ -1301,7 +1313,7 @@ export default function StudentPortal() {
                               {diary.subject}
                             </span>
                             <span className="font-data text-xs font-semibold text-[#F5F7FA]">
-                              {diary.lessonDate} ({diary.sessionTime || '09:00 - 10:30'})
+                              {diary.lessonDate} {diary.sessionTime ? ` (${diary.sessionTime})` : ''}
                             </span>
                           </div>
                           <div className="text-xs text-[#929BAA]">
@@ -1548,6 +1560,9 @@ export default function StudentPortal() {
                   </button>
                 </div>
 
+                {/* Monthly Attendance Rate Chart */}
+                <StudentAttendanceTrendCard records={attendanceData.records} />
+
                 {/* Progress Banner */}
                 <div className="p-6 rounded-2xl bg-[#0A0D12] border border-[rgba(255,255,255,0.08)] flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
                   <div className="space-y-2 text-center md:text-left">
@@ -1602,7 +1617,7 @@ export default function StudentPortal() {
                         {attendanceData.records.map((rec) => (
                           <tr key={rec.id} className="hover:bg-[#10151D]/40 transition">
                             <td className="p-3.5 font-data text-[#F5F7FA]">{rec.date}</td>
-                            <td className="p-3.5 text-[#C3CAD6]">{rec.subjectName || 'JEE Mathematics Alpha'}</td>
+                            <td className="p-3.5 text-[#C3CAD6]">{rec.subjectName || 'Class Session'}</td>
                             <td className="p-3.5">
                               <span
                                 className={`px-2 py-0.5 rounded text-[10px] font-bold ${
@@ -1638,7 +1653,17 @@ export default function StudentPortal() {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Assignment Status Distribution */}
+                <StudentAssignmentBreakdownCard assignments={assignments} />
+
+                {assignments.length === 0 ? (
+                  <EmptyState
+                    art="education/homework"
+                    title="No assignments published yet"
+                    description="Practice problem sets and homework assigned by faculty will appear here."
+                  />
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {assignments.map((asg) => (
                     <div
                       key={asg.id}
@@ -1806,6 +1831,12 @@ export default function StudentPortal() {
                   </a>
                 </div>
 
+                {/* Score Trends & Subject Averages */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <StudentResultsTrendCard results={results} />
+                  <StudentSubjectAveragesCard results={results} />
+                </div>
+
                 <div className="rounded-2xl bg-[#0A0D12] border border-[rgba(255,255,255,0.08)] overflow-hidden shadow-xl">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
@@ -1832,10 +1863,10 @@ export default function StudentPortal() {
                             </td>
                             <td className="p-3.5">
                               <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[rgba(16,185,129,0.15)] text-[#10B981]">
-                                {res.grade || 'A+'}
+                                {res.grade || '—'}
                               </span>
                             </td>
-                            <td className="p-3.5 text-[11px] text-[#929BAA]">{res.feedback || 'Good attempt.'}</td>
+                            <td className="p-3.5 text-[11px] text-[#929BAA]">{res.feedback || '—'}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -1880,9 +1911,12 @@ export default function StudentPortal() {
                     <div className="font-data text-3xl font-extrabold text-[#F59E0B] mt-1">
                       ₹{feesData.balanceDue.toLocaleString()}
                     </div>
-                    <div className="text-[11px] text-[#F59E0B] font-semibold mt-1">Next installment due 15 Nov</div>
+                    <div className="text-[11px] text-[#F59E0B] font-semibold mt-1">{feesData.balanceDue > 0 ? 'Pending payment' : 'Cleared'}</div>
                   </div>
                 </div>
+
+                {/* Fee Breakdown Donut */}
+                <StudentFeeBreakdownCard fee={feesData} />
 
                 {/* Receipts Table */}
                 <div className="rounded-2xl bg-[#0A0D12] border border-[rgba(255,255,255,0.08)] overflow-hidden shadow-xl">
@@ -1904,7 +1938,7 @@ export default function StudentPortal() {
                       <tbody className="divide-y divide-[rgba(255,255,255,0.04)] text-xs">
                         {feesData.receipts.map((rec) => (
                           <tr key={rec.id} className="hover:bg-[#10151D]/40 transition">
-                            <td className="p-3.5 font-data text-[#1677FF] font-semibold">{rec.receiptNumber || 'REC-2026-0941'}</td>
+                            <td className="p-3.5 font-data text-[#1677FF] font-semibold">{rec.receiptNumber || rec.id}</td>
                             <td className="p-3.5 text-[#F5F7FA] font-medium">{rec.title}</td>
                             <td className="p-3.5 font-data text-[#929BAA]">{rec.dueDate}</td>
                             <td className="p-3.5 font-data font-bold text-[#F5F7FA]">₹{rec.amount.toLocaleString()}</td>
@@ -1997,7 +2031,7 @@ export default function StudentPortal() {
                       {q.facultyReply && (
                         <div className="p-3.5 rounded-xl bg-[#10151D] border border-[rgba(16,185,129,0.2)] text-xs text-[#C3CAD6] space-y-1">
                           <div className="flex items-center justify-between text-[#10B981] font-bold text-[11px]">
-                            <span>Faculty Response ({q.facultyName || 'Prof. Rajesh Sharma'})</span>
+                            <span>Faculty Response ({q.facultyName || 'Faculty'})</span>
                             <span className="font-data text-[10px] text-[#929BAA]">{q.repliedAt?.split('T')[0]}</span>
                           </div>
                           <p className="leading-relaxed">{q.facultyReply}</p>
@@ -2061,6 +2095,9 @@ export default function StudentPortal() {
                     <span>Add Task</span>
                   </button>
                 </form>
+
+                {/* Study Goals Progress Donut */}
+                <StudentTaskProgressCard tasks={studyTasks} />
 
                 {/* Tasks List */}
                 <div className="space-y-2.5">
@@ -2196,7 +2233,7 @@ export default function StudentPortal() {
                     </div>
                     <div>
                       <label className="text-[10px] text-[#929BAA] uppercase block">Phone Contact</label>
-                      <div className="text-sm text-[#F5F7FA]">{profileData?.phone || '+91 98765 43210'}</div>
+                      <div className="text-sm text-[#F5F7FA]">{profileData?.phone || 'Not provided'}</div>
                     </div>
                   </div>
 
@@ -2207,19 +2244,19 @@ export default function StudentPortal() {
                     <div>
                       <label className="text-[10px] text-[#929BAA] uppercase block">Enrolled Institute</label>
                       <div className="text-sm font-bold text-[#F5F7FA]">
-                        {student.instituteName || 'Apex IIT-JEE & Medical Academy'}
+                        {student.instituteName || 'Enrolled Institute'}
                       </div>
                     </div>
                     <div>
                       <label className="text-[10px] text-[#929BAA] uppercase block">Batch Assignment</label>
                       <div className="text-sm text-[#F5F7FA]">
-                        {profileData?.batchName || 'JEE Advanced — Mathematics Alpha'}
+                        {profileData?.batchName || '—'}
                       </div>
                     </div>
                     <div>
                       <label className="text-[10px] text-[#929BAA] uppercase block">Student Roll Number</label>
                       <div className="text-sm font-data font-bold text-[#10B981]">
-                        {profileData?.rollNumber || 'APX-2026-001'}
+                        {profileData?.rollNumber || '—'}
                       </div>
                     </div>
                   </div>
@@ -2759,5 +2796,16 @@ export default function StudentPortal() {
         </div>
       )}
     </div>
+  );
+}
+
+/** Shared motion + toast context (reduced-motion aware). */
+export default function StudentPortalRoot() {
+  return (
+    <MotionProvider>
+      <ToastProvider>
+        <StudentPortal />
+      </ToastProvider>
+    </MotionProvider>
   );
 }

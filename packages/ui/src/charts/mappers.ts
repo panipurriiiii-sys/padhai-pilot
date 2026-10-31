@@ -123,3 +123,211 @@ export function subjectMarks(rows: ReadonlyArray<{ subject: string; marks: numbe
   }
   return out.length ? out : null;
 }
+
+// -------------------------------------------------------------
+// STUDENT PORTAL MAPPERS
+// -------------------------------------------------------------
+
+/** Student attendance records -> monthly attendance percentage trend. */
+export function studentMonthlyAttendance(
+  records: ReadonlyArray<{ date: string; status: 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED' }> | undefined | null,
+): CartesianData | null {
+  if (!records?.length) return null;
+  const monthMap = new Map<string, { present: number; late: number; total: number; sortKey: string }>();
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  for (const r of records) {
+    if (!r.date) continue;
+    const d = new Date(r.date);
+    let label = r.date.slice(0, 7);
+    let sortKey = r.date.slice(0, 7);
+    if (!Number.isNaN(d.getTime())) {
+      label = `${monthNames[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`;
+      sortKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    }
+    const cur = monthMap.get(label) ?? { present: 0, late: 0, total: 0, sortKey };
+    cur.total += 1;
+    if (r.status === 'PRESENT') cur.present += 1;
+    else if (r.status === 'LATE') cur.late += 1;
+    monthMap.set(label, cur);
+  }
+
+  const entries = [...monthMap.entries()].sort((a, b) => a[1].sortKey.localeCompare(b[1].sortKey));
+  if (!entries.length) return null;
+
+  return {
+    unit: '%',
+    yMin: 0,
+    yMax: 100,
+    series: [
+      {
+        id: 'attendance-rate',
+        label: 'Attendance rate',
+        tone: 'brand',
+        points: entries.map(([label, data]) => {
+          const rate = data.total > 0 ? Math.round(((data.present + data.late * 0.5) / data.total) * 1000) / 10 : 0;
+          return {
+            x: label,
+            y: rate,
+            note: `${data.present} present of ${data.total}`,
+          };
+        }),
+      },
+    ],
+  };
+}
+
+/** Assessment results -> score percentage trend per assessment. */
+export function studentResultsTrend(
+  results: ReadonlyArray<{
+    testTitle?: string;
+    title?: string;
+    percentage?: number | null;
+    obtainedMarks?: number | null;
+    maxMarks?: number | null;
+    resultStatus?: string;
+  }> | undefined | null,
+  limit = 8,
+): CartesianData | null {
+  const valid = (results ?? []).filter((r) => {
+    if (r.resultStatus && r.resultStatus !== 'SCORED') return false;
+    if (finite(r.percentage)) return true;
+    return finite(r.obtainedMarks) && finite(r.maxMarks) && (r.maxMarks as number) > 0;
+  });
+  if (!valid.length) return null;
+
+  const slice = valid.slice(0, limit);
+  return {
+    unit: '%',
+    yMin: 0,
+    yMax: 100,
+    series: [
+      {
+        id: 'scores',
+        label: 'Assessment score',
+        tone: 'brand',
+        points: slice.map((r) => {
+          const score = finite(r.percentage)
+            ? r.percentage
+            : (pct(r.obtainedMarks as number, r.maxMarks as number) ?? 0);
+          const label = r.testTitle || r.title || 'Assessment';
+          return {
+            x: label,
+            y: score,
+            note: finite(r.obtainedMarks) && finite(r.maxMarks) ? `${r.obtainedMarks}/${r.maxMarks}` : undefined,
+          };
+        }),
+      },
+    ],
+  };
+}
+
+/** Assessment results -> subject-wise average score breakdown. */
+export function studentSubjectAverages(
+  results: ReadonlyArray<{
+    subject?: string;
+    percentage?: number | null;
+    obtainedMarks?: number | null;
+    maxMarks?: number | null;
+    resultStatus?: string;
+  }> | undefined | null,
+): HBarRowData[] | null {
+  const valid = (results ?? []).filter((r) => {
+    if (r.resultStatus && r.resultStatus !== 'SCORED') return false;
+    return finite(r.percentage) || (finite(r.obtainedMarks) && finite(r.maxMarks) && (r.maxMarks as number) > 0);
+  });
+  if (!valid.length) return null;
+
+  const subjectMap = new Map<string, { totalPct: number; count: number }>();
+  for (const r of valid) {
+    const sub = r.subject || 'General';
+    const score = finite(r.percentage)
+      ? (r.percentage as number)
+      : (pct(r.obtainedMarks as number, r.maxMarks as number) ?? 0);
+    const cur = subjectMap.get(sub) ?? { totalPct: 0, count: 0 };
+    cur.totalPct += score;
+    cur.count += 1;
+    subjectMap.set(sub, cur);
+  }
+
+  return [...subjectMap.entries()]
+    .map(([subject, data]) => {
+      const avg = Math.round((data.totalPct / data.count) * 10) / 10;
+      return {
+        id: subject,
+        label: subject,
+        value: avg,
+        tone: avg >= 75 ? ('success' as const) : avg >= 60 ? ('brand' as const) : ('warning' as const),
+        note: `${data.count} test${data.count === 1 ? '' : 's'}`,
+      };
+    })
+    .sort((a, b) => b.value - a.value);
+}
+
+/** Assignment items -> status breakdown as Donut slices. */
+export function studentAssignmentStatus(
+  assignments: ReadonlyArray<{ status: string }> | undefined | null,
+): DonutSlice[] | null {
+  if (!assignments?.length) return null;
+
+  const counts: Record<string, number> = {
+    GRADED: 0,
+    SUBMITTED: 0,
+    PENDING: 0,
+    LATE: 0,
+    RESUBMIT: 0,
+  };
+
+  for (const a of assignments) {
+    const key = (a.status || 'PENDING').toUpperCase();
+    if (key in counts) counts[key] += 1;
+    else counts.PENDING += 1;
+  }
+
+  const slices: DonutSlice[] = [
+    { id: 'graded', label: 'Graded', value: counts.GRADED, tone: 'success' },
+    { id: 'submitted', label: 'Submitted', value: counts.SUBMITTED, tone: 'brand' },
+    { id: 'pending', label: 'Pending', value: counts.PENDING, tone: 'warning' },
+    { id: 'late', label: 'Late', value: counts.LATE, tone: 'danger' },
+    { id: 'resubmit', label: 'Resubmit', value: counts.RESUBMIT, tone: 'deep' },
+  ].filter((s) => s.value > 0);
+
+  return slices.length ? slices : null;
+}
+
+/** Student fee summary -> paid vs due breakdown as Donut slices. */
+export function studentFeeBreakdown(
+  fee: { totalFees?: number; paidAmount?: number; balanceDue?: number } | undefined | null,
+): DonutSlice[] | null {
+  if (!fee) return null;
+  const paid = finite(fee.paidAmount) && fee.paidAmount > 0 ? fee.paidAmount : 0;
+  const due = finite(fee.balanceDue) && fee.balanceDue > 0 ? fee.balanceDue : 0;
+  if (paid === 0 && due === 0) return null;
+
+  const slices: DonutSlice[] = [];
+  if (paid > 0) {
+    slices.push({ id: 'paid', label: 'Paid', value: paid, tone: 'success' });
+  }
+  if (due > 0) {
+    slices.push({ id: 'due', label: 'Balance Due', value: due, tone: 'warning' });
+  }
+  return slices.length ? slices : null;
+}
+
+/** Personal study tasks -> completion donut breakdown. */
+export function studentTaskProgress(
+  tasks: ReadonlyArray<{ isCompleted: boolean }> | undefined | null,
+): DonutSlice[] | null {
+  if (!tasks?.length) return null;
+  let completed = 0;
+  let pending = 0;
+  for (const t of tasks) {
+    if (t.isCompleted) completed += 1;
+    else pending += 1;
+  }
+  if (completed === 0 && pending === 0) return null;
+  const slices: DonutSlice[] = [];
+  if (completed > 0) slices.push({ id: 'completed', label: 'Completed', value: completed, tone: 'success' });
+  if (pending > 0) slices.push({ id: 'pending', label: 'Pending', value: pending, tone: 'brand' });
+  return slices.length ? slices : null;
+}

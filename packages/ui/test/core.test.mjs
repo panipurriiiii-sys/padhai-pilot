@@ -3,6 +3,14 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { niceTicks, linear, extent, runs, linePath, arcPath, describeCartesian, describeDonut, formatValue, hasData } from '../src/charts/core.ts';
 import { staggerDelay, stagger, duration, durationMs } from '../src/motion/tokens.ts';
+import {
+  studentMonthlyAttendance,
+  studentResultsTrend,
+  studentSubjectAverages,
+  studentAssignmentStatus,
+  studentFeeBreakdown,
+  studentTaskProgress,
+} from '../src/charts/mappers.ts';
 
 const attendance = {
   unit: '%',
@@ -57,4 +65,81 @@ test('motion tokens: stagger is capped and durations agree across platforms', ()
   assert.equal(staggerDelay(500), stagger.maxItems * stagger.list);
   for (const k of Object.keys(duration)) assert.equal(Math.round(duration[k] * 1000), durationMs[k]);
   assert.ok(duration.standard <= 0.24, 'UI feedback must stay fast');
+});
+
+test('studentMonthlyAttendance: groups by month and computes rate accurately', () => {
+  assert.equal(studentMonthlyAttendance(null), null);
+  assert.equal(studentMonthlyAttendance([]), null);
+
+  const records = [
+    { date: '2026-09-01', status: 'PRESENT' },
+    { date: '2026-09-02', status: 'PRESENT' },
+    { date: '2026-09-03', status: 'ABSENT' },
+    { date: '2026-09-04', status: 'LATE' },
+    { date: '2026-10-01', status: 'PRESENT' },
+  ];
+  const chart = studentMonthlyAttendance(records);
+  assert.ok(chart);
+  assert.equal(chart.series[0].points.length, 2);
+  // Sep: (2 + 0.5) / 4 = 62.5%
+  assert.equal(chart.series[0].points[0].y, 62.5);
+  // Oct: 1 / 1 = 100%
+  assert.equal(chart.series[0].points[1].y, 100);
+});
+
+test('studentResultsTrend: maps valid assessment percentages', () => {
+  assert.equal(studentResultsTrend(null), null);
+  assert.equal(studentResultsTrend([]), null);
+
+  const results = [
+    { testTitle: 'Unit Test 1', percentage: 88, resultStatus: 'SCORED' },
+    { testTitle: 'Unit Test 2', percentage: null, obtainedMarks: 45, maxMarks: 50, resultStatus: 'SCORED' },
+    { testTitle: 'Unscored Test', percentage: null, resultStatus: 'PENDING' },
+  ];
+  const chart = studentResultsTrend(results);
+  assert.ok(chart);
+  assert.equal(chart.series[0].points.length, 2);
+  assert.equal(chart.series[0].points[0].y, 88);
+  assert.equal(chart.series[0].points[1].y, 90);
+});
+
+test('studentSubjectAverages: aggregates subject scores', () => {
+  assert.equal(studentSubjectAverages(null), null);
+  const results = [
+    { subject: 'Math', percentage: 90, resultStatus: 'SCORED' },
+    { subject: 'Math', percentage: 80, resultStatus: 'SCORED' },
+    { subject: 'Physics', percentage: 70, resultStatus: 'SCORED' },
+  ];
+  const rows = studentSubjectAverages(results);
+  assert.ok(rows);
+  assert.equal(rows.length, 2);
+  assert.equal(rows[0].id, 'Math');
+  assert.equal(rows[0].value, 85);
+  assert.equal(rows[1].id, 'Physics');
+  assert.equal(rows[1].value, 70);
+});
+
+test('studentAssignmentStatus & fees & tasks: build donut slices', () => {
+  assert.equal(studentAssignmentStatus([]), null);
+  const asgSlices = studentAssignmentStatus([
+    { status: 'SUBMITTED' },
+    { status: 'GRADED' },
+    { status: 'GRADED' },
+  ]);
+  assert.ok(asgSlices);
+  assert.equal(asgSlices.length, 2);
+
+  const feeSlices = studentFeeBreakdown({ totalFees: 50000, paidAmount: 35000, balanceDue: 15000 });
+  assert.ok(feeSlices);
+  assert.equal(feeSlices.length, 2);
+  assert.equal(studentFeeBreakdown(null), null);
+
+  const taskSlices = studentTaskProgress([
+    { isCompleted: true },
+    { isCompleted: false },
+    { isCompleted: true },
+  ]);
+  assert.ok(taskSlices);
+  assert.equal(taskSlices.length, 2);
+  assert.equal(studentTaskProgress([]), null);
 });

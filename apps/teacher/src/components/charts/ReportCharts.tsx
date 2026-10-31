@@ -6,10 +6,32 @@
  * numbers. Empty inputs show an honest empty state. Loaded lazily through ./index.tsx.
  */
 import React from 'react';
-import { ChartCard, BarChart, DonutChart, HBarChart, LineChart, attendanceTrend, assignmentCompletion, batchAttendance, statusBreakdown, submissionFunnel, syllabusCoverage, testAverages } from '@padhai-pilot/ui/charts';
-import type { Assignment, LessonPlan, TeacherReports, TestQuiz } from '@padhai-pilot/shared';
+import {
+  ChartCard,
+  BarChart,
+  DonutChart,
+  HBarChart,
+  LineChart,
+  attendanceTrend,
+  assignmentCompletion,
+  batchAttendance,
+  statusBreakdown,
+  submissionFunnel,
+  syllabusCoverage,
+  testAverages,
+} from '@padhai-pilot/ui/charts';
+import type {
+  Assignment,
+  LessonPlan,
+  TestQuiz,
+  TeacherReports,
+  AttendanceTrendPoint,
+  BatchPerformanceRow,
+  SubmissionMetrics,
+  AttendanceRegisterBreakdown,
+} from '@padhai-pilot/shared';
 
-export function AttendanceTrendCard({ trends }: { trends: TeacherReports['attendanceTrends'] | undefined }) {
+export function AttendanceTrendCard({ trends }: { trends: AttendanceTrendPoint[] | undefined }) {
   const data = attendanceTrend(trends);
   return (
     <ChartCard
@@ -25,7 +47,7 @@ export function AttendanceTrendCard({ trends }: { trends: TeacherReports['attend
   );
 }
 
-export function BatchAttendanceCard({ rows }: { rows: TeacherReports['batchPerformance'] | undefined }) {
+export function BatchAttendanceCard({ rows }: { rows: BatchPerformanceRow[] | undefined }) {
   const data = batchAttendance(rows);
   return (
     <ChartCard
@@ -42,7 +64,7 @@ export function BatchAttendanceCard({ rows }: { rows: TeacherReports['batchPerfo
   );
 }
 
-export function SubmissionFunnelCard({ metrics }: { metrics: TeacherReports['submissionMetrics'] | undefined }) {
+export function SubmissionFunnelCard({ metrics }: { metrics: SubmissionMetrics | undefined }) {
   const rows = submissionFunnel(metrics);
   return (
     <ChartCard
@@ -109,7 +131,13 @@ export function SyllabusCoverageCard({ plans }: { plans: LessonPlan[] }) {
   );
 }
 
-export function RegisterBreakdownCard({ counts, title = 'Today’s register' }: { counts: { present: number; absent: number; late: number; excused: number }; title?: string }) {
+export function RegisterBreakdownCard({
+  counts,
+  title = 'Today’s register',
+}: {
+  counts: AttendanceRegisterBreakdown;
+  title?: string;
+}) {
   const slices = statusBreakdown(counts);
   const total = counts.present + counts.absent + counts.late + counts.excused;
   return (
@@ -122,7 +150,14 @@ export function RegisterBreakdownCard({ counts, title = 'Today’s register' }: 
       emptyDescription="Tap P, A, L or E against a student to start the breakdown."
       height={150}
     >
-      {slices && <DonutChart slices={slices} label="Attendance status of marked students" centerValue={String(total)} centerLabel="marked" />}
+      {slices && (
+        <DonutChart
+          slices={slices}
+          label="Attendance status of marked students"
+          centerValue={String(total)}
+          centerLabel="marked"
+        />
+      )}
     </ChartCard>
   );
 }
