@@ -1,0 +1,88 @@
+/* Canonical SVG library - web runtime styles.
+   Colour tokens resolve through the Teacher Portal variables (paper-desk theme) with
+   the Teacher Portal's own values as fallbacks, so illustrations work in every app. */
+:root,
+.light {
+  --pp-ink: var(--ink-primary, #1C1917);
+  --pp-ink-soft: var(--ink-muted, #78716C);
+  --pp-ink-faint: var(--ink-faint, #A8A29E);
+  --pp-line: var(--border-paper, #E3DFD9);
+  --pp-paper: var(--bg-paper, #FFFFFF);
+  --pp-paper-warm: var(--bg-paper-warm, #FAF8F5);
+  --pp-desk: var(--bg-surface-subtle, #F3EFE9);
+  --pp-brand: var(--brand-electric, #1677FF);
+  --pp-brand-soft: var(--sticky-blue, #E1EDFF);
+  --pp-brand-line: var(--sticky-blue-border, #BBD4FC);
+  --pp-brand-deep: var(--sticky-blue-text, #0A3D78);
+  --pp-yellow: var(--sticky-yellow, #FFF3C4);
+  --pp-yellow-deep: var(--sticky-yellow-border, #F6E09E);
+  --pp-pink: var(--sticky-pink, #FDE2E4);
+  --pp-pink-deep: var(--sticky-pink-border, #F8BCC2);
+  --pp-mint: var(--sticky-mint, #DAF5E4);
+  --pp-mint-deep: var(--sticky-mint-border, #B2E6C4);
+  --pp-beige: var(--sticky-beige, #F2E8DC);
+  --pp-beige-deep: var(--sticky-beige-border, #DECDBD);
+  --pp-success: #10B981;
+  --pp-danger: #F43F5E;
+  --pp-warning: #F59E0B;
+}
+
+/* Dark scopes re-resolve the same chain (Teacher Portal `.dark` palette as fallback). */
+.dark,
+.admin-dark,
+[data-theme="dark"] {
+  --pp-ink: var(--ink-primary, #F5F7FA);
+  --pp-ink-soft: var(--ink-muted, #929BAA);
+  --pp-ink-faint: var(--ink-faint, #55595F);
+  --pp-line: var(--border-paper, #2A313D);
+  --pp-paper: var(--bg-paper, #0A0D12);
+  --pp-paper-warm: var(--bg-paper-warm, #10151D);
+  --pp-desk: var(--bg-surface-subtle, #141A24);
+  --pp-brand: var(--brand-electric, #1677FF);
+  --pp-brand-soft: var(--sticky-blue, #E1EDFF);
+  --pp-brand-line: var(--sticky-blue-border, #BBD4FC);
+  --pp-brand-deep: var(--sticky-blue-text, #0A3D78);
+  --pp-yellow: var(--sticky-yellow, #FFF3C4);
+  --pp-yellow-deep: var(--sticky-yellow-border, #F6E09E);
+  --pp-pink: var(--sticky-pink, #FDE2E4);
+  --pp-pink-deep: var(--sticky-pink-border, #F8BCC2);
+  --pp-mint: var(--sticky-mint, #DAF5E4);
+  --pp-mint-deep: var(--sticky-mint-border, #B2E6C4);
+  --pp-beige: var(--sticky-beige, #F2E8DC);
+  --pp-beige-deep: var(--sticky-beige-border, #DECDBD);
+}
+
+.pp-illustration {
+  display: inline-block;
+  max-width: 100%;
+  height: auto;
+  flex-shrink: 0;
+}
+
+/* --- element-level path drawing (same timeline as native: 620ms ease-out) --- */
+.pp-anim-draw .pp-draw {
+  stroke-dasharray: var(--pp-len);
+  stroke-dashoffset: var(--pp-len);
+  animation: pp-draw 620ms cubic-bezier(0.22, 1, 0.36, 1) var(--pp-delay, 0ms) forwards;
+}
+@keyframes pp-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+/* --- whole-asset animations --- */
+.pp-anim-spin { animation: pp-spin 900ms linear infinite; }
+.pp-anim-pop { animation: pp-pop 420ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.pp-anim-float { animation: pp-float 3.2s ease-in-out infinite; }
+@keyframes pp-spin { to { transform: rotate(360deg); } }
+@keyframes pp-pop { from { transform: scale(0.82); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes pp-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes pp-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* Reduced motion: no transform loops; draw is instant; pop degrades to a plain fade.
+   A spinner is essential progress feedback, so it slows down rather than stopping. */
+@media (prefers-reduced-motion: reduce) {
+  .pp-anim-draw .pp-draw { animation: none; stroke-dashoffset: 0; }
+  .pp-anim-spin { animation: pp-spin 2.4s linear infinite; }
+  .pp-anim-float { animation: none; }
+  .pp-anim-pop { animation: pp-fade 200ms linear both; }
+}
