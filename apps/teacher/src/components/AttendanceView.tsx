@@ -24,7 +24,9 @@ import {
   History,
   Info,
 } from 'lucide-react';
-import type { BatchSummary, AttendanceStatus } from '@padhai-pilot/shared';
+import type { BatchSummary, AttendanceStatus, TeacherReports } from '@padhai-pilot/shared';
+import { EmptyState } from '@padhai-pilot/ui';
+import { AttendanceTrendCard, RegisterBreakdownCard } from './charts';
 import {
   CountUp,
 } from './ui';
@@ -47,6 +49,8 @@ interface AttendanceViewProps {
     records: { studentId: string; status: AttendanceStatus; note?: string }[];
   }) => Promise<void>;
   loadSession: (batchId: string, date: string) => Promise<any>;
+  /** weekly attendance trend from the already-loaded /teacher/reports payload */
+  trends?: TeacherReports['attendanceTrends'];
 }
 
 export function AttendanceView({
@@ -54,6 +58,7 @@ export function AttendanceView({
   selectedBatchId,
   onSaveAttendance,
   loadSession,
+  trends,
 }: AttendanceViewProps) {
   const [currentBatchId, setCurrentBatchId] = useState(
     selectedBatchId || batches[0]?.id || '',
@@ -300,14 +305,12 @@ export function AttendanceView({
           </div>
         </div>
 
-        <div className="paper-card p-12 text-center space-y-3">
-          <Users className="w-10 h-10 text-[var(--ink-muted)] mx-auto opacity-50" />
-          <h3 className="font-['Playfair_Display'] font-bold text-lg text-[var(--ink-primary)]">
-            No Active Batches Found
-          </h3>
-          <p className="font-['Raleway'] text-xs text-[var(--ink-muted)] max-w-md mx-auto">
-            You must create at least one batch and enroll students before you can take attendance.
-          </p>
+        <div className="paper-card">
+          <EmptyState
+            art="empty-states/roster"
+            title="No batch to take attendance for"
+            description="Create a batch and enroll students first. The register opens as soon as a batch has a roster."
+          />
         </div>
       </div>
     );
@@ -743,6 +746,12 @@ export function AttendanceView({
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Analytics sit below the register so marking stays the first thing on screen */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <AttendanceTrendCard trends={trends} />
+        <RegisterBreakdownCard counts={metrics} />
       </div>
 
       {/* FINALIZATION CONFIRMATION MODAL */}

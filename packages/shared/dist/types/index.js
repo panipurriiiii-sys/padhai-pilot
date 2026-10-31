@@ -1,3 +1,4 @@
+export * from './analytics.js';
 export function calculateGradeAndPercentage(obtainedMarks, maxMarks) {
     if (obtainedMarks === null || obtainedMarks === undefined || maxMarks <= 0) {
         return { percentage: null, grade: null };

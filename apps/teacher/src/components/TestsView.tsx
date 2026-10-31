@@ -14,6 +14,8 @@ import {
   Trash2,
 } from 'lucide-react';
 import type { BatchSummary, TestQuiz, TestQuestion } from '@padhai-pilot/shared';
+import { EmptyState } from '@padhai-pilot/ui';
+import { TestAveragesCard } from './charts';
 
 interface TestsViewProps {
   batches: BatchSummary[];
@@ -119,16 +121,12 @@ export function TestsView({
         </button>
       </div>
 
+      {tests.length > 0 && <TestAveragesCard tests={tests} />}
+
       {/* Tests Grid */}
       {tests.length === 0 ? (
-        <div className="paper-card p-12 text-center space-y-3">
-          <Award className="w-10 h-10 text-[var(--ink-muted)] mx-auto opacity-50" />
-          <h3 className="font-['Playfair_Display'] font-bold text-lg text-[var(--ink-primary)]">
-            No Quizzes or Tests Configured
-          </h3>
-          <p className="font-['Raleway'] text-xs text-[var(--ink-muted)] max-w-md mx-auto">
-            Click &quot;Create Assessment&quot; above to create timed objective quizzes and evaluate student learning.
-          </p>
+        <div className="paper-card">
+          <EmptyState art="education/exam-results" title="No tests created yet" description="Create a timed quiz or assessment for a batch. Average scores appear here once students attempt it." />
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

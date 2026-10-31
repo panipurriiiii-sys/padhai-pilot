@@ -210,28 +210,7 @@ export interface AnnouncementItem {
   createdAt: string;
 }
 
-export interface TeacherReports {
-  attendanceTrends: { label: string; rate: number }[];
-  submissionMetrics: {
-    totalAssigned: number;
-    submittedCount: number;
-    gradedCount: number;
-    pendingReviewCount: number;
-  };
-  batchPerformance: {
-    batchName: string;
-    code: string;
-    studentCount: number;
-    averageAttendance: number;
-    assignmentTurnaround: string;
-  }[];
-  summary: {
-    totalBatches: number;
-    totalStudents: number;
-    averageClassAttendance: string;
-    totalTestsConducted: number;
-  };
-}
+export * from './analytics.js';
 
 export interface TeacherDashboardMetrics {
   todayClassesCount: number;

@@ -1,5 +1,75 @@
 @import "tailwindcss";
-@import "@padhai-pilot/shared/theme.css";
+@import "@padhai-pilot/ui/styles.css";
+@import "@padhai-pilot/assets/styles.css";
 
-/* All design tokens, base styles and shared component classes (.paper-card, .btn-primary, .input-paper, ...)
-   come from @padhai-pilot/shared. Do not add literal colours, fonts or shadows here: change the token instead. */
+:root {
+  /* Three strictly permitted font families */
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-primary: 'Raleway', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-data: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* Reference portfolio palette (Dark Mode first - Luxury Tech Education) */
+  --bg-app: #050608;
+  --surface-card: #0A0D12;
+  --surface-elevated: #10151D;
+  --surface-hover: #141A24;
+  --border-subtle: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.16);
+
+  --text-primary: #F5F7FA;
+  --text-secondary: #C3CAD6;
+  --text-muted: #929BAA;
+  --text-disabled: #55595F;
+
+  --primary-accent: #1677FF;
+  --primary-hover: #3395FF;
+  --primary-active: #0A6FE8;
+  --primary-subtle: rgba(22, 119, 255, 0.12);
+  --primary-border: rgba(22, 119, 255, 0.28);
+
+  --status-success: #10B981;
+  --status-success-subtle: rgba(16, 185, 129, 0.12);
+  --status-warning: #F59E0B;
+  --status-warning-subtle: rgba(245, 158, 11, 0.12);
+  --status-error: #F43F5E;
+  --status-error-subtle: rgba(244, 63, 94, 0.12);
+  --status-info: #00B7D7;
+  --status-info-subtle: rgba(0, 183, 215, 0.12);
+}
+
+@theme inline {
+  --font-display: var(--font-display);
+  --font-sans: var(--font-primary);
+  --font-primary: var(--font-primary);
+  --font-data: var(--font-data);
+
+  --color-bg-app: var(--bg-app);
+  --color-surface-card: var(--surface-card);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-surface-hover: var(--surface-hover);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-text-disabled: var(--text-disabled);
+
+  --color-primary-accent: var(--primary-accent);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
+  --color-primary-subtle: var(--primary-subtle);
+  --color-primary-border: var(--primary-border);
+
+  --color-status-success: var(--status-success);
+  --color-status-warning: var(--status-warning);
+  --color-status-error: var(--status-error);
+  --color-status-info: var(--status-info);
+}
+
+body {
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  font-family: var(--font-primary);
+  -webkit-font-smoothing: antialiased;
+}

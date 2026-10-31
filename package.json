@@ -9,7 +9,9 @@
     "apps/student",
     "apps/mobile",
     "apps/api",
-    "packages/shared"
+    "packages/shared",
+    "packages/assets",
+    "packages/ui"
   ],
   "scripts": {
     "dev:web": "npm run dev --workspace=@padhai-pilot/web",

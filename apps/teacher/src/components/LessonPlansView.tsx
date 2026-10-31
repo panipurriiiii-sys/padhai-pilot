@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import { BookOpen, Plus, CheckCircle, Circle, FileText, Link as LinkIcon, X } from 'lucide-react';
 import type { BatchSummary, LessonPlan } from '@padhai-pilot/shared';
+import { EmptyState } from '@padhai-pilot/ui';
+import { SyllabusCoverageCard } from './charts';
 
 interface LessonPlansViewProps {
   batches: BatchSummary[];
@@ -80,16 +82,12 @@ export function LessonPlansView({
         </button>
       </div>
 
+      {lessonPlans.length > 0 && <SyllabusCoverageCard plans={lessonPlans} />}
+
       {/* Plans List */}
       {lessonPlans.length === 0 ? (
-        <div className="paper-card p-12 text-center space-y-3">
-          <BookOpen className="w-10 h-10 text-[var(--ink-muted)] mx-auto opacity-50" />
-          <h3 className="font-['Playfair_Display'] font-bold text-lg text-[var(--ink-primary)]">
-            No Lesson Plans Created
-          </h3>
-          <p className="font-['Raleway'] text-xs text-[var(--ink-muted)] max-w-md mx-auto">
-            Click &quot;New Lesson Plan&quot; above to organize your syllabus topics, schedules, and reference resources.
-          </p>
+        <div className="paper-card">
+          <EmptyState art="education/books" title="No lesson plans yet" description="Add weekly topics for a batch, then tick them off as you teach to see syllabus coverage." />
         </div>
       ) : (
         <div className="space-y-3">

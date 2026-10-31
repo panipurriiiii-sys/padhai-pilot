@@ -13,6 +13,8 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import type { BatchSummary, Assignment, AssignmentSubmission } from '@padhai-pilot/shared';
+import { EmptyState } from '@padhai-pilot/ui';
+import { AssignmentCompletionCard } from './charts';
 
 interface AssignmentsViewProps {
   batches: BatchSummary[];
@@ -151,16 +153,12 @@ export function AssignmentsView({
         </button>
       </div>
 
+      {assignments.length > 0 && <AssignmentCompletionCard items={assignments} />}
+
       {/* Assignments List */}
       {assignments.length === 0 ? (
-        <div className="paper-card p-12 text-center space-y-3">
-          <FileText className="w-10 h-10 text-[var(--ink-muted)] mx-auto opacity-50" />
-          <h3 className="font-['Playfair_Display'] font-bold text-lg text-[var(--ink-primary)]">
-            No Assignments Published
-          </h3>
-          <p className="font-['Raleway'] text-xs text-[var(--ink-muted)] max-w-md mx-auto">
-            Click &quot;Create Assignment&quot; above to compose and assign problem sets to your batches.
-          </p>
+        <div className="paper-card">
+          <EmptyState art="education/homework" title="No assignments published yet" description="Create an assignment to give a batch a problem set. Submissions and grading status will show up here." />
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
