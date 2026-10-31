@@ -8,7 +8,8 @@ ADD COLUMN     "status" TEXT NOT NULL DEFAULT 'ACTIVE',
 ADD COLUMN     "subdomain" TEXT;
 
 -- AlterTable
-ALTER TABLE "User" ADD COLUMN     "tokenVersion" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "User" ADD COLUMN     "notificationPreferences" JSONB,
+ADD COLUMN     "tokenVersion" INTEGER NOT NULL DEFAULT 0;
 
 -- AlterTable
 ALTER TABLE "InstituteMembership" ADD COLUMN     "revokedAt" TIMESTAMP(3),

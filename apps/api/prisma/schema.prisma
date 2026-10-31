@@ -124,21 +124,22 @@ model Institute {
 }
 
 model User {
-  id                  String    @id @default(cuid())
-  email               String    @unique
-  passwordHash        String
-  fullName            String
-  phone               String?
-  avatarUrl           String?
-  role                Role      @default(TEACHER)
-  isActive            Boolean   @default(true)
-  isEmailVerified     Boolean   @default(false)
-  resetPasswordToken  String?
-  resetPasswordExpiry DateTime?
+  id                      String    @id @default(cuid())
+  email                   String    @unique
+  passwordHash            String
+  fullName                String
+  phone                   String?
+  avatarUrl               String?
+  role                    Role      @default(TEACHER)
+  isActive                Boolean   @default(true)
+  isEmailVerified         Boolean   @default(false)
+  resetPasswordToken      String?
+  resetPasswordExpiry     DateTime?
   // Bumped to invalidate every outstanding JWT for this user (password change, "sign out everywhere").
-  tokenVersion        Int       @default(0)
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  tokenVersion            Int       @default(0)
+  notificationPreferences Json?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
 
   memberships           InstituteMembership[]
   teacherBatches        Batch[]                   @relation("TeacherBatches")

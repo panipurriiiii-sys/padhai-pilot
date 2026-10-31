@@ -46,6 +46,7 @@ interface DbUserWithMemberships {
   avatarUrl: string | null;
   isActive: boolean;
   passwordHash: string;
+  tokenVersion?: number;
   memberships: Array<{
     instituteId: string;
     role: string;
@@ -108,6 +109,7 @@ export class AuthService {
         instituteId: PLATFORM_INSTITUTE_ID,
         instituteName: PLATFORM_INSTITUTE_NAME,
         avatarUrl: u.avatarUrl || undefined,
+        tv: u.tokenVersion ?? 0,
       };
     }
     const membership = u.memberships.find((m) => m.status === 'ACTIVE' && m.institute.isActive);
@@ -122,6 +124,7 @@ export class AuthService {
       instituteId: membership.instituteId,
       instituteName: membership.institute.name,
       avatarUrl: u.avatarUrl || undefined,
+      tv: u.tokenVersion ?? 0,
     };
   }
 
@@ -413,7 +416,7 @@ export class AuthService {
       // Single-use: the token is consumed in the same statement that checks it.
       const result = await this.prisma.user.updateMany({
         where: { resetPasswordToken: tokenHash, resetPasswordExpiry: { gt: new Date() } },
-        data: { passwordHash, resetPasswordToken: null, resetPasswordExpiry: null },
+        data: { passwordHash, resetPasswordToken: null, resetPasswordExpiry: null, tokenVersion: { increment: 1 } },
       });
       if (result.count !== 1) throw invalid();
     } else {
@@ -433,7 +436,11 @@ export class AuthService {
   // -------------------------------------------------------------
   // 5. CHANGE PASSWORD (authenticated)
   // -------------------------------------------------------------
-  async changePassword(userId: string, oldPass: string, newPass: string): Promise<{ success: boolean }> {
+  async changePassword(
+    userId: string,
+    oldPass: string,
+    newPass: string,
+  ): Promise<{ success: boolean; session?: { user: AuthenticatedUser; token: string } }> {
     const policyError = passwordPolicyError(newPass);
     if (policyError) throw new BadRequestException(policyError);
     if (typeof oldPass !== 'string' || !oldPass) throw new BadRequestException('Current password is required.');
@@ -444,8 +451,13 @@ export class AuthService {
       if (!user || !(await verifyPassword(oldPass, user.passwordHash))) {
         throw new BadRequestException('Current password does not match.');
       }
-      await this.prisma.user.update({ where: { id: userId }, data: { passwordHash: await hashPassword(newPass) } });
-      return { success: true };
+      // Bumping tokenVersion signs every other device out; the caller gets a fresh token below.
+      const updated = (await this.prisma.user.update({
+        where: { id: userId },
+        data: { passwordHash: await hashPassword(newPass), tokenVersion: { increment: 1 } },
+        include: { memberships: { include: { institute: true } } },
+      })) as DbUserWithMemberships;
+      return { success: true, session: this.issue(this.toAuthUser(updated)) };
     }
 
     const record = [...this.memoryUsers.values()].find((u) => u.id === userId);
