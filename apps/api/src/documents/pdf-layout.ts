@@ -255,10 +255,15 @@ export async function renderDocument(spec: DocSpec, brand: InstituteLetterhead, 
     drawRow(t.columns.map((c) => c.header), { head: true });
     t.rows.forEach((r, i) => drawRow(r, { zebra: i % 2 === 1 }));
     for (const [label, value] of t.totals ?? []) {
-      const cells = t.columns.map(() => '');
-      cells[t.columns.length - 2] = label;
-      cells[t.columns.length - 1] = value;
-      drawRow(cells, { boldRow: true });
+      // Totals span the table: label left of the value, both right-aligned, never wrapped into a narrow column.
+      if (y - 20 < M + FOOTER_H) newPage();
+      const v = sanitizePdfText(value);
+      const l = sanitizePdfText(label);
+      const vw = bold.widthOfTextAtSize(v, 9.5);
+      page!.drawText(v, { x: A4[0] - M - PAD - vw, y: y - 14, size: 9.5, font: bold, color: INK });
+      page!.drawText(l, { x: A4[0] - M - PAD - vw - 14 - bold.widthOfTextAtSize(l, 9.5), y: y - 14, size: 9.5, font: bold, color: INK });
+      page!.drawLine({ start: { x: M, y: y - 20 }, end: { x: A4[0] - M, y: y - 20 }, thickness: 0.8, color: INK });
+      y -= 20;
     }
     y -= 12;
   }
