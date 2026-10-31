@@ -8,8 +8,8 @@ import type {
   UserSession,
   PublishedTheme,
   PlatformThemeConfig,
+  PlatformAdminAnalyticsSummary,
 } from '@padhai-pilot/shared';
-import { BUILT_IN_PUBLISHED_THEME } from '@padhai-pilot/shared';
 
 export interface InstituteSummary {
   id: string;
@@ -82,12 +82,24 @@ export interface AdminThemeOverview {
 }
 
 function getCleanApiBaseUrl(): string {
-  const envUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+  const envUrl =
+    process.env.NEXT_PUBLIC_API_URL ||
+    (process.env.NODE_ENV === 'production' ? 'https://padhai-pilot.vercel.app/api' : 'http://localhost:3001/api');
   let clean = envUrl.trim().replace(/\/+$/, '');
   if (!clean.endsWith('/api')) {
     clean += '/api';
   }
   return clean;
+}
+
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
 }
 
 class AdminApiClient {
@@ -149,47 +161,58 @@ class AdminApiClient {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('admin_user');
       if (stored) {
-        try {
-          return JSON.parse(stored);
-        } catch {}
+        return JSON.parse(stored);
       }
     }
     return null;
   }
 
-  async getHealth(): Promise<PlatformHealth> {
+  /** Authenticated GET. Failures throw ApiError: callers render an error state, never sample data. */
+  private async get<T>(path: string): Promise<T> {
+    let res: Response;
     try {
-      const res = await fetch(`${getCleanApiBaseUrl()}/admin/stats`, {
-        headers: this.getHeaders(),
-      });
-      if (res.ok) {
-        const body = await res.json();
-        const stats = body.data || body;
-        return {
-          status: 'ok',
-          api: true,
-          database: stats.infrastructure?.databaseStatus === 'CONNECTED' || true,
-          redis: stats.infrastructure?.redisStatus === 'ACTIVE' || true,
-          uptimeSeconds: stats.infrastructure?.uptimeSeconds || 12450,
-          environment: stats.infrastructure?.environment || 'production',
-          tenantsTotal: stats.tenants?.total || 4,
-          activeStudents: stats.users?.totalStudents || 1457,
-          activeTeachers: stats.users?.totalTeachers || 58,
-        };
+      res = await fetch(`${getCleanApiBaseUrl()}${path}`, { headers: this.getHeaders(), cache: 'no-store' });
+    } catch {
+      throw new ApiError('Cannot reach the server. Check your connection and try again.', 0);
+    }
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      const raw = (err as { message?: string | string[] }).message;
+      const message = Array.isArray(raw) ? raw.join(', ') : raw || `Request failed (${res.status})`;
+      if (res.status === 401) {
+        this.clearToken();
+        if (typeof window !== 'undefined') window.dispatchEvent(new Event('pp:unauthorized'));
       }
-    } catch {}
+      throw new ApiError(message, res.status);
+    }
+    const body = await res.json();
+    return ((body as { data?: T }).data ?? body) as T;
+  }
 
+  /** Platform health derived only from what GET /admin/stats actually reports. */
+  async getHealth(): Promise<PlatformHealth> {
+    const stats = await this.get<{
+      tenants?: { total?: number };
+      users?: { totalStudents?: number; totalTeachers?: number };
+      infrastructure?: { databaseStatus?: string; redisStatus?: string; uptimeSeconds?: number; environment?: string };
+    }>('/admin/stats');
+    const db = stats.infrastructure?.databaseStatus === 'CONNECTED';
+    const redis = stats.infrastructure?.redisStatus === 'ACTIVE';
     return {
-      status: 'ok',
+      status: db ? 'ok' : 'degraded',
       api: true,
-      database: true,
-      redis: true,
-      uptimeSeconds: 14200,
-      environment: 'production',
-      tenantsTotal: 4,
-      activeStudents: 1457,
-      activeTeachers: 58,
+      database: db,
+      redis,
+      uptimeSeconds: stats.infrastructure?.uptimeSeconds ?? 0,
+      environment: stats.infrastructure?.environment ?? 'unknown',
+      tenantsTotal: stats.tenants?.total ?? 0,
+      activeStudents: stats.users?.totalStudents ?? 0,
+      activeTeachers: stats.users?.totalTeachers ?? 0,
     };
+  }
+
+  async getAdminAnalytics(): Promise<PlatformAdminAnalyticsSummary> {
+    return this.get<PlatformAdminAnalyticsSummary>('/analytics/admin');
   }
 
   // --------------------------------------------------------------------------
@@ -197,96 +220,7 @@ class AdminApiClient {
   // --------------------------------------------------------------------------
 
   async getInstitutes(): Promise<InstituteSummary[]> {
-    try {
-      const res = await fetch(`${getCleanApiBaseUrl()}/admin/institutes`, {
-        headers: this.getHeaders(),
-      });
-      if (res.ok) {
-        const body = await res.json();
-        return body.data || body;
-      }
-    } catch {}
-
-    // Fallback baseline for registered institutes
-    return [
-      {
-        id: 'inst_apex_academy',
-        name: 'Apex Academy Kota',
-        subdomain: 'apex',
-        plan: 'GROWTH',
-        status: 'ACTIVE',
-        ownerName: 'Rajeshwar Singhania',
-        ownerEmail: 'owner@padhaipilot.com',
-        ownerPhone: '+91 98220 11223',
-        customDomain: 'learn.apexkota.edu.in',
-        isWhiteLabel: true,
-        isDedicatedDb: false,
-        studentCount: 142,
-        teacherCount: 8,
-        createdAt: '2026-09-01T08:00:00Z',
-        updatedAt: '2026-10-25T14:20:00Z',
-        themePrimaryColor: '#1677FF',
-        maxStudentsLimit: 500,
-        maxTeachersLimit: 25,
-      },
-      {
-        id: 'inst_zenith_classes',
-        name: 'Zenith Science Institute',
-        subdomain: 'zenith',
-        plan: 'PRO',
-        status: 'ACTIVE',
-        ownerName: 'Dr. Anand Verma',
-        ownerEmail: 'anand@zenithclasses.com',
-        ownerPhone: '+91 98111 23456',
-        customDomain: 'portal.zenithscience.com',
-        isWhiteLabel: true,
-        isDedicatedDb: true,
-        studentCount: 380,
-        teacherCount: 15,
-        createdAt: '2026-08-15T09:30:00Z',
-        updatedAt: '2026-10-28T10:15:00Z',
-        themePrimaryColor: '#059669',
-        maxStudentsLimit: 1000,
-        maxTeachersLimit: 50,
-      },
-      {
-        id: 'inst_prerna_tuition',
-        name: 'Prerna Commerce Classes',
-        subdomain: 'prerna',
-        plan: 'STARTER',
-        status: 'ACTIVE',
-        ownerName: 'Sunita Agarwal',
-        ownerEmail: 'sunita@prernaclasses.in',
-        ownerPhone: '+91 98333 44556',
-        isWhiteLabel: false,
-        isDedicatedDb: false,
-        studentCount: 45,
-        teacherCount: 3,
-        createdAt: '2026-10-10T11:00:00Z',
-        updatedAt: '2026-10-20T16:00:00Z',
-        maxStudentsLimit: 100,
-        maxTeachersLimit: 5,
-      },
-      {
-        id: 'inst_quantum_allen',
-        name: 'Quantum Physics Circle',
-        subdomain: 'quantum',
-        plan: 'ENTERPRISE',
-        status: 'ACTIVE',
-        ownerName: 'Prof. Debabrata Roy',
-        ownerEmail: 'debabrata@quantumphy.org',
-        ownerPhone: '+91 97444 88990',
-        customDomain: 'mastery.quantumphy.org',
-        isWhiteLabel: true,
-        isDedicatedDb: true,
-        studentCount: 890,
-        teacherCount: 32,
-        createdAt: '2026-07-01T07:00:00Z',
-        updatedAt: '2026-10-29T18:00:00Z',
-        maxStudentsLimit: 5000,
-        maxTeachersLimit: 100,
-      },
-    ];
+    return this.get<InstituteSummary[]>('/admin/institutes');
   }
 
   async createInstitute(data: {
@@ -372,12 +306,7 @@ class AdminApiClient {
   // --------------------------------------------------------------------------
 
   async getFeatureRegistry(): Promise<FeatureDefinition[]> {
-    const res = await fetch(`${getCleanApiBaseUrl()}/features/registry`, {
-      headers: this.getHeaders(),
-    });
-    if (!res.ok) throw new Error('Failed to load feature registry');
-    const body = await res.json();
-    return body.data || body;
+    return this.get<FeatureDefinition[]>('/features/registry');
   }
 
   async getEffectiveFeatures(instituteId: string): Promise<InstituteEffectiveFeatures> {
@@ -429,40 +358,7 @@ class AdminApiClient {
   // --------------------------------------------------------------------------
 
   async getAuditLogs(): Promise<PlatformAuditItem[]> {
-    try {
-      const res = await fetch(`${getCleanApiBaseUrl()}/admin/audit-logs`, {
-        headers: this.getHeaders(),
-      });
-      if (res.ok) {
-        const body = await res.json();
-        return body.data || body;
-      }
-    } catch {}
-
-    return [
-      {
-        id: 'audit_init_01',
-        timestamp: new Date(Date.now() - 3600000 * 24).toISOString(),
-        actorId: 'usr_admin_malhotra',
-        actorEmail: 'super@padhaipilot.com',
-        action: 'TENANT_ONBOARDED',
-        targetId: 'inst_quantum_allen',
-        targetType: 'INSTITUTE',
-        details: 'Onboarded Quantum Physics Circle on Enterprise tier with dedicated DB.',
-        status: 'SUCCESS',
-      },
-      {
-        id: 'audit_init_02',
-        timestamp: new Date(Date.now() - 3600000 * 12).toISOString(),
-        actorId: 'usr_admin_malhotra',
-        actorEmail: 'super@padhaipilot.com',
-        action: 'PLAN_UPGRADE',
-        targetId: 'inst_apex_academy',
-        targetType: 'SUBSCRIPTION',
-        details: 'Upgraded Apex Academy Kota from STARTER to GROWTH.',
-        status: 'SUCCESS',
-      },
-    ];
+    return this.get<PlatformAuditItem[]>('/admin/audit-logs');
   }
 
   // --------------------------------------------------------------------------
@@ -470,26 +366,7 @@ class AdminApiClient {
   // --------------------------------------------------------------------------
 
   async getAnnouncements(): Promise<PlatformAnnouncementItem[]> {
-    try {
-      const res = await fetch(`${getCleanApiBaseUrl()}/admin/announcements`, {
-        headers: this.getHeaders(),
-      });
-      if (res.ok) {
-        const body = await res.json();
-        return body.data || body;
-      }
-    } catch {}
-
-    return [
-      {
-        id: 'ann_sys_01',
-        title: 'Scheduled Cloud Maintenance — PostgreSQL Optimization',
-        message: 'Platform-wide DB maintenance scheduled for Sunday at 02:00 AM IST. Expect up to 2 mins read-only transition.',
-        severity: 'info',
-        targetAudience: 'ALL',
-        createdAt: new Date().toISOString(),
-      },
-    ];
+    return this.get<PlatformAnnouncementItem[]>('/admin/announcements');
   }
 
   async createAnnouncement(data: {
@@ -515,45 +392,13 @@ class AdminApiClient {
   // --------------------------------------------------------------------------
 
   async getPublicTheme(): Promise<PublishedTheme> {
-    try {
-      const res = await fetch(`${getCleanApiBaseUrl()}/theme`, {
-        headers: { Accept: 'application/json' },
-        cache: 'no-store',
-      });
-      if (res.ok) {
-        return (await res.json()) as PublishedTheme;
-      }
-    } catch {
-      // Offline fallback
-    }
-    return BUILT_IN_PUBLISHED_THEME;
+    const res = await fetch(`${getCleanApiBaseUrl()}/theme`, { headers: { Accept: 'application/json' }, cache: 'no-store' });
+    if (!res.ok) throw new ApiError('Could not load the published theme.', res.status);
+    return (await res.json()) as PublishedTheme;
   }
 
   async getAdminThemeOverview(): Promise<AdminThemeOverview> {
-    try {
-      const res = await fetch(`${getCleanApiBaseUrl()}/admin/theme`, {
-        headers: this.getHeaders(),
-      });
-      if (res.ok) {
-        const body = await res.json();
-        return body.data || body;
-      }
-    } catch {
-      // Offline fallback
-    }
-    return {
-      published: BUILT_IN_PUBLISHED_THEME,
-      history: [
-        {
-          revision: 0,
-          revisionId: 'r0-default',
-          checksum: 'default',
-          publishedAt: '2026-10-31T00:00:00.000Z',
-          publishedByEmail: 'system@padhaipilot.com',
-          reason: 'Initial authoritative design-system baseline',
-        },
-      ],
-    };
+    return this.get<AdminThemeOverview>('/admin/theme');
   }
 
   async validateThemeConfig(config: PlatformThemeConfig): Promise<{ valid: boolean; errors?: string[]; warnings?: string[] }> {
