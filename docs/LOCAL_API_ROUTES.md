@@ -50,3 +50,11 @@ No default expiry (`expiresAt:null`). Code format `ABCD-EF23`. Responses are `En
 * `GET /teacher/reports` now returns real aggregates (rates are `null` when there is no data).
 * Attendance `POST /teacher/attendance` rejects students not actively enrolled in the batch.
 * Migration: `apps/api/prisma/migrations/20261101000000_academic_core` (additive: Batch.schedule/archivedAt, Enrollment.endedAt/promotedFromBatchId, InvitationCode.expiresAt nullable + label/revokedAt/updatedAt, TimetableSlot.notes/updatedAt, table BatchPromotion).
+
+## Faculty onboarding and admin (changed)
+* `POST /faculty-invitations` (MGMT) -> `{token, acceptPath: "/join-faculty?token=...", expiresAt, deliveryStatus:"NOT_SENT"}`; token shown once, only its sha256 is stored; expiry 1..30 days; supersedes earlier pending invites for the same email.
+* `GET /faculty-invitations` (MGMT) list; `POST /faculty-invitations/:id/revoke`; `POST /faculty-invitations/:id/resend` (rotates the token).
+* `GET /faculty-invitations/:token` public preview; `POST /faculty-invitations/accept` `{token,password,fullName?,phone?}`: atomic single-use claim; an existing account must give its current password (never overwritten), existing owner/student memberships are refused.
+* `POST /tuition/faculties` no longer creates users (400 -> use invitations); it only updates people who already hold a FACULTY/TEACHER membership.
+* `/tuition/diaries`, `/tuition/materials`: faculty see only their own / their batches' entries; students see only enrolled-batch materials (none -> `[]`).
+* `/admin/*` (SUPER_ADMIN): now PostgreSQL-backed; 503 when DB is down; `GET /admin/stats` users no longer has `estimatedDailyActive`.
