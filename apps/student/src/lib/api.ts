@@ -4,6 +4,10 @@ import {
   UserSession,
   StudyMaterialItem,
   StudentAnalyticsSummary,
+  StudentFeeLedger,
+  StudentLeaveItem,
+  ApplyStudentLeaveRequest,
+  InstituteLetterhead,
 } from '@padhai-pilot/shared';
 
 const PRODUCTION_API_URL = 'https://padhai-pilot.vercel.app/api';
@@ -84,6 +88,34 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
+}
+
+/** Fetches a server-rendered PDF (needs the bearer token) as a Blob. */
+async function fetchDocumentBlob(path: string): Promise<Blob> {
+  const token = getAuthToken();
+  let res: Response;
+  try {
+    res = await fetch(`${getCleanApiBaseUrl()}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  } catch {
+    throw new ApiError('Cannot reach the server. Check your connection and try again.', 0);
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new ApiError((body as { message?: string }).message || `Could not generate the document (${res.status})`, res.status);
+  }
+  return res.blob();
+}
+
+function openBlob(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const w = window.open(url, '_blank');
+  if (!w) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.click();
+  }
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
 /** Normalised API failure: status 0 means the server could not be reached. */
@@ -447,6 +479,31 @@ export const studentApi = {
     }>;
   }> {
     return await request('/student/fees');
+  },
+
+  // 11b. Fee ledger (PENDING until the teacher records a payment), receipts and server-rendered PDFs
+  async getFeeLedger(): Promise<StudentFeeLedger> {
+    return request<StudentFeeLedger>('/student/finance/fees');
+  },
+  async openReceipt(paymentId: string): Promise<void> {
+    openBlob(await fetchDocumentBlob(`/documents/fee-receipt/${paymentId}`), 'fee-receipt.pdf');
+  },
+  async openAttendanceReport(): Promise<void> {
+    openBlob(await fetchDocumentBlob('/documents/attendance-report'), 'attendance-report.pdf');
+  },
+
+  // 11c. Leave applications
+  async getLeaves(): Promise<StudentLeaveItem[]> {
+    return request<StudentLeaveItem[]>('/student/leaves');
+  },
+  async applyLeave(dto: ApplyStudentLeaveRequest): Promise<StudentLeaveItem> {
+    return request<StudentLeaveItem>('/student/leaves', { method: 'POST', body: JSON.stringify(dto) });
+  },
+  async cancelLeave(id: string): Promise<StudentLeaveItem> {
+    return request<StudentLeaveItem>(`/student/leaves/${id}/cancel`, { method: 'POST' });
+  },
+  async getLetterhead(): Promise<InstituteLetterhead> {
+    return request<InstituteLetterhead>('/branding');
   },
 
   // 12. Announcements
