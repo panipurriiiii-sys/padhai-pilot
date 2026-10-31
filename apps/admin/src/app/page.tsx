@@ -560,6 +560,13 @@ export default function AdminPlatformOwnerDashboard() {
           </div>
         )}
 
+        {Object.keys(loadErrors).length > 0 && activeTab !== 'system' && activeTab !== 'theme' && (
+          <div role="alert" className="p-3.5 rounded-xl border bg-status-danger-bg border-status-danger-border text-status-danger-text text-xs flex items-center justify-between gap-4">
+            <span>Some data could not be loaded: {Object.entries(loadErrors).map(([k, v]) => `${k} (${v})`).join('; ')}. Lists below may be incomplete.</span>
+            <button onClick={loadAll} className="underline font-bold shrink-0">Retry</button>
+          </div>
+        )}
+
         {/* Tab Selection Bar & Universal Search */}
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 border-b border-border-paper pb-4">
           <div className="flex items-center gap-1.5 bg-paper p-1.5 rounded-2xl border border-border-paper overflow-x-auto">
