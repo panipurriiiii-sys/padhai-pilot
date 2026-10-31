@@ -212,14 +212,16 @@ export function BatchesView({
                       <td className="py-3 px-4 text-center font-['Inter'] font-bold">
                         <span
                           className={`px-2 py-0.5 rounded-full text-[11px] ${
-                            std.attendanceRate >= 90
+                            typeof std.attendanceRate !== 'number'
+                              ? 'bg-stone-100 text-stone-600'
+                              : std.attendanceRate >= 90
                               ? 'bg-emerald-100 text-emerald-800'
                               : std.attendanceRate >= 80
                               ? 'bg-amber-100 text-amber-800'
                               : 'bg-rose-100 text-rose-800'
                           }`}
                         >
-                          {std.attendanceRate}%
+                          {typeof std.attendanceRate === 'number' ? `${std.attendanceRate}%` : 'No data'}
                         </span>
                       </td>
                       <td className="py-3 px-4 text-right">

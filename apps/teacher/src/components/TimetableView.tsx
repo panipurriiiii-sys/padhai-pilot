@@ -146,7 +146,7 @@ export function TimetableView({ batches }: { batches: BatchSummary[] }) {
                     <div className="min-w-0">
                       <div className="font-data text-xs font-bold text-[var(--brand-electric)]">{s.startTime} - {s.endTime}</div>
                       <div className="font-['Raleway'] font-bold text-sm text-[var(--ink-primary)] truncate">{s.subject}</div>
-                      <div className="text-[11px] text-[var(--ink-muted)] truncate">{s.batchName}{s.room ? ` - Room ${s.room}` : ''}</div>
+                      <div className="text-[11px] text-[var(--ink-muted)] truncate">{s.batchName}{s.room ? ` - ${s.room}` : ''}</div>
                       {s.notes && <div className="text-[11px] text-[var(--ink-secondary)] mt-0.5">{s.notes}</div>}
                     </div>
                     <div className="flex gap-1 shrink-0">
