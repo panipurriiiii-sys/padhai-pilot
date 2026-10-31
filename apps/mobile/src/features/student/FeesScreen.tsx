@@ -1,36 +1,45 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Screen } from '../../components/common/Screen';
+import { Screen, SectionTitle } from '../../components/common/Screen';
 import { QueryBoundary } from '../../components/common/QueryBoundary';
 import { Card } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
+import { Button } from '../../components/common/Button';
 import { Body, Caption, StatValue, Subtitle } from '../../components/common/Typography';
-import { useFeesData } from '../../hooks/useStudentData';
+import { useStudentFeeLedger } from '../../hooks/useFinanceData';
 import { useTheme } from '../../theme/ThemeContext';
 import { formatDate, formatInr } from '../../lib/format';
+import { openPdf } from '../../lib/pdf';
+import { documentPaths } from '../../services/api/financeService';
 
-const VARIANT = { PAID: 'success', PENDING: 'warning', OVERDUE: 'error' } as const;
+const VARIANT = { PAID: 'success', PARTIAL: 'warning', PENDING: 'neutral', OVERDUE: 'error', VOID: 'neutral' } as const;
 
 export const FeesScreen: React.FC = () => {
   const { colors, spacing } = useTheme();
-  const query = useFeesData();
+  const query = useStudentFeeLedger();
 
   return (
     <Screen
       eyebrow="ACADEMIC DUES"
       title="Fees & receipts"
-      subtitle="Payment status changes only after your institute verifies it"
+      subtitle="Payment status changes only after your teacher records it"
       refreshing={query.isRefetching}
       onRefresh={() => query.refetch()}
     >
       <QueryBoundary
         query={query}
-        isEmpty={(f) => f.receipts.length === 0}
+        isEmpty={(f) => f.fees.length === 0}
         emptyTitle="No fee records"
-        emptyDescription="Your institute has not added any fee records for you yet."
+        emptyDescription="Your teacher has not set a fee for your batch yet."
       >
         {(f) => (
           <>
+            {f.overdueAmount > 0 ? (
+              <Card style={{ marginBottom: spacing.md, borderColor: colors.error }}>
+                <Subtitle color={colors.error}>{`Overdue: ${formatInr(f.overdueAmount)}`}</Subtitle>
+                <Caption>Please contact your teacher to clear the balance.</Caption>
+              </Card>
+            ) : null}
             <View style={styles.grid}>
               <Card style={styles.kpi}>
                 <Caption>Total</Caption>
@@ -42,28 +51,43 @@ export const FeesScreen: React.FC = () => {
               </Card>
               <Card style={styles.kpi}>
                 <Caption>Balance due</Caption>
-                <StatValue color={f.balanceDue > 0 ? colors.warning : colors.success}>
-                  {formatInr(f.balanceDue)}
-                </StatValue>
+                <StatValue color={f.balanceDue > 0 ? colors.warning : colors.success}>{formatInr(f.balanceDue)}</StatValue>
               </Card>
             </View>
 
-            <View style={{ marginTop: spacing.lg }}>
-              {f.receipts.map((r) => (
-                <Card key={r.id} style={{ marginBottom: spacing.sm }}>
-                  <View style={styles.row}>
-                    <Subtitle style={{ flex: 1 }}>{r.title}</Subtitle>
-                    <Badge label={r.status} variant={VARIANT[r.status]} />
-                  </View>
-                  <Body>{`${formatInr(r.paidAmount)} of ${formatInr(r.amount)}`}</Body>
-                  <Caption>
-                    {r.status === 'PAID' && r.paidDate
-                      ? `Paid ${formatDate(r.paidDate)}${r.receiptNumber ? ` · ${r.receiptNumber}` : ''}`
-                      : `Due ${formatDate(r.dueDate)}`}
-                  </Caption>
-                </Card>
-              ))}
-            </View>
+            <SectionTitle>Fees</SectionTitle>
+            {f.fees.map((fee) => (
+              <Card key={fee.id} style={{ marginBottom: spacing.sm }}>
+                <View style={styles.row}>
+                  <Subtitle style={{ flex: 1 }}>{fee.feeTitle}</Subtitle>
+                  <Badge label={fee.status} variant={VARIANT[fee.status]} />
+                </View>
+                <Body>{`${formatInr(fee.paidAmount)} of ${formatInr(fee.totalAmount)}`}</Body>
+                <Caption>{`Due ${formatDate(fee.dueDate)}${fee.balanceDue > 0 ? ` · balance ${formatInr(fee.balanceDue)}` : ''}`}</Caption>
+              </Card>
+            ))}
+
+            <SectionTitle>Receipts</SectionTitle>
+            {f.receipts.length === 0 ? <Caption>No payments recorded yet.</Caption> : null}
+            {f.receipts.map((r) => (
+              <Card key={r.id} style={{ marginBottom: spacing.sm }}>
+                <View style={styles.row}>
+                  <Subtitle style={{ flex: 1 }}>{r.receiptNumber}</Subtitle>
+                  <Badge label={r.status} variant={r.status === 'ISSUED' ? 'success' : 'neutral'} />
+                </View>
+                <Body>{formatInr(r.amount)}</Body>
+                <Caption>{`${formatDate(r.paidOn)} · ${r.mode.replace('_', ' ')}${r.reference ? ` · ${r.reference}` : ''}`}</Caption>
+                {r.status === 'ISSUED' ? (
+                  <Button
+                    title="Open receipt PDF"
+                    size="sm"
+                    variant="outline"
+                    style={{ marginTop: spacing.sm }}
+                    onPress={() => void openPdf(documentPaths.feeReceipt(r.id), r.receiptNumber)}
+                  />
+                ) : null}
+              </Card>
+            ))}
           </>
         )}
       </QueryBoundary>

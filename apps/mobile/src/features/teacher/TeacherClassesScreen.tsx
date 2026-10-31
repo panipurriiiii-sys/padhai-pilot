@@ -20,7 +20,9 @@ import { useTheme } from '../../theme/ThemeContext';
 import { errorMessage, formatDate } from '../../lib/format';
 import type { EnrollmentCode, TeacherBatch } from '../../services/api/teacherService';
 
-type Tab = 'students' | 'codes' | 'batch';
+import { TeacherFeesPanel } from './TeacherFeesPanel';
+
+type Tab = 'students' | 'codes' | 'fees' | 'batch';
 const CODE_VARIANT = { ACTIVE: 'success', EXPIRED: 'neutral', REVOKED: 'error', EXHAUSTED: 'warning' } as const;
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -215,6 +217,7 @@ export const TeacherClassesScreen: React.FC = () => {
         options={[
           { key: 'students', label: 'Students' },
           { key: 'codes', label: 'Codes' },
+          { key: 'fees', label: 'Fees' },
           { key: 'batch', label: 'Batch' },
         ]}
       />
@@ -268,6 +271,8 @@ export const TeacherClassesScreen: React.FC = () => {
             {(codes) => codes.map((c) => <CodeCard key={c.id} c={c} />)}
           </QueryBoundary>
         </>
+      ) : tab === 'fees' ? (
+        batchId ? <TeacherFeesPanel batchId={batchId} /> : <Caption>Select a batch to manage its fees.</Caption>
       ) : selected ? (
         <BatchManage key={selected.id} batch={selected} />
       ) : (

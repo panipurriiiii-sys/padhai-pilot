@@ -82,3 +82,8 @@ dependencies {
         implementation jscFlavor
     }
 }
+
+// FCM: only active once the owner drops google-services.json into android/app (never committed).
+if (file("google-services.json").exists()) {
+    apply plugin: "com.google.gms.google-services"
+}

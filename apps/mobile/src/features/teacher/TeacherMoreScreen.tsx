@@ -22,16 +22,18 @@ import {
   useTimetableMutations,
 } from '../../hooks/useTeacherData';
 import type { TimetableConflictError, WeekDay } from '@padhai-pilot/shared';
+import { StudentLeaveReview } from '../leave/StudentLeavePanels';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useTheme } from '../../theme/ThemeContext';
 import { errorMessage, formatDate, formatInr, todayIso } from '../../lib/format';
 
-type View_ = 'menu' | 'homework' | 'announcements' | 'timetable' | 'leave' | 'salary' | 'profile';
+type View_ = 'menu' | 'homework' | 'announcements' | 'timetable' | 'leave' | 'studentLeave' | 'salary' | 'profile';
 
 const MENU: Array<{ key: Exclude<View_, 'menu'>; label: string; hint: string }> = [
   { key: 'homework', label: 'Homework & grading', hint: 'Create assignments, grade submissions' },
   { key: 'announcements', label: 'Announcements', hint: 'Message your batches' },
   { key: 'timetable', label: 'Timetable', hint: 'Your weekly schedule' },
+  { key: 'studentLeave', label: 'Student leave', hint: 'Approve or reject requests' },
   { key: 'leave', label: 'My leave', hint: 'Apply and track decisions' },
   { key: 'salary', label: 'My salary statements', hint: 'Visible only to you' },
   { key: 'profile', label: 'Account', hint: 'Sign out' },
@@ -85,7 +87,9 @@ const Homework: React.FC = () => {
   const [subject, setSubject] = useState('');
   const [instructions, setInstructions] = useState('');
   const [due, setDue] = useState(todayIso());
-  const ready = !!batchId && title.trim() && subject.trim() && instructions.trim() && /^\d{4}-\d{2}-\d{2}$/.test(due);
+  const [attachment, setAttachment] = useState('');
+  const attachmentOk = attachment.trim() === '' || /^https:\/\/\S+$/i.test(attachment.trim());
+  const ready = attachmentOk && !!batchId && title.trim() && subject.trim() && instructions.trim() && /^\d{4}-\d{2}-\d{2}$/.test(due);
   return (
     <>
       <Card style={{ marginBottom: 16 }}>
@@ -95,13 +99,20 @@ const Homework: React.FC = () => {
         <Input label="Subject" value={subject} onChangeText={setSubject} />
         <Input label="Instructions" value={instructions} onChangeText={setInstructions} multiline />
         <Input label="Due date (YYYY-MM-DD)" value={due} onChangeText={setDue} autoCapitalize="none" />
+        <Input
+          label="PDF / document link (optional, https)"
+          value={attachment}
+          onChangeText={setAttachment}
+          autoCapitalize="none"
+          error={attachmentOk ? null : 'Must start with https://'}
+        />
         <Button
           title="Publish to batch"
           disabled={!ready}
           loading={create.isPending}
           onPress={() =>
             create.mutate(
-              { batchId: batchId as string, title: title.trim(), subject: subject.trim(), instructions: instructions.trim(), dueDate: due },
+              { batchId: batchId as string, title: title.trim(), subject: subject.trim(), instructions: instructions.trim(), dueDate: due, attachmentUrl: attachment.trim() || undefined },
               {
                 onSuccess: () => { setTitle(''); setInstructions(''); },
                 onError: (e) => Alert.alert('Could not create', errorMessage(e)),
@@ -224,8 +235,8 @@ const Timetable: React.FC = () => {
             .sort((a, b) => DAYS.indexOf(a.dayOfWeek) - DAYS.indexOf(b.dayOfWeek) || a.startTime.localeCompare(b.startTime))
             .map((s) => (
               <Card key={s.id} style={{ marginBottom: 8 }}>
-                <Subtitle>{`${s.subject} · ${s.batchName}`}</Subtitle>
-                <Caption>{`${s.dayOfWeek} ${s.startTime}–${s.endTime}${s.room ? ` · ${s.room}` : ''}`}</Caption>
+                <Subtitle>{`${s.subject} Â· ${s.batchName}`}</Subtitle>
+                <Caption>{`${s.dayOfWeek} ${s.startTime}â€“${s.endTime}${s.room ? ` Â· ${s.room}` : ''}`}</Caption>
                 <View style={[styles.between, { justifyContent: 'flex-start', marginTop: 8 }]}>
                   <Button
                     title="Edit"
@@ -343,6 +354,7 @@ export const TeacherMoreScreen: React.FC = () => {
           {view === 'announcements' ? <Announcements /> : null}
           {view === 'timetable' ? <Timetable /> : null}
           {view === 'leave' ? <Leave /> : null}
+          {view === 'studentLeave' ? <StudentLeaveReview /> : null}
           {view === 'salary' ? <Salary /> : null}
           {view === 'profile' ? (
             <>

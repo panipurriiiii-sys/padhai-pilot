@@ -51,6 +51,11 @@ class ApiClient {
     this.unauthorizedHandler = handler;
   }
 
+  /** For code paths that bypass `request` (e.g. native PDF downloads) and see a 401. */
+  public notifyUnauthorized() {
+    if (this.authToken) this.unauthorizedHandler?.();
+  }
+
   public getAuthToken(): string | null {
     return this.authToken;
   }
