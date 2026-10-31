@@ -602,6 +602,7 @@ model AssessmentAudit {
   assessmentId String
   action       String // CREATED, DRAFT_SAVED, PUBLISHED, REPUBLISHED, MARKS_CORRECTED
   userId       String
+  reason       String?
   metadata     Json?
   createdAt    DateTime @default(now())
 
@@ -1149,5 +1150,25 @@ model PlatformAnnouncement {
   createdById    String?
   createdAt      DateTime  @default(now())
 
+  @@index([createdAt])
+}
+
+model PlatformThemeRevision {
+  id               String   @id @default(cuid())
+  revision         Int      @unique
+  revisionId       String   @unique
+  checksum         String
+  config           Json
+  action           String
+  restoredFrom     Int?
+  previousRevision Int?
+  changeSummary    Json?
+  reason           String?
+  actorId          String
+  actorEmail       String
+  isActive         Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  @@index([isActive])
   @@index([createdAt])
 }
