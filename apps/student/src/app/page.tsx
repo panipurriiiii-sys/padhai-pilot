@@ -53,6 +53,7 @@ import {
   InAppNotification,
   UserSession,
   StudyMaterialItem,
+  StudentAnalyticsSummary,
 } from '@padhai-pilot/shared';
 import {
   studentApi,
@@ -66,6 +67,18 @@ import {
   OfficialDocument,
   StudentProfileData,
 } from '../lib/api';
+import {
+  StudentAttendanceTrendCard,
+  StudentResultsTrendCard,
+  StudentSubjectAveragesCard,
+  StudentAssignmentBreakdownCard,
+  StudentFeeBreakdownCard,
+  StudentTaskProgressCard,
+  ExamVsClassCard,
+  SubjectPerformanceCard,
+  HomeworkCompletionCard,
+} from '../components/charts';
+import { EmptyState, ErrorState, MotionProvider, ToastProvider } from '@padhai-pilot/ui';
 
 type PortalTab =
   | 'OVERVIEW'
@@ -92,6 +105,25 @@ const MATERIAL_CATEGORIES: { key: string; label: string }[] = [
   { key: 'PRACTICE_PAPER', label: 'Practice Papers' },
 ];
 
+const ALL_RESOURCES = ['dashboard', 'results', 'notifications', 'materials', 'attendance', 'fees', 'announcements', 'diary', 'timetable', 'assignments', 'tests', 'queries', 'tasks', 'documents', 'profile', 'analytics'] as const;
+
+/** Resources each tab cannot render without. */
+const TAB_RESOURCES: Record<string, string[]> = {
+  OVERVIEW: ['dashboard'],
+  DIARY: ['diary'],
+  MATERIALS: ['materials'],
+  TIMETABLE: ['timetable'],
+  ATTENDANCE: ['attendance'],
+  ASSIGNMENTS: ['assignments'],
+  TESTS: ['tests'],
+  RESULTS: ['results'],
+  FEES: ['fees'],
+  QUERIES: ['queries'],
+  PLANNER: ['tasks'],
+  DOCUMENTS: ['documents'],
+  PROFILE: ['profile'],
+};
+
 function StudentPortal() {
   const [student, setStudent] = useState<UserSession | null>(null);
   const [activeTab, setActiveTab] = useState<PortalTab>('OVERVIEW');
@@ -112,6 +144,8 @@ function StudentPortal() {
   const [studyTasks, setStudyTasks] = useState<StudyTask[]>([]);
   const [documents, setDocuments] = useState<OfficialDocument[]>([]);
   const [profileData, setProfileData] = useState<StudentProfileData | null>(null);
+  const [analytics, setAnalytics] = useState<StudentAnalyticsSummary | null>(null);
+  const [sessionNotice, setSessionNotice] = useState<string | null>(null);
 
   const [attendanceData, setAttendanceData] = useState<{
     totalClasses: number;
@@ -139,7 +173,7 @@ function StudentPortal() {
     totalFees: number;
     paidAmount: number;
     balanceDue: number;
-    status: 'PAID' | 'PARTIAL' | 'OVERDUE';
+    status: 'PAID' | 'PARTIAL' | 'PENDING' | 'OVERDUE';
     receipts: Array<{
       id: string;
       title: string;
@@ -244,75 +278,86 @@ function StudentPortal() {
   const [authError, setAuthError] = useState('');
   const [authSuccessMsg, setAuthSuccessMsg] = useState('');
 
-  // Load all student data
+  const [loadErrors, setLoadErrors] = useState<Record<string, string>>({});
+
+  const loadResource = async (key: string) => {
+    try {
+      switch (key) {
+        case 'dashboard': setDashboardData(await studentApi.getDashboard()); break;
+        case 'results': setResults(await studentApi.getPublishedResults()); break;
+        case 'notifications': setNotifications(await studentApi.getNotifications()); break;
+        case 'materials': setMaterials(await studentApi.getStudyMaterials()); break;
+        case 'attendance': setAttendanceData(await studentApi.getAttendance()); break;
+        case 'fees': setFeesData(await studentApi.getFees()); break;
+        case 'announcements': setAnnouncements(await studentApi.getAnnouncements()); break;
+        case 'diary': setDiaries(await studentApi.getTeachingDiaries()); break;
+        case 'timetable': setTimetable(await studentApi.getTimetable()); break;
+        case 'assignments': setAssignments(await studentApi.getAssignments()); break;
+        case 'tests': setTests(await studentApi.getTests()); break;
+        case 'queries': setQueries(await studentApi.getAcademicQueries()); break;
+        case 'tasks': setStudyTasks(await studentApi.getStudyTasks()); break;
+        case 'documents': setDocuments(await studentApi.getDocuments()); break;
+        case 'profile': setProfileData(await studentApi.getProfile()); break;
+        case 'analytics': setAnalytics(await studentApi.getAnalytics()); break;
+      }
+      setLoadErrors((p) => {
+        if (!p[key]) return p;
+        const n = { ...p };
+        delete n[key];
+        return n;
+      });
+    } catch (err) {
+      setLoadErrors((p) => ({ ...p, [key]: err instanceof Error ? err.message : 'Request failed' }));
+    }
+  };
+
+  // Load all student data. Every resource is independent: one failure never hides the others,
+  // and a failed resource shows an error state with Retry instead of empty or sample data.
   const loadAllStudentData = async () => {
     setIsLoading(true);
     try {
-      const [
-        dash,
-        resList,
-        notifList,
-        matList,
-        att,
-        fee,
-        ann,
-        dList,
-        tt,
-        asgList,
-        tstList,
-        qList,
-        tasks,
-        docs,
-        prof,
-      ] = await Promise.all([
-        studentApi.getDashboard(),
-        studentApi.getPublishedResults(),
-        studentApi.getNotifications(),
-        studentApi.getStudyMaterials(),
-        studentApi.getAttendance(),
-        studentApi.getFees(),
-        studentApi.getAnnouncements(),
-        studentApi.getTeachingDiaries(),
-        studentApi.getTimetable(),
-        studentApi.getAssignments(),
-        studentApi.getTests(),
-        studentApi.getAcademicQueries(),
-        studentApi.getStudyTasks(),
-        studentApi.getDocuments(),
-        studentApi.getProfile(),
-      ]);
-
-      setDashboardData(dash);
-      setResults(resList);
-      setNotifications(notifList);
-      setMaterials(matList);
-      setAttendanceData(att);
-      setFeesData(fee);
-      setAnnouncements(ann);
-      setDiaries(dList);
-      setTimetable(tt);
-      setAssignments(asgList);
-      setTests(tstList);
-      setQueries(qList);
-      setStudyTasks(tasks);
-      setDocuments(docs);
-      setProfileData(prof);
-    } catch (err) {
-      console.error('Failed to load student data:', err);
+      await Promise.all(ALL_RESOURCES.map((k) => loadResource(k)));
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
+    const onUnauthorized = () => {
+      setStudent(null);
+      setSessionNotice('Your session expired. Please sign in again.');
+    };
+    window.addEventListener('pp:unauthorized', onUnauthorized);
+
     const session = studentApi.getStudentSession();
-    if (session) {
-      setStudent(session);
-      loadAllStudentData();
-    } else {
+    if (!session) {
       setIsLoading(false);
+      return () => window.removeEventListener('pp:unauthorized', onUnauthorized);
     }
+    // Never trust the cached session alone: confirm the token is still valid.
+    studentApi
+      .verifySession()
+      .then((verified) => {
+        if (verified) {
+          setStudent(verified);
+          return loadAllStudentData();
+        }
+        setIsLoading(false);
+      })
+      .catch((err: { status?: number }) => {
+        if (err?.status === 401) {
+          clearAuthToken();
+          setIsLoading(false);
+          return;
+        }
+        // Server unreachable: keep the cached identity; each resource shows its own error + Retry.
+        setStudent(session);
+        return loadAllStudentData();
+      });
+    return () => window.removeEventListener('pp:unauthorized', onUnauthorized);
   }, []);
+
+  const blockingErrors = (TAB_RESOURCES[activeTab] ?? []).filter((k) => loadErrors[k]);
 
   // Authentication Handlers
   const handleSignIn = async (e: React.FormEvent) => {
@@ -351,20 +396,6 @@ function StudentPortal() {
       await loadAllStudentData();
     } catch (err: any) {
       setAuthError(err.message || 'Registration failed.');
-    } finally {
-      setLoginLoading(false);
-    }
-  };
-
-  const handleDemoStudentLogin = async () => {
-    setLoginLoading(true);
-    setAuthError('');
-    try {
-      const res = await studentApi.loginDemoStudent();
-      setStudent(res.user);
-      await loadAllStudentData();
-    } catch (err: any) {
-      setAuthError(err.message || 'Demo student access failed.');
     } finally {
       setLoginLoading(false);
     }
@@ -415,7 +446,8 @@ function StudentPortal() {
     setIsValidatingInvite(true);
     try {
       const res = await studentApi.joinBatch(inviteCodeInput.trim());
-      setInviteStatusMsg(res.message);
+      setInviteStatusMsg(res.alreadyEnrolled ? 'You are already enrolled in this batch.' : 'You have joined the batch.');
+      setStudent(res.user);
       setInviteValidationResult(null);
       setInviteCodeInput('');
       await loadAllStudentData();
@@ -642,26 +674,6 @@ function StudentPortal() {
             </p>
           </div>
 
-          {/* Quick Demo Access Button */}
-          <div className="mb-6 p-3 rounded-xl bg-[#10151D] border border-[rgba(255,255,255,0.06)] flex items-center justify-between">
-            <div>
-              <div className="font-sans text-xs font-semibold text-[#F5F7FA]">
-                Instant Demo Access
-              </div>
-              <div className="text-[11px] text-[#929BAA]">
-                Aarav Patel (JEE Advanced Alpha)
-              </div>
-            </div>
-            <button
-              onClick={handleDemoStudentLogin}
-              disabled={loginLoading}
-              className="px-3 py-1.5 rounded-lg bg-[#1677FF] hover:bg-[#3395FF] text-xs font-semibold text-white transition flex items-center gap-1.5 shadow-sm"
-            >
-              {loginLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-              <span>Enter Demo</span>
-            </button>
-          </div>
-
           {/* Auth Tab Switcher */}
           <div className="grid grid-cols-2 p-1 bg-[#10151D] rounded-xl border border-[rgba(255,255,255,0.06)] mb-5">
             <button
@@ -692,6 +704,9 @@ function StudentPortal() {
             </button>
           </div>
 
+          {sessionNotice && !authError && (
+            <div role="status" className="mb-4 p-2.5 rounded-lg bg-[rgba(245,158,11,0.12)] border border-[rgba(245,158,11,0.3)] text-[#F59E0B] text-xs">{sessionNotice}</div>
+          )}
           {authError && (
             <div className="mb-4 p-3 rounded-xl bg-[rgba(244,63,94,0.12)] border border-[rgba(244,63,94,0.3)] text-xs text-[#F43F5E] flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0" />
@@ -954,11 +969,24 @@ function StudentPortal() {
               Synchronizing verified student academic ledger...
             </div>
           </div>
+        ) : blockingErrors.length > 0 ? (
+          <div className="py-16 flex justify-center" role="alert">
+            <ErrorState
+              title="Could not load this section"
+              description={blockingErrors.map((k) => loadErrors[k]).join('; ')}
+              onRetry={() => blockingErrors.forEach((k) => loadResource(k))}
+            />
+          </div>
         ) : (
           <>
             {/* 1. OVERVIEW / DASHBOARD TAB */}
             {activeTab === 'OVERVIEW' && (
               <div className="space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  <ExamVsClassCard analytics={analytics} error={loadErrors.analytics} />
+                  <SubjectPerformanceCard analytics={analytics} error={loadErrors.analytics} />
+                  <HomeworkCompletionCard analytics={analytics} error={loadErrors.analytics} />
+                </div>
                 {/* Greeting & Welcome Banner */}
                 <div className="p-6 rounded-2xl bg-gradient-to-r from-[#0A0D12] via-[#10151D] to-[#0A0D12] border border-[rgba(255,255,255,0.08)] flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl">
                   <div>
@@ -1067,11 +1095,10 @@ function StudentPortal() {
                     </div>
 
                     <div className="space-y-2.5">
-                      {(dashboardData?.timetable || [
-                        { time: '09:00 AM - 10:30 AM', subject: 'Mathematics (Calculus)', room: 'Lecture Hall 2', faculty: 'Prof. Rajesh Sharma' },
-                        { time: '11:00 AM - 12:30 PM', subject: 'Physics (Optics)', room: 'Physics Lab A', faculty: 'Dr. Alok Verma' },
-                        { time: '02:00 PM - 03:30 PM', subject: 'Daily Problem Practice (DPP)', room: 'Study Wing 3', faculty: 'Faculty Assistant' },
-                      ]).map((slot: any, idx: number) => (
+                      {(dashboardData?.timetable ?? []).length === 0 && (
+                        <p className="text-xs text-[#929BAA]">No classes scheduled today.</p>
+                      )}
+                      {(dashboardData?.timetable ?? []).map((slot: any, idx: number) => (
                         <div
                           key={idx}
                           className="p-3.5 rounded-xl bg-[#10151D] border border-[rgba(255,255,255,0.05)] flex items-center justify-between gap-3 hover:border-[rgba(255,255,255,0.1)] transition"
@@ -1731,7 +1758,8 @@ function StudentPortal() {
                       </div>
                     </div>
                   ))}
-                </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1895,7 +1923,7 @@ function StudentPortal() {
                     <div className="font-data text-3xl font-extrabold text-[#F5F7FA] mt-1">
                       ₹{feesData.totalFees.toLocaleString()}
                     </div>
-                    <div className="text-[11px] text-[#929BAA] mt-1">Academic Year 2026-2027</div>
+                    <div className="text-[11px] text-[#929BAA] mt-1">{profileData?.academicYear ? `Academic Year ${profileData.academicYear}` : ""}</div>
                   </div>
 
                   <div>
