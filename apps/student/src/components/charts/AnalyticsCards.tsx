@@ -77,7 +77,7 @@ export function HomeworkCompletionCard(p: Props) {
     ? [
         { id: 'graded', label: 'Graded', value: h.graded, tone: 'success' as const },
         { id: 'submitted', label: 'Submitted, awaiting grade', value: Math.max(0, h.submitted - h.graded), tone: 'brand' as const },
-        { id: 'pending', label: 'Pending', value: h.pending, tone: 'warning' as const },
+        { id: 'pending', label: 'Not submitted', value: Math.max(0, h.totalAssigned - h.submitted), tone: 'warning' as const },
       ].filter((s) => s.value > 0)
     : [];
   return (

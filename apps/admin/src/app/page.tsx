@@ -498,13 +498,13 @@ export default function AdminPlatformOwnerDashboard() {
           <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-paper-warm border border-border-paper">
             <span className="w-2 h-2 rounded-full bg-status-success animate-pulse" />
             <span className="text-ink-muted">API:</span>
-            <span className="text-status-success-text font-semibold font-data">99.98% OK</span>
+            <span className={`font-semibold font-data ${health?.api ? 'text-status-success-text' : 'text-status-danger-text'}`}>{health ? (health.api ? 'Reachable' : 'Down') : 'Unknown'}</span>
           </div>
 
           <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-paper-warm border border-border-paper">
             <span className="w-2 h-2 rounded-full bg-status-success" />
             <span className="text-ink-muted">PostgreSQL:</span>
-            <span className="text-status-success-text font-semibold font-data">Connected (4ms)</span>
+            <span className={`font-semibold font-data ${health?.database ? 'text-status-success-text' : 'text-status-danger-text'}`}>{health ? (health.database ? 'Connected' : 'Not connected') : 'Unknown'}</span>
           </div>
 
           <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-paper-warm border border-border-paper">
