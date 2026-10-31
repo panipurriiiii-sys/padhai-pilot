@@ -19,9 +19,9 @@ export const TeacherProfileScreen: React.FC = () => {
     setTab('student_dashboard');
   };
 
-  const name = session?.user?.fullName || session?.user?.name || 'Prof. Rajesh Sharma';
-  const email = session?.user?.email || 'teacher@padhaipilot.com';
-  const instName = session?.user?.instituteName || 'Apex IIT-JEE & Medical Academy';
+  const name = session?.user?.fullName || session?.user?.name || '';
+  const email = session?.user?.email || '';
+  const instName = session?.user?.instituteName || '';
 
   return (
     <ScreenContainer>
@@ -53,7 +53,8 @@ export const TeacherProfileScreen: React.FC = () => {
           </View>
         </Card>
 
-        {/* Switch Portal Sandbox */}
+        {/* Switch Portal Sandbox (development builds only) */}
+        {__DEV__ && (
         <Card style={{ marginBottom: spacing.lg }}>
           <Subtitle style={{ marginBottom: spacing.xs }}>Role Switcher</Subtitle>
           <Caption style={{ marginBottom: spacing.md }}>
@@ -65,6 +66,7 @@ export const TeacherProfileScreen: React.FC = () => {
             onPress={handleSwitchToStudent}
           />
         </Card>
+        )}
 
         {/* Logout */}
         <Button

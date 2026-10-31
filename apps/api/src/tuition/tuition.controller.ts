@@ -13,6 +13,9 @@ import {
 } from '@nestjs/common';
 import { TuitionService } from './tuition.service.js';
 import { AuthGuard } from '../common/guards/auth.guard.js';
+import { RolesGuard } from '../common/guards/roles.guard.js';
+import { Roles } from '../common/decorators/roles.decorator.js';
+import { STAFF_ROLES, MANAGEMENT_ROLES, STUDENT_ROLES, isManagement } from '../common/security/roles.js';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import type { AuthenticatedUser } from '../common/types.js';
 import {
@@ -32,7 +35,8 @@ import {
 } from './dto/tuition.dto.js';
 
 @Controller('tuition')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
+@Roles(...STAFF_ROLES)
 export class TuitionController {
   constructor(@Inject(TuitionService) private readonly tuitionService: TuitionService) {}
 
@@ -45,6 +49,7 @@ export class TuitionController {
     return this.tuitionService.getBrandingProfile(user.instituteId);
   }
 
+  @Roles(...MANAGEMENT_ROLES)
   @Put('profile')
   async updateProfile(
     @CurrentUser() user: AuthenticatedUser,
@@ -57,11 +62,13 @@ export class TuitionController {
   // 2. FACULTY MANAGEMENT
   // --------------------------------------------------------------------------
 
+  @Roles(...MANAGEMENT_ROLES)
   @Get('faculties')
   async getFaculties(@CurrentUser() user: AuthenticatedUser) {
     return this.tuitionService.getFaculties(user.instituteId);
   }
 
+  @Roles(...MANAGEMENT_ROLES)
   @Post('faculties')
   @HttpCode(HttpStatus.CREATED)
   async createFaculty(
@@ -71,6 +78,7 @@ export class TuitionController {
     return this.tuitionService.createFaculty(user.instituteId, dto);
   }
 
+  @Roles(...MANAGEMENT_ROLES)
   @Put('faculties/:id')
   async updateFaculty(
     @CurrentUser() user: AuthenticatedUser,
@@ -90,9 +98,12 @@ export class TuitionController {
     @Query('payPeriod') payPeriod?: string,
     @Query('facultyId') facultyId?: string,
   ) {
-    return this.tuitionService.getSalaryRecords(user.instituteId, payPeriod, facultyId);
+    // Management sees the whole institute; faculty only ever see their own statements.
+    const targetFacultyId = isManagement(user.role) ? facultyId : user.id;
+    return this.tuitionService.getSalaryRecords(user.instituteId, payPeriod, targetFacultyId);
   }
 
+  @Roles(...MANAGEMENT_ROLES)
   @Post('salaries/generate')
   @HttpCode(HttpStatus.CREATED)
   async generateSalary(
@@ -102,6 +113,7 @@ export class TuitionController {
     return this.tuitionService.generateSalaryRecord(user.instituteId, dto);
   }
 
+  @Roles(...MANAGEMENT_ROLES)
   @Put('salaries/:id/pay')
   async recordPayment(
     @CurrentUser() user: AuthenticatedUser,
@@ -120,9 +132,8 @@ export class TuitionController {
     @CurrentUser() user: AuthenticatedUser,
     @Query('facultyId') facultyId?: string,
   ) {
-    // If ordinary teacher, default to only their own leaves unless facultyId specified
-    const targetFacultyId =
-      user.role === 'TEACHER' ? user.id : facultyId;
+    // Only management may view other faculty's leaves; everyone else is pinned to their own.
+    const targetFacultyId = isManagement(user.role) ? facultyId : user.id;
     return this.tuitionService.getLeaveApplications(user.instituteId, targetFacultyId);
   }
 
@@ -135,6 +146,7 @@ export class TuitionController {
     return this.tuitionService.applyLeave(user.instituteId, user.id, dto);
   }
 
+  @Roles(...MANAGEMENT_ROLES)
   @Put('leaves/:id/review')
   async reviewLeave(
     @CurrentUser() user: AuthenticatedUser,
@@ -157,6 +169,7 @@ export class TuitionController {
     return this.tuitionService.getTeachingDiaries(user.instituteId, batchId, facultyId);
   }
 
+  @Roles(...MANAGEMENT_ROLES)
   @Get('diaries/overview')
   async getDiariesOverview(@CurrentUser() user: AuthenticatedUser) {
     return this.tuitionService.getTeachingDiaryOverview(user.instituteId);
@@ -217,6 +230,7 @@ export class TuitionController {
   // 7. STUDENT FEES & FEE REMINDERS
   // --------------------------------------------------------------------------
 
+  @Roles(...MANAGEMENT_ROLES)
   @Get('fees')
   async getFees(
     @CurrentUser() user: AuthenticatedUser,
@@ -225,11 +239,13 @@ export class TuitionController {
     return this.tuitionService.getFeeRecords(user.instituteId, batchId);
   }
 
+  @Roles(...MANAGEMENT_ROLES)
   @Get('fees/summary')
   async getFeeSummary(@CurrentUser() user: AuthenticatedUser) {
     return this.tuitionService.getFeeSummary(user.instituteId);
   }
 
+  @Roles(...MANAGEMENT_ROLES)
   @Post('fees/record')
   @HttpCode(HttpStatus.CREATED)
   async createFeeRecord(
@@ -239,6 +255,7 @@ export class TuitionController {
     return this.tuitionService.createFeeRecord(user.instituteId, dto);
   }
 
+  @Roles(...MANAGEMENT_ROLES)
   @Post('fees/remind')
   async dispatchFeeReminder(
     @CurrentUser() user: AuthenticatedUser,

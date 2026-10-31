@@ -15,12 +15,16 @@ import {
 import type { Response } from 'express';
 import { AssessmentService } from './assessment.service.js';
 import { AuthGuard } from '../common/guards/auth.guard.js';
+import { RolesGuard } from '../common/guards/roles.guard.js';
+import { Roles } from '../common/decorators/roles.decorator.js';
+import { STAFF_ROLES, MANAGEMENT_ROLES, STUDENT_ROLES, isManagement } from '../common/security/roles.js';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import type { AuthenticatedUser } from '../common/types.js';
 import { BulkSaveDraftDto, CorrectMarkDto } from './dto/bulk-save-draft.dto.js';
 
 @Controller('assessment')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
+@Roles(...STAFF_ROLES)
 export class AssessmentController {
   constructor(@Inject(AssessmentService) private readonly assessmentService: AssessmentService) {}
 
@@ -110,16 +114,19 @@ export class AssessmentController {
   // STUDENT PORTAL ENDPOINTS
   // -------------------------------------------------------------
 
+  @Roles(...STUDENT_ROLES)
   @Get('student/results')
   async getStudentPublishedResults(@CurrentUser() user: AuthenticatedUser) {
     return this.assessmentService.getStudentPublishedResults(user);
   }
 
+  @Roles(...STUDENT_ROLES)
   @Get('student/notifications')
   async getStudentNotifications(@CurrentUser() user: AuthenticatedUser) {
     return this.assessmentService.getStudentNotifications(user);
   }
 
+  @Roles(...STUDENT_ROLES)
   @Get('student/materials')
   async getStudentMaterials(
     @CurrentUser() user: AuthenticatedUser,
@@ -129,6 +136,7 @@ export class AssessmentController {
     return this.assessmentService.getStudentStudyMaterials(user, batchId, category);
   }
 
+  @Roles(...STUDENT_ROLES)
   @Put('student/notifications/:id/read')
   async markNotificationRead(
     @Param('id') id: string,

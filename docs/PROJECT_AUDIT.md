@@ -171,3 +171,25 @@ Not run: `npm ci` from clean, lint, mobile jest, Android build, any Vercel deplo
 8. **Storage + PDFs:** pick durable object storage (R2/Vercel Blob/Supabase Storage), signed upload URLs (removes B6), server-side PDF generation.
 9. **Design pass:** unify theme across portals, remove Geist, welcome/onboarding flows per portal, then accessibility pass.
 10. **Deploy to Vercel preview** with real env vars, run smoke tests, then write the remaining docs listed in §5.
+
+
+---
+
+## 15. Addendum — mobile & role-authorization findings (2026-10-31, second pass)
+
+**Live API:** `https://padhai-pilot.vercel.app/api/health` returned `200`, `database: connected`, `environment: production` (took ~2.7 s, i.e. a cold start). The deployed build is the **pre-hardening** code from `main`, so the backdoor passwords, the leaked JWT secret and the open CORS policy described in §9 are **still live until the `audit/auth-hardening` branch is merged and redeployed**. I did not log in, register or write anything on the live service.
+
+**A1 — No role authorization on any non-admin controller (fixed in this pass).** `StudentController`, `TeacherController`, `TuitionController` and `AssessmentController` used only `AuthGuard`. Any signed-in user, including a student, could call staff routes in their institute — e.g. read every faculty member's salary (`GET /tuition/salaries`), generate/pay salaries, approve leave, edit institute branding, publish assessments. Now: class-level `@Roles` (student routes → `STUDENT`; teacher/assessment/tuition → staff roles), owner-only routes → management roles, `/assessment/student/*` → `STUDENT`; salaries and leaves are pinned to the caller's own records unless the caller is management (the old leave check only handled `TEACHER`, not `FACULTY`). Covered by `controller-roles.spec.ts` (5 tests). **Still open:** feature-flag guards (`FeatureFlagGuard`) are not applied to these controllers, and resource-level checks (delegated faculty permissions such as `VIEW_FEES`) are not enforced.
+
+**A2 — The backend itself returns fabricated data.** `StudentService` returns hard-coded values for every student: `rollNumber: 'APX-2026-001'`, batch "JEE Advanced — Mathematics Alpha", a fixed timetable, and process-wide in-memory query/task lists shared by *all* students (`memAcademicQueries`, `memStudyTasks`; `getTimetable(_user)`, `getAnnouncements(_user)`, `getStudyTasks(_user)` ignore the user). Real students on the live API therefore see invented and cross-student data. This must be replaced with DB-scoped queries before any client — web or mobile — can be called "end to end on live".
+
+**A3 — The mobile data layer has never worked against the real API.** Of the student routes the app calls, these do not exist on the server: `/student/study-vault` (server: `/student/materials`), `/student/attendance/correction` (`…/correction-request`), `/student/assignments/submit` (`/student/assignments/:id/submit`), `/student/tests/:id/submit` (`…/attempt`), `/student/doubts` (`/student/queries`), `/student/study-planner[/tasks]` (`/student/study-tasks`), `/student/notifications` (`/assessment/student/notifications`), `/student/join-institute` (`/student/join-batch`). Every service method wrapped its call in `try/catch` and returned hard-coded sample data ("Aarav Patel", "Prof. Rajesh Sharma") on any error, so the app looked functional while showing no real data. Response field names also differ from the server (`entryDate/topicsCovered` vs `lessonDate/conceptsTaught`, `AttendanceSummary` vs `StudentAttendanceSummary`, …). The web student client has the same `try/catch → mock` pattern in several calls.
+
+**Fixed in the mobile app in this pass:** request timeout 2.5 s → 20 s (a cold start alone exceeded the old limit); `authService` no longer fabricates a session when demo login fails and demo login throws outside `__DEV__`; the "Instant Demo Access" card and both "Role Switcher" previews render only in development builds; hard-coded teacher identity fallbacks removed from the teacher profile. Mobile `tsc` errors 30 → 17.
+
+**Still to do for the mobile app (ordered):**
+1. Replace the 26 mock-returning `catch` blocks in `studentService.ts` / `teacherService.ts` with real routes and server-shaped types (generate types from the server DTOs in `@padhai-pilot/shared`), then fix the screens `tsc` flags. Errors must reach the UI as error/empty states with retry.
+2. Make the corresponding server services real (A2) — otherwise the mobile app can only show the same fabricated data as the web portals.
+3. Persist the session in Keychain/Keystore-backed storage (no library installed) and handle 401 by signing out.
+4. Remove the remaining sample-data defaults in screens, then run on an emulator against a staging API with seeded non-demo data.
+5. Android release build + signing, push notifications, deep links (none started).

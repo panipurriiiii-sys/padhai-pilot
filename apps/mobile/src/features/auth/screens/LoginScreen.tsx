@@ -206,6 +206,7 @@ export const LoginScreen: React.FC = () => {
             </Caption>
           </View>
 
+          {__DEV__ && (
           {/* Quick Demo Access Bar (Matching Web Instant Demo Card) */}
           <View
             style={[
@@ -249,6 +250,7 @@ export const LoginScreen: React.FC = () => {
               onPress={activeRole === 'STUDENT' ? handleDemoStudentLogin : handleDemoTeacherLogin}
             />
           </View>
+          )}
 
           {/* Role Selector Tabs */}
           <View

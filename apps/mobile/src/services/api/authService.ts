@@ -79,56 +79,20 @@ export const authService = {
     return apiClient.post('/student/join-institute', { invitationCode });
   },
 
+  // Development-only convenience. The server answers 404 in production, and there is deliberately no
+  // client-side fallback: a failed login must never produce a fabricated session.
   async loginDemoStudent(): Promise<MobileUserSession> {
-    try {
-      const data = await apiClient.post<MobileUserSession>('/auth/demo-student', {});
-      if (data?.token) {
-        apiClient.setAuthToken(data.token);
-      }
-      return data;
-    } catch {
-      const fallback: MobileUserSession = {
-        token: 'demo-student-mobile-token',
-        user: {
-          id: 'demo-student-1',
-          name: 'Aarav Patel',
-          email: 'aarav.student@padhaipilot.test',
-          role: 'STUDENT',
-          instituteId: 'inst_apex_1',
-          instituteName: 'Apex IIT-JEE & Medical Academy',
-          batchId: 'batch_jee_alpha',
-          batchName: 'JEE Advanced — Mathematics Alpha',
-        },
-      };
-      apiClient.setAuthToken(fallback.token);
-      return fallback;
-    }
+    if (!__DEV__) throw new Error('Demo access is not available.');
+    const data = await apiClient.post<MobileUserSession>('/auth/demo-student', {});
+    if (data?.token) apiClient.setAuthToken(data.token);
+    return data;
   },
 
   async loginDemoTeacher(): Promise<MobileUserSession> {
-    try {
-      const data = await apiClient.post<MobileUserSession>('/auth/demo-teacher', {});
-      if (data?.token) {
-        apiClient.setAuthToken(data.token);
-      }
-      return data;
-    } catch {
-      const fallback: MobileUserSession = {
-        token: 'demo-teacher-mobile-token',
-        user: {
-          id: 'demo-teacher-1',
-          name: 'Prof. Rajesh Sharma',
-          email: 'sharma.faculty@padhaipilot.test',
-          role: 'TEACHER',
-          instituteId: 'inst_apex_1',
-          instituteName: 'Apex IIT-JEE & Medical Academy',
-          batchId: 'batch_jee_alpha',
-          batchName: 'JEE Advanced — Mathematics Alpha',
-        },
-      };
-      apiClient.setAuthToken(fallback.token);
-      return fallback;
-    }
+    if (!__DEV__) throw new Error('Demo access is not available.');
+    const data = await apiClient.post<MobileUserSession>('/auth/demo-teacher', {});
+    if (data?.token) apiClient.setAuthToken(data.token);
+    return data;
   },
 
   async getProfile(): Promise<MobileUserSession['user']> {

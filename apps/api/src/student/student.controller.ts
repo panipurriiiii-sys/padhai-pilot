@@ -14,6 +14,9 @@ import {
 } from '@nestjs/common';
 import { StudentService } from './student.service.js';
 import { AuthGuard } from '../common/guards/auth.guard.js';
+import { RolesGuard } from '../common/guards/roles.guard.js';
+import { Roles } from '../common/decorators/roles.decorator.js';
+import { STAFF_ROLES, MANAGEMENT_ROLES, STUDENT_ROLES, isManagement } from '../common/security/roles.js';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import type { AuthenticatedUser } from '../common/types.js';
 import {
@@ -30,7 +33,8 @@ import {
 } from './dto/student.dto.js';
 
 @Controller('student')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
+@Roles(...STUDENT_ROLES)
 export class StudentController {
   constructor(@Inject(StudentService) private readonly studentService: StudentService) {}
 

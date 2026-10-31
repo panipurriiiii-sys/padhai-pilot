@@ -13,11 +13,15 @@ import {
 } from '@nestjs/common';
 import { TeacherService } from './teacher.service.js';
 import { AuthGuard } from '../common/guards/auth.guard.js';
+import { RolesGuard } from '../common/guards/roles.guard.js';
+import { Roles } from '../common/decorators/roles.decorator.js';
+import { STAFF_ROLES, MANAGEMENT_ROLES, STUDENT_ROLES, isManagement } from '../common/security/roles.js';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import type { AuthenticatedUser } from '../common/types.js';
 
 @Controller('teacher')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, RolesGuard)
+@Roles(...STAFF_ROLES)
 export class TeacherController {
   constructor(@Inject(TeacherService) private readonly teacherService: TeacherService) {}
 

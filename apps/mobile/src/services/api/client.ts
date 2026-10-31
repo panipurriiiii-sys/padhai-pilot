@@ -16,6 +16,8 @@ export class ApiError extends Error {
   }
 }
 
+const REQUEST_TIMEOUT_MS = 20000;
+
 // Configurable endpoint with production default
 const DEFAULT_API_BASE_URL = 'https://padhai-pilot.vercel.app/api';
 
@@ -60,10 +62,11 @@ class ApiClient {
       headers['Authorization'] = `Bearer ${this.authToken}`;
     }
 
+    // Vercel cold starts alone can take several seconds; a short timeout turns them into spurious failures.
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
       controller.abort();
-    }, 2500);
+    }, REQUEST_TIMEOUT_MS);
 
     try {
       const response = await fetch(url, {
@@ -100,7 +103,9 @@ class ApiClient {
         throw err;
       }
       const networkMsg =
-        err instanceof Error ? err.message : 'Unable to connect to school server. Please verify internet connection.';
+        err instanceof Error && err.name !== 'AbortError'
+          ? err.message
+          : 'Unable to reach the PadhaiPilot server. Check your internet connection and try again.';
       throw new ApiError(networkMsg, 0, err);
     }
   }

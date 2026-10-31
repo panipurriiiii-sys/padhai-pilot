@@ -97,6 +97,7 @@ export const ProfileScreen: React.FC = () => {
           </Card>
         </View>
 
+        {__DEV__ && (
         {/* System info */}
         <View style={{ marginBottom: spacing.lg }}>
           <Subtitle style={{ marginBottom: spacing.xs }}>Role Switcher</Subtitle>
@@ -112,6 +113,7 @@ export const ProfileScreen: React.FC = () => {
             }}
           />
         </View>
+        )}
 
         <View style={{ marginBottom: spacing.xl }}>
           <Caption align="center">PadhaiPilot Mobile v1.0.0</Caption>
