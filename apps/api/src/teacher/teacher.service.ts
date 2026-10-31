@@ -10,7 +10,7 @@ import crypto from 'crypto';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { RedisService } from '../redis/redis.service.js';
 import { AccessService } from '../common/access/access.service.js';
-import { assertDb, parseDate, toDateOnly } from '../common/db/db.js';
+import { assertDb, optionalUrl, parseDate, toDateOnly } from '../common/db/db.js';
 import type { AuthenticatedUser } from '../common/types.js';
 
 @Injectable()
@@ -141,211 +141,6 @@ export class TeacherService {
   }
 
   // -------------------------------------------------------------
-  // 2. BATCHES & STUDENT ROSTER
-  // -------------------------------------------------------------
-  async getBatches(user: AuthenticatedUser) {
-    const staffBatchIds = await this.access.staffBatchIds(user);
-    const where = {
-      instituteId: user.instituteId,
-      ...(staffBatchIds !== null ? { id: { in: staffBatchIds } } : {}),
-      isActive: true,
-    };
-
-    const batches = await this.db.batch.findMany({
-      where,
-      include: {
-        _count: {
-          select: {
-            enrollments: { where: { status: 'ACTIVE' } },
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    return batches.map((b) => ({
-      ...b,
-      studentCount: b._count.enrollments,
-    }));
-  }
-
-  async getBatchRoster(batchId: string, user: AuthenticatedUser) {
-    const batch = await this.access.assertBatchAccess(user, batchId);
-
-    const enrollments = await this.db.enrollment.findMany({
-      where: {
-        batchId,
-        instituteId: user.instituteId,
-        status: 'ACTIVE',
-      },
-      include: {
-        student: {
-          select: {
-            id: true,
-            fullName: true,
-            rollNumber: true,
-            email: true,
-            phone: true,
-          },
-        },
-      },
-      orderBy: { student: { fullName: 'asc' } },
-    });
-
-    return {
-      batch,
-      students: enrollments.map((e) => ({
-        id: e.student.id,
-        fullName: e.student.fullName,
-        rollNumber: e.rollNumber || e.student.rollNumber || '',
-        email: e.student.email,
-        phone: e.student.phone,
-      })),
-    };
-  }
-
-  async createBatch(
-    data: { name: string; code?: string; subject: string; gradeLevel?: string; room?: string },
-    user: AuthenticatedUser,
-  ) {
-    if (!data.name || !data.subject) {
-      throw new BadRequestException('Batch name and subject are required.');
-    }
-
-    const code = data.code || `BTC-${Date.now().toString().slice(-4)}`;
-
-    const batch = await this.db.batch.create({
-      data: {
-        instituteId: user.instituteId,
-        teacherId: user.id,
-        name: data.name,
-        code,
-        subject: data.subject,
-        gradeLevel: data.gradeLevel || 'Standard',
-        room: data.room || 'General Classroom',
-        isActive: true,
-      },
-    });
-
-    await this.redis.invalidateTeacherDashboard(user.instituteId, user.id);
-    return {
-      ...batch,
-      studentCount: 0,
-    };
-  }
-
-  // -------------------------------------------------------------
-  // 3. STUDENT INVITATION CODES
-  // -------------------------------------------------------------
-  async getInvitations(user: AuthenticatedUser) {
-    const invs = await this.db.invitationCode.findMany({
-      where: {
-        instituteId: user.instituteId,
-        issuerId: user.id,
-      },
-      include: {
-        batch: { select: { name: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    const now = new Date();
-    return invs.map((i) => ({
-      ...i,
-      batchName: i.batch?.name,
-      status: i.isRevoked
-        ? 'REVOKED'
-        : new Date(i.expiresAt) < now
-        ? 'EXPIRED'
-        : i.usedCount >= i.maxUses
-        ? 'MAX_USED'
-        : 'ACTIVE',
-    }));
-  }
-
-  async createInvitation(
-    data: { batchId?: string; maxUses?: number; expiryDays?: number },
-    user: AuthenticatedUser,
-  ) {
-    let batchName: string | undefined;
-    if (data.batchId) {
-      const batch = await this.access.assertBatchAccess(user, data.batchId);
-      batchName = batch.name;
-    }
-
-    const randomSuffix = crypto.randomBytes(3).toString('hex').toUpperCase();
-    const code = `APX-${randomSuffix.slice(0, 3)}-${randomSuffix.slice(3, 6)}`;
-    const expiryDays = data.expiryDays || 14;
-    const expiresAt = new Date(Date.now() + expiryDays * 24 * 3600 * 1000);
-
-    const invitation = await this.db.invitationCode.create({
-      data: {
-        code,
-        instituteId: user.instituteId,
-        batchId: data.batchId || null,
-        issuerId: user.id,
-        maxUses: data.maxUses || 50,
-        expiresAt,
-      },
-    });
-
-    return {
-      ...invitation,
-      batchName,
-      issuerName: user.fullName,
-      status: 'ACTIVE',
-    };
-  }
-
-  async revokeInvitation(code: string, user: AuthenticatedUser) {
-    const inv = await this.db.invitationCode.findFirst({
-      where: {
-        code,
-        instituteId: user.instituteId,
-        issuerId: user.id,
-      },
-    });
-
-    if (!inv) {
-      throw new NotFoundException('Invitation code not found or unauthorized.');
-    }
-
-    await this.db.invitationCode.update({
-      where: { id: inv.id },
-      data: { isRevoked: true },
-    });
-
-    return { success: true, message: `Code ${code} successfully revoked.` };
-  }
-
-  async validateCodePublic(code: string, ip: string = '127.0.0.1') {
-    await this.redis.enforceRateLimit(ip, 'invitationValidate');
-
-    const inv = await this.db.invitationCode.findUnique({
-      where: { code },
-      include: {
-        institute: { select: { name: true } },
-        batch: { select: { name: true } },
-      },
-    });
-
-    if (
-      !inv ||
-      inv.isRevoked ||
-      new Date(inv.expiresAt) < new Date() ||
-      inv.usedCount >= inv.maxUses
-    ) {
-      throw new BadRequestException('This invitation code is invalid, expired, or has reached maximum usage.');
-    }
-
-    return {
-      valid: true,
-      batchName: inv.batch?.name || 'General Institute Admission',
-      instituteName: inv.institute?.name || 'Institute',
-    };
-  }
-
-  // -------------------------------------------------------------
   // 4. ATTENDANCE WORKFLOWS
   // -------------------------------------------------------------
   async getAttendanceSession(batchId: string, date: string, user: AuthenticatedUser) {
@@ -362,7 +157,7 @@ export class TeacherService {
       include: {
         records: {
           include: {
-            student: { select: { fullName: true, rollNumber: true } },
+            student: { select: { fullName: true } },
           },
         },
       },
@@ -376,15 +171,16 @@ export class TeacherService {
           status: 'ACTIVE',
         },
         include: {
-          student: { select: { id: true, fullName: true, rollNumber: true } },
+          student: { select: { id: true, fullName: true } },
         },
         orderBy: { student: { fullName: 'asc' } },
+        take: 1000,
       });
 
       const defaultRecords = enrollments.map((e) => ({
         studentId: e.student.id,
         studentName: e.student.fullName,
-        rollNumber: e.rollNumber || e.student.rollNumber || '',
+        rollNumber: e.rollNumber || '',
         status: 'PRESENT',
         note: '',
       }));
@@ -397,12 +193,21 @@ export class TeacherService {
       };
     }
 
+    const rolls = new Map(
+      (
+        await this.db.enrollment.findMany({
+          where: { batchId, instituteId: user.instituteId, studentId: { in: session.records.map((r) => r.studentId) } },
+          select: { studentId: true, rollNumber: true },
+          take: 1000,
+        })
+      ).map((e) => [e.studentId, e.rollNumber]),
+    );
     const records = session.records.map((r) => ({
       id: r.id,
       sessionId: r.sessionId,
       studentId: r.studentId,
       studentName: r.student.fullName,
-      rollNumber: r.student.rollNumber || '',
+      rollNumber: rolls.get(r.studentId) || '',
       status: r.status,
       note: r.note || '',
       correctionReason: r.correctionReason,
@@ -426,6 +231,25 @@ export class TeacherService {
   ) {
     const batch = await this.access.assertBatchAccess(user, data.batchId);
     const targetDate = toDateOnly(data.date);
+    const STATUSES = ['PRESENT', 'ABSENT', 'LATE', 'EXCUSED'];
+    if (!Array.isArray(data.records) || data.records.length === 0 || data.records.length > 1000) {
+      throw new BadRequestException('records must contain between 1 and 1000 entries.');
+    }
+    const seen = new Set<string>();
+    for (const r of data.records) {
+      if (!r || typeof r.studentId !== 'string' || !STATUSES.includes(r.status) || seen.has(r.studentId)) {
+        throw new BadRequestException('Each record needs a unique studentId and a valid status.');
+      }
+      seen.add(r.studentId);
+    }
+    // Only students actively enrolled in THIS batch (and institute) may be marked.
+    const enrolled = await this.db.enrollment.findMany({
+      where: { batchId: data.batchId, instituteId: user.instituteId, status: 'ACTIVE', studentId: { in: [...seen] } },
+      select: { studentId: true },
+    });
+    if (enrolled.length !== seen.size) {
+      throw new BadRequestException('Some students are not enrolled in this batch.');
+    }
 
     let present = 0;
     let absent = 0;
@@ -566,6 +390,7 @@ export class TeacherService {
       subject: string;
       dueDate: string;
       maxMarks?: number;
+      attachmentUrl?: string;
     },
     user: AuthenticatedUser,
   ) {
@@ -582,6 +407,7 @@ export class TeacherService {
         subject: data.subject,
         dueDate,
         maxMarks: data.maxMarks || 100,
+        attachmentUrl: optionalUrl(data.attachmentUrl, 'attachmentUrl') ?? null,
         status: 'PUBLISHED',
       },
     });
@@ -619,20 +445,29 @@ export class TeacherService {
           select: {
             id: true,
             fullName: true,
-            rollNumber: true,
             email: true,
           },
         },
       },
       orderBy: { submittedAt: 'desc' },
+      take: 1000,
     });
+    const rolls = new Map(
+      (
+        await this.db.enrollment.findMany({
+          where: { batchId: assignment.batchId, instituteId: user.instituteId, studentId: { in: submissions.map((s) => s.studentId) } },
+          select: { studentId: true, rollNumber: true },
+          take: 1000,
+        })
+      ).map((e) => [e.studentId, e.rollNumber]),
+    );
 
     return {
       assignment,
       submissions: submissions.map((s) => ({
         ...s,
         studentName: s.student.fullName,
-        rollNumber: s.student.rollNumber || '',
+        rollNumber: rolls.get(s.studentId) || '',
       })),
     };
   }
@@ -863,118 +698,105 @@ export class TeacherService {
   }
 
   // -------------------------------------------------------------
-  // 8. TIMETABLE
-  // -------------------------------------------------------------
-  async getTimetable(user: AuthenticatedUser) {
-    const staffBatchIds = await this.access.staffBatchIds(user);
-    const where = {
-      instituteId: user.instituteId,
-      ...(staffBatchIds !== null ? { batchId: { in: staffBatchIds } } : {}),
-    };
-
-    return this.db.timetableSlot.findMany({
-      where,
-      include: {
-        batch: { select: { name: true } },
-      },
-      orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
-    });
-  }
-
-  // -------------------------------------------------------------
-  // 9. ANNOUNCEMENTS
-  // -------------------------------------------------------------
-  async getAnnouncements(user: AuthenticatedUser) {
-    const staffBatchIds = await this.access.staffBatchIds(user);
-
-    return this.db.announcement.findMany({
-      where: {
-        instituteId: user.instituteId,
-        OR: [
-          { batchId: null },
-          ...(staffBatchIds !== null && staffBatchIds.length > 0 ? [{ batchId: { in: staffBatchIds } }] : []),
-        ],
-      },
-      include: {
-        batch: { select: { name: true } },
-        author: { select: { fullName: true, role: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-  }
-
-  async createAnnouncement(
-    data: { batchId?: string; title: string; content: string; priority?: 'NORMAL' | 'URGENT' },
-    user: AuthenticatedUser,
-  ) {
-    let batchName = 'All Batches';
-    if (data.batchId) {
-      const batch = await this.access.assertBatchAccess(user, data.batchId);
-      batchName = batch.name;
-    }
-
-    const announcement = await this.db.announcement.create({
-      data: {
-        instituteId: user.instituteId,
-        batchId: data.batchId || null,
-        authorId: user.id,
-        title: data.title,
-        content: data.content,
-        priority: (data.priority || 'NORMAL') as any,
-      },
-    });
-
-    await this.redis.invalidateTeacherDashboard(user.instituteId, user.id);
-
-    return {
-      ...announcement,
-      batchName,
-      authorName: user.fullName,
-      authorRole: user.role,
-    };
-  }
-
-  // -------------------------------------------------------------
   // 10. TEACHER ANALYTICS & REPORTS
   // -------------------------------------------------------------
   async getReports(user: AuthenticatedUser) {
-    const batches = await this.getBatches(user);
-    const totalStudents = batches.reduce((sum, b) => sum + (b.studentCount || 0), 0);
+    const staffBatchIds = await this.access.staffBatchIds(user);
+    const batches = await this.db.batch.findMany({
+      where: {
+        instituteId: user.instituteId,
+        isActive: true,
+        ...(staffBatchIds !== null ? { id: { in: staffBatchIds } } : {}),
+      },
+      select: { id: true, name: true, code: true, _count: { select: { enrollments: { where: { status: 'ACTIVE' } } } } },
+      take: 300,
+    });
     const batchIds = batches.map((b) => b.id);
+    const totalStudents = batches.reduce((sum, b) => sum + b._count.enrollments, 0);
+    const since = new Date(Date.now() - 28 * 86_400_000);
 
-    const [assignmentCount, testCount] = await Promise.all([
-      this.db.assignment.count({
+    const [assignments, testCount, sessions, subStatus] = await Promise.all([
+      this.db.assignment.findMany({
         where: { instituteId: user.instituteId, batchId: { in: batchIds } },
+        select: { id: true, batchId: true },
+        take: 1000,
       }),
-      this.db.testQuiz.count({
-        where: { instituteId: user.instituteId, batchId: { in: batchIds } },
+      this.db.testQuiz.count({ where: { instituteId: user.instituteId, batchId: { in: batchIds } } }),
+      this.db.attendanceSession.findMany({
+        where: { instituteId: user.instituteId, batchId: { in: batchIds }, date: { gte: toDateOnly(since) } },
+        select: { id: true, batchId: true, date: true },
+        take: 3000,
+      }),
+      this.db.assignmentSubmission.groupBy({
+        by: ['status'],
+        where: { assignment: { instituteId: user.instituteId, batchId: { in: batchIds } } },
+        _count: { _all: true },
       }),
     ]);
 
+    const marks = sessions.length
+      ? await this.db.attendanceRecord.groupBy({
+          by: ['sessionId', 'status'],
+          where: { sessionId: { in: sessions.map((x) => x.id) } },
+          _count: { _all: true },
+        })
+      : [];
+    const sessionMeta = new Map(sessions.map((x) => [x.id, x]));
+    const week = [0, 1, 2, 3].map(() => ({ ok: 0, total: 0 }));
+    const perBatch = new Map<string, { ok: number; total: number }>();
+    for (const m of marks) {
+      const sess = sessionMeta.get(m.sessionId);
+      if (!sess) continue;
+      const n = m._count._all;
+      const ok = m.status === 'PRESENT' || m.status === 'LATE' ? n : 0;
+      const w = Math.min(3, Math.floor((Date.now() - sess.date.getTime()) / (7 * 86_400_000)));
+      week[3 - w]!.ok += ok;
+      week[3 - w]!.total += n;
+      const b = perBatch.get(sess.batchId) ?? { ok: 0, total: 0 };
+      b.ok += ok;
+      b.total += n;
+      perBatch.set(sess.batchId, b);
+    }
+    const pct = (a: { ok: number; total: number }) => (a.total ? Math.round((a.ok / a.total) * 1000) / 10 : null);
+
+    const statusCount = (st: string) => subStatus.find((x) => x.status === st)?._count._all ?? 0;
+    const submitted = subStatus.reduce((sum, x) => sum + x._count._all, 0);
+
+    const subsByAssignment = assignments.length
+      ? await this.db.assignmentSubmission.groupBy({
+          by: ['assignmentId'],
+          where: { assignmentId: { in: assignments.map((a) => a.id) } },
+          _count: { _all: true },
+        })
+      : [];
+    const subCount = new Map(subsByAssignment.map((x) => [x.assignmentId, x._count._all]));
+
+    const allAtt = week.reduce((acc, w) => ({ ok: acc.ok + w.ok, total: acc.total + w.total }), { ok: 0, total: 0 });
     return {
-      attendanceTrends: [
-        { label: 'Week 1', rate: 94 },
-        { label: 'Week 2', rate: 91 },
-        { label: 'Week 3', rate: 95 },
-        { label: 'Week 4', rate: 92 },
-      ],
+      attendanceTrends: week.map((w, i) => ({ label: `Week ${i + 1}`, rate: pct(w) })),
       submissionMetrics: {
-        totalAssigned: assignmentCount,
-        submittedCount: Math.round(assignmentCount * 0.8),
-        gradedCount: Math.round(assignmentCount * 0.7),
-        pendingReviewCount: Math.max(0, Math.round(assignmentCount * 0.1)),
+        totalAssigned: assignments.length,
+        submittedCount: submitted,
+        gradedCount: statusCount('GRADED'),
+        pendingReviewCount: statusCount('SUBMITTED') + statusCount('LATE'),
       },
-      batchPerformance: batches.map((b) => ({
-        batchName: b.name,
-        code: b.code,
-        studentCount: b.studentCount,
-        averageAttendance: 93,
-        assignmentTurnaround: '94%',
-      })),
+      batchPerformance: batches.map((b) => {
+        const own = assignments.filter((a) => a.batchId === b.id);
+        const expected = own.length * b._count.enrollments;
+        const got = own.reduce((sum, a) => sum + (subCount.get(a.id) ?? 0), 0);
+        const att = perBatch.get(b.id);
+        return {
+          batchName: b.name,
+          code: b.code,
+          studentCount: b._count.enrollments,
+          averageAttendance: att ? pct(att) : null,
+          assignmentTurnaround: expected ? `${Math.round((got / expected) * 100)}%` : null,
+        };
+      }),
       summary: {
         totalBatches: batches.length,
         totalStudents,
-        averageClassAttendance: '93.2%',
+        averageClassAttendance: allAtt.total ? `${pct(allAtt)}%` : null,
         totalTestsConducted: testCount,
       },
     };

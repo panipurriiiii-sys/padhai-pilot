@@ -48,6 +48,7 @@ describe('AnalyticsService', () => {
         count: vi.fn().mockResolvedValue(150),
       },
       assessmentMark: {
+        groupBy: vi.fn().mockResolvedValue([{ assessmentId: 'asm_1', _avg: { percentage: 72.4 } }]),
         findMany: vi.fn().mockResolvedValue([
           {
             assessmentId: 'asm_1',
