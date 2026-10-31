@@ -873,24 +873,32 @@ model StudyMaterial {
 }
 
 model StudentFeeRecord {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   instituteId  String
   studentId    String
   batchId      String?
   feeTitle     String // e.g. "Term 2 Tuition Fee", "JEE Test Series Pack"
   totalAmount  Float
-  paidAmount   Float    @default(0)
+  paidAmount   Float     @default(0)
   dueDate      DateTime
-  status       String   @default("PENDING") // PAID, PARTIAL, PENDING, OVERDUE
-  academicYear String?  @default("2026-2027")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  status       String    @default("PENDING") // PAID, PARTIAL, PENDING, OVERDUE
+  academicYear String?   @default("2026-2027")
+  // --- api-finance-docs additions (nullable, additive) ---
+  structureId  String?
+  instalmentNo Int       @default(1)
+  voidedAt     DateTime?
+  voidReason   String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   institute Institute            @relation(fields: [instituteId], references: [id], onDelete: Cascade)
   student   User                 @relation("StudentFeeRecords", fields: [studentId], references: [id], onDelete: Cascade)
   batch     Batch?               @relation(fields: [batchId], references: [id])
   reminders StudentFeeReminder[]
+  structure BatchFeeStructure?   @relation(fields: [structureId], references: [id], onDelete: SetNull)
+  payments  FeePayment[]
 
+  @@unique([structureId, studentId, instalmentNo])
   @@index([instituteId])
   @@index([studentId])
   @@index([status])
@@ -1212,4 +1220,90 @@ model PlatformThemeRevision {
 
   @@index([isActive])
   @@index([createdAt])
+}
+
+// ==========================================================================
+// api-finance-docs BLOCK (batch fees, receipts, student leaves). Own migration folder:
+// 20261031000300_finance_leaves. instituteId/studentId are plain scoped columns (no FK relation
+// declared) so this block does not need back-relations on Institute/User/Batch.
+// ==========================================================================
+
+/// Fee plan a teacher/owner sets for a batch. `schedule` = [{ label, amount, dueDate }] (1+ instalments);
+/// one StudentFeeRecord per student per instalment is generated from it (and for later enrolments).
+model BatchFeeStructure {
+  id           String    @id @default(cuid())
+  instituteId  String
+  batchId      String
+  title        String
+  academicYear String?
+  schedule     Json
+  status       String    @default("ACTIVE") // ACTIVE, VOID
+  createdById  String
+  voidedAt     DateTime?
+  voidReason   String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  records StudentFeeRecord[]
+
+  @@index([instituteId, batchId])
+  @@index([batchId, status])
+}
+
+/// A manually recorded payment. Immutable once issued: corrections are done by voiding (status +
+/// reason + actor) and recording a new payment; the receipt number is never reused or edited.
+model FeePayment {
+  id            String    @id @default(cuid())
+  instituteId   String
+  feeRecordId   String
+  studentId     String
+  amount        Float
+  paidOn        DateTime
+  mode          String // CASH, UPI, BANK_TRANSFER, CHEQUE, CARD, OTHER
+  reference     String?
+  note          String?
+  receiptNumber String
+  status        String    @default("ISSUED") // ISSUED, VOIDED
+  recordedById  String
+  voidedAt      DateTime?
+  voidedById    String?
+  voidReason    String?
+  createdAt     DateTime  @default(now())
+
+  feeRecord StudentFeeRecord @relation(fields: [feeRecordId], references: [id], onDelete: Cascade)
+
+  @@unique([instituteId, receiptNumber])
+  @@index([feeRecordId])
+  @@index([studentId, createdAt])
+  @@index([instituteId, paidOn])
+}
+
+/// Per-institute counters (receipt numbers). Incremented atomically inside the payment transaction.
+model InstituteCounter {
+  instituteId String
+  key         String
+  value       Int    @default(0)
+
+  @@id([instituteId, key])
+}
+
+model StudentLeaveApplication {
+  id              String    @id @default(cuid())
+  instituteId     String
+  studentId       String
+  batchId         String?
+  startDate       DateTime  @db.Date
+  endDate         DateTime  @db.Date
+  totalDays       Int       @default(1)
+  reason          String
+  status          String    @default("PENDING") // PENDING, APPROVED, REJECTED, CANCELLED
+  reviewedById    String?
+  reviewerRemarks String?
+  reviewedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([instituteId, status])
+  @@index([studentId, createdAt])
+  @@index([batchId, status])
 }

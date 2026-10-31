@@ -13,6 +13,7 @@ import { AdminModule } from './admin/admin.module.js';
 import { ThemeModule } from './theme/theme.module.js';
 import { FacultyInvitationsModule } from './faculty-invitations/faculty-invitations.module.js';
 import { AnalyticsModule } from './analytics/analytics.module.js';
+import { FinanceModule } from './finance/finance.module.js';
 import { HealthController } from './health/health.controller.js';
 import { InvitationsController } from './invitations/invitations.controller.js';
 import { AppController } from './app.controller.js';
@@ -34,6 +35,7 @@ import { RateLimitFilter } from './common/filters/rate-limit.filter.js';
     ThemeModule,
     FacultyInvitationsModule,
     AnalyticsModule,
+    FinanceModule,
   ],
   controllers: [
     AppController,

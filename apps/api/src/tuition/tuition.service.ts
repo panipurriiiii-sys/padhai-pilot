@@ -11,6 +11,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { assertDb, clampLimit, parseDate } from '../common/db/db.js';
 import { AccessService } from '../common/access/access.service.js';
 import { isManagement } from '../common/security/roles.js';
+import { LOGO_EXTENSIONS, validateMediaUrl } from '../common/security/media-url.js';
 import type { AuthenticatedUser } from '../common/types.js';
 import type {
   UpdateTuitionProfileDto,
@@ -115,6 +116,7 @@ export class TuitionService {
       if (!check.ok) throw new BadRequestException({ message: 'Invalid brand colour.', errors: check.errors });
       dto.primaryColor = check.branding?.accentColor ?? dto.primaryColor;
     }
+    if (dto.logoUrl) dto.logoUrl = validateMediaUrl(dto.logoUrl, 'logoUrl', LOGO_EXTENSIONS);
     assertDb(this.prisma);
     const updated = await this.prisma.institute.update({
       where: { id: instituteId },
