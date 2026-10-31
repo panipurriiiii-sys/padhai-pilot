@@ -66,7 +66,7 @@ export function InvitationsView({
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E3DFD9]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border-paper">
         <div>
           <h1 className="font-['Playfair_Display'] text-2xl sm:text-3xl font-bold text-stone-900">
             Student Invitation Codes
@@ -78,7 +78,7 @@ export function InvitationsView({
 
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#1677FF] hover:bg-[#3395FF] text-white text-xs font-semibold tracking-wide transition shadow-[0_2px_12px_rgba(22,119,255,0.35)] shrink-0"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-electric hover:bg-[#3395FF] text-white text-xs font-semibold tracking-wide transition shadow-[0_2px_12px_rgba(22,119,255,0.35)] shrink-0"
         >
           <Plus className="w-4 h-4" />
           <span>Generate New Code</span>
@@ -86,8 +86,8 @@ export function InvitationsView({
       </div>
 
       {/* Security Guidance Note */}
-      <div className="p-4 rounded-xl bg-white border border-[#1677FF]/25 flex items-start gap-3">
-        <ShieldCheck className="w-5 h-5 text-[#1677FF] shrink-0 mt-0.5" />
+      <div className="p-4 rounded-xl bg-white border border-electric/25 flex items-start gap-3">
+        <ShieldCheck className="w-5 h-5 text-electric shrink-0 mt-0.5" />
         <div className="text-xs text-stone-500 leading-relaxed">
           <span className="font-bold text-stone-900">Zero-Trust Security Enforcement: </span>
           Invitation codes allow students to register directly into the designated batch without administrative manual entry. Revoking a code immediately prevents any further redemptions while preserving already enrolled students.
@@ -95,8 +95,8 @@ export function InvitationsView({
       </div>
 
       {/* Invitations Table */}
-      <div className="rounded-xl bg-white border border-[#E3DFD9] overflow-hidden">
-        <div className="p-4 border-b border-[#E3DFD9] bg-[#FAF8F5] flex items-center justify-between">
+      <div className="rounded-xl bg-white border border-border-paper overflow-hidden">
+        <div className="p-4 border-b border-border-paper bg-paper-warm flex items-center justify-between">
           <span className="text-xs font-bold text-stone-900 uppercase tracking-wider">
             Active & Historic Tokens ({invitations.length})
           </span>
@@ -105,7 +105,7 @@ export function InvitationsView({
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="border-b border-[#E3DFD9] text-stone-500 font-medium uppercase tracking-wider text-[10px] bg-[#FAF8F5]">
+              <tr className="border-b border-border-paper text-stone-500 font-medium uppercase tracking-wider text-[10px] bg-paper-warm">
                 <th className="py-3 px-4">Enrollment Token</th>
                 <th className="py-3 px-4">Target Batch</th>
                 <th className="py-3 px-4 text-center">Usage Quota</th>
@@ -137,10 +137,10 @@ export function InvitationsView({
                     : 'ACTIVE';
 
                   return (
-                    <tr key={inv.id} className="hover:bg-[#F3EFE9]/60 transition">
+                    <tr key={inv.id} className="hover:bg-surface-subtle/60 transition">
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-2">
-                          <span className="font-['Inter'] font-mono font-bold text-sm tracking-wider text-stone-900 bg-[#FAF8F5] px-2.5 py-1 rounded border border-[#E3DFD9]">
+                          <span className="font-['Inter'] font-mono font-bold text-sm tracking-wider text-stone-900 bg-paper-warm px-2.5 py-1 rounded border border-border-paper">
                             {inv.code}
                           </span>
                           <button
@@ -149,7 +149,7 @@ export function InvitationsView({
                             className="p-1.5 rounded hover:bg-[#ffffff10] text-stone-500 hover:text-white transition"
                           >
                             {isCopied ? (
-                              <Check className="w-3.5 h-3.5 text-[#10B981]" />
+                              <Check className="w-3.5 h-3.5 text-status-success" />
                             ) : (
                               <Copy className="w-3.5 h-3.5" />
                             )}
@@ -174,10 +174,10 @@ export function InvitationsView({
                         <span
                           className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${
                             statusLabel === 'ACTIVE'
-                              ? 'bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30'
+                              ? 'bg-status-success/15 text-status-success border border-status-success/30'
                               : statusLabel === 'EXPIRED'
                               ? 'bg-[#929BAA]/15 text-stone-500 border border-[#929BAA]/30'
-                              : 'bg-[#F43F5E]/15 text-[#F43F5E] border border-[#F43F5E]/30'
+                              : 'bg-status-danger/15 text-status-danger border border-status-danger/30'
                           }`}
                         >
                           {statusLabel}
@@ -188,7 +188,7 @@ export function InvitationsView({
                         {statusLabel === 'ACTIVE' && (
                           <button
                             onClick={() => setRevokeConfirmCode(inv.code)}
-                            className="px-2.5 py-1 rounded bg-[#F43F5E]/15 hover:bg-[#F43F5E] text-[#F43F5E] hover:text-white border border-[#F43F5E]/30 text-[11px] font-semibold transition"
+                            className="px-2.5 py-1 rounded bg-status-danger/15 hover:bg-status-danger text-status-danger hover:text-white border border-status-danger/30 text-[11px] font-semibold transition"
                           >
                             Revoke
                           </button>
@@ -206,7 +206,7 @@ export function InvitationsView({
       {/* Revoke Confirmation Modal */}
       {revokeConfirmCode && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-white border border-[#F43F5E]/30 p-5 shadow-2xl relative animate-in zoom-in-95 duration-150">
+          <div className="w-full max-w-sm rounded-2xl bg-white border border-status-danger/30 p-5 shadow-2xl relative animate-in zoom-in-95 duration-150">
             <h3 className="font-['Playfair_Display'] text-lg font-bold text-stone-900 mb-1">
               Revoke Invitation Code
             </h3>
@@ -223,7 +223,7 @@ export function InvitationsView({
               </button>
               <button
                 onClick={() => handleRevoke(revokeConfirmCode)}
-                className="px-4 py-1.5 rounded-lg bg-[#F43F5E] hover:bg-[#ff4d4f] text-white font-semibold shadow-[0_2px_10px_rgba(244,63,94,0.35)]"
+                className="px-4 py-1.5 rounded-lg bg-status-danger hover:bg-[#ff4d4f] text-white font-semibold shadow-[0_2px_10px_rgba(244,63,94,0.35)]"
               >
                 Yes, Revoke Code
               </button>
@@ -235,7 +235,7 @@ export function InvitationsView({
       {/* Create Invitation Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white border border-[#E3DFD9] p-6 shadow-2xl relative animate-in zoom-in-95 duration-150">
+          <div className="w-full max-w-md rounded-2xl bg-white border border-border-paper p-6 shadow-2xl relative animate-in zoom-in-95 duration-150">
             <button
               onClick={() => setShowCreateModal(false)}
               className="absolute right-4 top-4 text-stone-500 hover:text-white"
@@ -256,7 +256,7 @@ export function InvitationsView({
                 <select
                   value={batchId}
                   onChange={(e) => setBatchId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E3DFD9] text-stone-900 focus:outline-none focus:border-[#1677FF]"
+                  className="w-full px-3 py-2 rounded-lg bg-paper-warm border border-border-paper text-stone-900 focus:outline-none focus:border-electric"
                 >
                   {batches.map((b) => (
                     <option key={b.id} value={b.id} className="bg-white">
@@ -275,7 +275,7 @@ export function InvitationsView({
                     max={200}
                     value={maxUses}
                     onChange={(e) => setMaxUses(Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E3DFD9] text-stone-900 focus:outline-none focus:border-[#1677FF]"
+                    className="w-full px-3 py-2 rounded-lg bg-paper-warm border border-border-paper text-stone-900 focus:outline-none focus:border-electric"
                   />
                 </div>
                 <div>
@@ -286,7 +286,7 @@ export function InvitationsView({
                     max={90}
                     value={expiryDays}
                     onChange={(e) => setExpiryDays(Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E3DFD9] text-stone-900 focus:outline-none focus:border-[#1677FF]"
+                    className="w-full px-3 py-2 rounded-lg bg-paper-warm border border-border-paper text-stone-900 focus:outline-none focus:border-electric"
                   />
                 </div>
               </div>
@@ -302,7 +302,7 @@ export function InvitationsView({
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-2 rounded-lg bg-[#1677FF] hover:bg-[#3395FF] text-white font-semibold shadow-[0_2px_12px_rgba(22,119,255,0.35)] disabled:opacity-50"
+                  className="px-5 py-2 rounded-lg bg-electric hover:bg-[#3395FF] text-white font-semibold shadow-[0_2px_12px_rgba(22,119,255,0.35)] disabled:opacity-50"
                 >
                   {isSubmitting ? 'Generating...' : 'Generate Code'}
                 </button>

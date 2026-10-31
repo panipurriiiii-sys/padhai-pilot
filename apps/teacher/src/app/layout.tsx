@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Playfair_Display, Raleway, Inter } from 'next/font/google';
 import './globals.css';
 
+// The three approved PadhaiPilot families (identical in every app; see docs/global-design-system.md).
 const playfair = Playfair_Display({
   subsets: ['latin'],
   weight: ['600', '700'],
@@ -38,7 +39,7 @@ export default function RootLayout({
       lang="en"
       className={`${playfair.variable} ${raleway.variable} ${inter.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-[#F8F6F0] text-[#1C1917]">
+      <body className="min-h-full flex flex-col bg-desk text-ink-primary">
         {children}
       </body>
     </html>

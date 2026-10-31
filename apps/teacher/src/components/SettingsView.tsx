@@ -72,7 +72,7 @@ export function SettingsView({ user, onUpdateUser, onLogout }: SettingsViewProps
   return (
     <div className="space-y-6 max-w-4xl animate-in fade-in duration-200 text-xs">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E3DFD9]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border-paper">
         <div>
           <h1 className="font-['Playfair_Display'] text-2xl sm:text-3xl font-bold text-stone-900">
             Faculty Account & Settings
@@ -84,7 +84,7 @@ export function SettingsView({ user, onUpdateUser, onLogout }: SettingsViewProps
 
         <button
           onClick={onLogout}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-[#F43F5E]/15 hover:bg-[#F43F5E] text-[#F43F5E] hover:text-white border border-[#F43F5E]/30 font-semibold transition shrink-0"
+          className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-status-danger/15 hover:bg-status-danger text-status-danger hover:text-white border border-status-danger/30 font-semibold transition shrink-0"
         >
           <LogOut className="w-3.5 h-3.5" />
           <span>Sign Out</span>
@@ -92,9 +92,9 @@ export function SettingsView({ user, onUpdateUser, onLogout }: SettingsViewProps
       </div>
 
       {/* Institutional Context Card */}
-      <div className="p-4 rounded-xl bg-white border border-[#E3DFD9] flex items-center justify-between">
+      <div className="p-4 rounded-xl bg-white border border-border-paper flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-[#1677FF]/15 border border-[#1677FF]/30 flex items-center justify-center text-[#1677FF]">
+          <div className="w-10 h-10 rounded-lg bg-electric/15 border border-electric/30 flex items-center justify-center text-electric">
             <Building2 className="w-5 h-5" />
           </div>
           <div>
@@ -107,20 +107,20 @@ export function SettingsView({ user, onUpdateUser, onLogout }: SettingsViewProps
           </div>
         </div>
 
-        <span className="px-2.5 py-1 rounded bg-[#10B981]/15 text-[#10B981] font-bold uppercase tracking-wider text-[10px]">
+        <span className="px-2.5 py-1 rounded bg-status-success/15 text-status-success font-bold uppercase tracking-wider text-[10px]">
           Verified Faculty
         </span>
       </div>
 
       {/* Profile Form */}
-      <div className="p-5 rounded-xl bg-white border border-[#E3DFD9] space-y-4">
+      <div className="p-5 rounded-xl bg-white border border-border-paper space-y-4">
         <h3 className="font-['Raleway'] font-bold text-sm text-stone-900 flex items-center gap-2">
-          <User className="w-4 h-4 text-[#1677FF]" />
+          <User className="w-4 h-4 text-electric" />
           <span>Personal Profile Information</span>
         </h3>
 
         {profileSuccessMsg && (
-          <div className="p-2.5 rounded-lg bg-[#10B981]/15 border border-[#10B981]/30 text-[#10B981] flex items-center gap-2">
+          <div className="p-2.5 rounded-lg bg-status-success/15 border border-status-success/30 text-status-success flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
             <span>{profileSuccessMsg}</span>
           </div>
@@ -135,7 +135,7 @@ export function SettingsView({ user, onUpdateUser, onLogout }: SettingsViewProps
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E3DFD9] text-stone-900 focus:outline-none focus:border-[#1677FF]"
+                className="w-full px-3 py-2 rounded-lg bg-paper-warm border border-border-paper text-stone-900 focus:outline-none focus:border-electric"
               />
             </div>
             <div>
@@ -144,7 +144,7 @@ export function SettingsView({ user, onUpdateUser, onLogout }: SettingsViewProps
                 type="text"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E3DFD9] text-stone-900 font-['Inter'] focus:outline-none focus:border-[#1677FF]"
+                className="w-full px-3 py-2 rounded-lg bg-paper-warm border border-border-paper text-stone-900 font-['Inter'] focus:outline-none focus:border-electric"
               />
             </div>
           </div>
@@ -155,7 +155,7 @@ export function SettingsView({ user, onUpdateUser, onLogout }: SettingsViewProps
               type="email"
               disabled
               value={user.email}
-              className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E3DFD9] text-[#55595F] cursor-not-allowed font-['Inter']"
+              className="w-full px-3 py-2 rounded-lg bg-paper-warm border border-border-paper text-[#55595F] cursor-not-allowed font-['Inter']"
             />
           </div>
 
@@ -163,7 +163,7 @@ export function SettingsView({ user, onUpdateUser, onLogout }: SettingsViewProps
             <button
               type="submit"
               disabled={isUpdatingProfile}
-              className="px-5 py-2 rounded-lg bg-[#1677FF] hover:bg-[#3395FF] text-white font-semibold transition disabled:opacity-50"
+              className="px-5 py-2 rounded-lg bg-electric hover:bg-[#3395FF] text-white font-semibold transition disabled:opacity-50"
             >
               {isUpdatingProfile ? 'Saving...' : 'Save Profile Changes'}
             </button>
@@ -172,21 +172,21 @@ export function SettingsView({ user, onUpdateUser, onLogout }: SettingsViewProps
       </div>
 
       {/* Password & Security Form */}
-      <div className="p-5 rounded-xl bg-white border border-[#E3DFD9] space-y-4">
+      <div className="p-5 rounded-xl bg-white border border-border-paper space-y-4">
         <h3 className="font-['Raleway'] font-bold text-sm text-stone-900 flex items-center gap-2">
-          <Lock className="w-4 h-4 text-[#1677FF]" />
+          <Lock className="w-4 h-4 text-electric" />
           <span>Security & Password Management</span>
         </h3>
 
         {passErrorMsg && (
-          <div className="p-2.5 rounded-lg bg-[#F43F5E]/15 border border-[#F43F5E]/30 text-[#F43F5E] flex items-center gap-2">
+          <div className="p-2.5 rounded-lg bg-status-danger/15 border border-status-danger/30 text-status-danger flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{passErrorMsg}</span>
           </div>
         )}
 
         {passSuccessMsg && (
-          <div className="p-2.5 rounded-lg bg-[#10B981]/15 border border-[#10B981]/30 text-[#10B981] flex items-center gap-2">
+          <div className="p-2.5 rounded-lg bg-status-success/15 border border-status-success/30 text-status-success flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
             <span>{passSuccessMsg}</span>
           </div>
@@ -201,7 +201,7 @@ export function SettingsView({ user, onUpdateUser, onLogout }: SettingsViewProps
               placeholder="••••••••••••"
               value={oldPassword}
               onChange={(e) => setOldPassword(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E3DFD9] text-stone-900 focus:outline-none focus:border-[#1677FF]"
+              className="w-full px-3 py-2 rounded-lg bg-paper-warm border border-border-paper text-stone-900 focus:outline-none focus:border-electric"
             />
           </div>
 
@@ -215,7 +215,7 @@ export function SettingsView({ user, onUpdateUser, onLogout }: SettingsViewProps
                 placeholder="••••••••••••"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E3DFD9] text-stone-900 focus:outline-none focus:border-[#1677FF]"
+                className="w-full px-3 py-2 rounded-lg bg-paper-warm border border-border-paper text-stone-900 focus:outline-none focus:border-electric"
               />
             </div>
             <div>
@@ -227,7 +227,7 @@ export function SettingsView({ user, onUpdateUser, onLogout }: SettingsViewProps
                 placeholder="••••••••••••"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E3DFD9] text-stone-900 focus:outline-none focus:border-[#1677FF]"
+                className="w-full px-3 py-2 rounded-lg bg-paper-warm border border-border-paper text-stone-900 focus:outline-none focus:border-electric"
               />
             </div>
           </div>
@@ -236,7 +236,7 @@ export function SettingsView({ user, onUpdateUser, onLogout }: SettingsViewProps
             <button
               type="submit"
               disabled={isChangingPass}
-              className="px-5 py-2 rounded-lg bg-[#1677FF] hover:bg-[#3395FF] text-white font-semibold transition disabled:opacity-50"
+              className="px-5 py-2 rounded-lg bg-electric hover:bg-[#3395FF] text-white font-semibold transition disabled:opacity-50"
             >
               {isChangingPass ? 'Updating...' : 'Update Password'}
             </button>

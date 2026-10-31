@@ -103,7 +103,7 @@ export function colorVariables(p: ColorPalette): CssVars {
 /** Variables that do not change between schemes. */
 export function staticVariables(): CssVars {
   const v: CssVars = {};
-  for (const [k, n] of Object.entries(radii)) v[`--radius-${k}`] = k === 'full' ? '9999px' : `${n / 16}rem`;
+  for (const [k, n] of Object.entries(radii)) v[`--ui-radius-${k}`] = k === 'full' ? '9999px' : `${n / 16}rem`;
   for (const [k, n] of Object.entries(spacing)) v[`--space-${k}`] = `${n / 16}rem`;
   v['--duration-instant'] = `${motion.duration.instant}ms`;
   v['--duration-fast'] = `${motion.duration.fast}ms`;
@@ -199,6 +199,7 @@ export const TAILWIND_COLORS: ReadonlyArray<readonly [string, string]> = [
   ['border-focus', '--border-focus'],
   ['electric', '--brand-electric'],
   ['brand-hover', '--brand-hover'],
+  ['brand-deep', '--brand-deep'],
   ['brand-cyan', '--brand-cyan'],
   ['brand-subtle', '--brand-subtle-bg'],
   ['brand-subtle-border', '--brand-subtle-border'],

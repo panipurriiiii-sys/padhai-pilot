@@ -61,7 +61,7 @@ export function LessonPlansView({
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E3DFD9]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border-paper">
         <div>
           <h1 className="font-['Playfair_Display'] text-2xl sm:text-3xl font-bold text-stone-900">
             Syllabus & Lesson Planning
@@ -73,7 +73,7 @@ export function LessonPlansView({
 
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#1677FF] hover:bg-[#3395FF] text-white text-xs font-semibold tracking-wide transition shadow-[0_2px_12px_rgba(22,119,255,0.35)] shrink-0"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-electric hover:bg-[#3395FF] text-white text-xs font-semibold tracking-wide transition shadow-[0_2px_12px_rgba(22,119,255,0.35)] shrink-0"
         >
           <Plus className="w-4 h-4" />
           <span>New Lesson Plan</span>
@@ -127,14 +127,14 @@ export function LessonPlansView({
                   <p className="text-xs text-[var(--ink-secondary)] mt-1.5 leading-relaxed font-['Raleway']">{lp.content}</p>
 
                   {lp.resources && lp.resources.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-3 pt-2 border-t border-[#E3DFD9]">
+                    <div className="flex flex-wrap gap-2 mt-3 pt-2 border-t border-border-paper">
                       {lp.resources.map((res, i) => (
                         <a
                           key={i}
                           href={res.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#FAF8F5] hover:bg-[#1677FF]/15 border border-[#E3DFD9] hover:border-[#1677FF]/40 text-[11px] text-stone-700 hover:text-[#1677FF] transition"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-paper-warm hover:bg-electric/15 border border-border-paper hover:border-electric/40 text-[11px] text-stone-700 hover:text-electric transition"
                         >
                           {res.type === 'PDF' ? <FileText className="w-3 h-3" /> : <LinkIcon className="w-3 h-3" />}
                           <span>{res.title}</span>
@@ -149,8 +149,8 @@ export function LessonPlansView({
                 <span
                   className={`text-[10px] font-bold px-2 py-0.5 rounded ${
                     lp.isCompleted
-                      ? 'bg-[#10B981]/15 text-[#10B981]'
-                      : 'bg-[#F59E0B]/15 text-[#F59E0B]'
+                      ? 'bg-status-success/15 text-status-success'
+                      : 'bg-status-warning/15 text-status-warning'
                   }`}
                 >
                   {lp.isCompleted ? 'Topic Covered' : 'In Progress'}
@@ -164,7 +164,7 @@ export function LessonPlansView({
       {/* Create Lesson Plan Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white border border-[#E3DFD9] p-6 shadow-2xl relative animate-in zoom-in-95 duration-150 text-xs">
+          <div className="w-full max-w-md rounded-2xl bg-white border border-border-paper p-6 shadow-2xl relative animate-in zoom-in-95 duration-150 text-xs">
             <button
               onClick={() => setShowCreateModal(false)}
               className="absolute right-4 top-4 text-stone-500 hover:text-white"
@@ -188,7 +188,7 @@ export function LessonPlansView({
                   placeholder="e.g. Integral Calculus: Week 6"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E3DFD9] text-stone-900"
+                  className="w-full px-3 py-2 rounded-lg bg-paper-warm border border-border-paper text-stone-900"
                 />
               </div>
 
@@ -200,7 +200,7 @@ export function LessonPlansView({
                   placeholder="e.g. Definite Integrals and Properties"
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E3DFD9] text-stone-900"
+                  className="w-full px-3 py-2 rounded-lg bg-paper-warm border border-border-paper text-stone-900"
                 />
               </div>
 
@@ -213,7 +213,7 @@ export function LessonPlansView({
                     placeholder="Math"
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E3DFD9] text-stone-900"
+                    className="w-full px-3 py-2 rounded-lg bg-paper-warm border border-border-paper text-stone-900"
                   />
                 </div>
                 <div>
@@ -221,7 +221,7 @@ export function LessonPlansView({
                   <select
                     value={batchId}
                     onChange={(e) => setBatchId(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E3DFD9] text-stone-900"
+                    className="w-full px-3 py-2 rounded-lg bg-paper-warm border border-border-paper text-stone-900"
                   >
                     {batches.map((b) => (
                       <option key={b.id} value={b.id} className="bg-white">
@@ -238,7 +238,7 @@ export function LessonPlansView({
                     max={52}
                     value={weekNumber}
                     onChange={(e) => setWeekNumber(Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-lg bg-[#FAF8F5] border border-[#E3DFD9] text-stone-900"
+                    className="w-full px-3 py-2 rounded-lg bg-paper-warm border border-border-paper text-stone-900"
                   />
                 </div>
               </div>
@@ -250,7 +250,7 @@ export function LessonPlansView({
                   placeholder="Outline derivations, key formulas, and exam problems to be covered..."
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
-                  className="w-full p-2.5 rounded-lg bg-[#FAF8F5] border border-[#E3DFD9] text-stone-900"
+                  className="w-full p-2.5 rounded-lg bg-paper-warm border border-border-paper text-stone-900"
                 />
               </div>
 
@@ -265,7 +265,7 @@ export function LessonPlansView({
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-2 rounded-lg bg-[#1677FF] hover:bg-[#3395FF] text-white font-semibold disabled:opacity-50"
+                  className="px-5 py-2 rounded-lg bg-electric hover:bg-[#3395FF] text-white font-semibold disabled:opacity-50"
                 >
                   {isSubmitting ? 'Saving...' : 'Save Lesson Plan'}
                 </button>

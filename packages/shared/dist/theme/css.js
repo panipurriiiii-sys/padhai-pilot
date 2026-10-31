@@ -92,7 +92,7 @@ export function colorVariables(p) {
 export function staticVariables() {
     const v = {};
     for (const [k, n] of Object.entries(radii))
-        v[`--radius-${k}`] = k === 'full' ? '9999px' : `${n / 16}rem`;
+        v[`--ui-radius-${k}`] = k === 'full' ? '9999px' : `${n / 16}rem`;
     for (const [k, n] of Object.entries(spacing))
         v[`--space-${k}`] = `${n / 16}rem`;
     v['--duration-instant'] = `${motion.duration.instant}ms`;
@@ -185,6 +185,7 @@ export const TAILWIND_COLORS = [
     ['border-focus', '--border-focus'],
     ['electric', '--brand-electric'],
     ['brand-hover', '--brand-hover'],
+    ['brand-deep', '--brand-deep'],
     ['brand-cyan', '--brand-cyan'],
     ['brand-subtle', '--brand-subtle-bg'],
     ['brand-subtle-border', '--brand-subtle-border'],

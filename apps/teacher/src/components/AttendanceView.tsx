@@ -549,7 +549,7 @@ export function AttendanceView({
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-stone-200 bg-[#FAF8F5] text-[11px] font-['Raleway'] font-bold text-stone-600 uppercase tracking-wider">
+              <tr className="border-b border-stone-200 bg-paper-warm text-[11px] font-['Raleway'] font-bold text-stone-600 uppercase tracking-wider">
                 <th className="py-3 px-5 w-12 text-center">#</th>
                 <th className="py-3 px-5">Student / Candidate</th>
                 <th className="py-3 px-5 w-36">Roll Number</th>

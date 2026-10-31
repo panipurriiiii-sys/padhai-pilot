@@ -6,13 +6,13 @@
   --font-display: 'Playfair Display', Georgia, serif;
   --font-primary: 'Raleway', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-data: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --radius-none: 0rem;
-  --radius-xs: 0.25rem;
-  --radius-sm: 0.375rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
-  --radius-full: 9999px;
+  --ui-radius-none: 0rem;
+  --ui-radius-xs: 0.25rem;
+  --ui-radius-sm: 0.375rem;
+  --ui-radius-md: 0.5rem;
+  --ui-radius-lg: 0.75rem;
+  --ui-radius-xl: 1rem;
+  --ui-radius-full: 9999px;
   --space-none: 0rem;
   --space-xxs: 0.125rem;
   --space-xs: 0.25rem;
@@ -268,6 +268,7 @@
   --color-border-focus: var(--border-focus);
   --color-electric: var(--brand-electric);
   --color-brand-hover: var(--brand-hover);
+  --color-brand-deep: var(--brand-deep);
   --color-brand-cyan: var(--brand-cyan);
   --color-brand-subtle: var(--brand-subtle-bg);
   --color-brand-subtle-border: var(--brand-subtle-border);
@@ -399,7 +400,7 @@ body {
 .paper-card {
   background-color: var(--bg-paper);
   border: 1px solid var(--border-paper);
-  border-radius: var(--radius-xl);
+  border-radius: var(--ui-radius-xl);
   box-shadow: var(--shadow-paper);
 }
 
@@ -407,7 +408,7 @@ body {
 .paper-card-interactive {
   background-color: var(--bg-paper);
   border: 1px solid var(--border-paper);
-  border-radius: var(--radius-xl);
+  border-radius: var(--ui-radius-xl);
   box-shadow: var(--shadow-paper);
   transition: all var(--duration-base) var(--ease-surface);
 }
@@ -421,7 +422,7 @@ body {
 .paper-card-selected {
   background-color: var(--bg-selected);
   border: 1.5px solid var(--brand-electric);
-  border-radius: var(--radius-xl);
+  border-radius: var(--ui-radius-xl);
   box-shadow: var(--shadow-selected);
 }
 
@@ -429,7 +430,7 @@ body {
 .kpi-card {
   background-color: var(--bg-paper);
   border: 1px solid var(--border-paper);
-  border-radius: var(--radius-xl);
+  border-radius: var(--ui-radius-xl);
   padding: 1.25rem;
   box-shadow: var(--shadow-paper);
   transition: all var(--duration-base) var(--ease-surface);
@@ -443,7 +444,7 @@ body {
 .recessed-surface {
   background-color: var(--bg-surface-subtle);
   border: 1px solid var(--border-paper);
-  border-radius: var(--radius-lg);
+  border-radius: var(--ui-radius-lg);
 }
 
 /* ---- Buttons ---- */
@@ -454,7 +455,7 @@ body {
   font-weight: 700;
   font-size: 0.75rem;
   padding: 0.625rem 1rem;
-  border-radius: var(--radius-lg);
+  border-radius: var(--ui-radius-lg);
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -478,7 +479,7 @@ body {
   font-weight: 700;
   font-size: 0.75rem;
   padding: 0.625rem 1rem;
-  border-radius: var(--radius-lg);
+  border-radius: var(--ui-radius-lg);
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -502,7 +503,7 @@ body {
   font-weight: 700;
   font-size: 0.75rem;
   padding: 0.375rem 0.875rem;
-  border-radius: var(--radius-lg);
+  border-radius: var(--ui-radius-lg);
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
@@ -526,7 +527,7 @@ body {
   font-weight: 700;
   font-size: 0.75rem;
   padding: 0.625rem 1rem;
-  border-radius: var(--radius-lg);
+  border-radius: var(--ui-radius-lg);
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -564,7 +565,7 @@ body {
 .input-paper {
   background-color: var(--bg-paper);
   border: 1px solid var(--border-input);
-  border-radius: var(--radius-lg);
+  border-radius: var(--ui-radius-lg);
   padding: 0.5rem 0.875rem;
   font-family: var(--font-primary);
   font-size: 0.75rem;
@@ -589,7 +590,7 @@ body {
 .select-paper {
   background-color: var(--bg-paper);
   border: 1px solid var(--border-input);
-  border-radius: var(--radius-lg);
+  border-radius: var(--ui-radius-lg);
   padding: 0.375rem 0.75rem;
   font-family: var(--font-primary);
   font-size: 0.75rem;
@@ -607,7 +608,7 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 0.125rem 0.5rem;
-  border-radius: var(--radius-md);
+  border-radius: var(--ui-radius-md);
   background-color: var(--bg-surface-subtle);
   color: var(--brand-electric);
   border: 1px solid color-mix(in srgb, var(--brand-electric) 20%, transparent);
@@ -618,7 +619,7 @@ body {
   font-size: 0.7rem;
   font-weight: 600;
   padding: 0.125rem 0.5rem;
-  border-radius: var(--radius-sm);
+  border-radius: var(--ui-radius-sm);
   background-color: var(--status-success-bg);
   color: var(--status-success-text);
   border: 1px solid var(--status-success-border);
@@ -631,7 +632,7 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 0.125rem 0.5rem;
-  border-radius: var(--radius-full);
+  border-radius: var(--ui-radius-full);
   background-color: var(--status-danger-bg);
   color: var(--status-danger-text);
   border: 1px solid var(--status-danger-border);
@@ -644,7 +645,7 @@ body {
   font-weight: 700;
   letter-spacing: 0.03em;
   padding: 0.125rem 0.625rem;
-  border-radius: var(--radius-full);
+  border-radius: var(--ui-radius-full);
   border: 1px solid transparent;
   display: inline-flex;
   align-items: center;
@@ -661,7 +662,7 @@ body {
   font-family: var(--font-primary);
   font-size: 0.75rem;
   padding: 0.375rem 0.75rem;
-  border-radius: var(--radius-lg);
+  border-radius: var(--ui-radius-lg);
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
@@ -703,14 +704,14 @@ body {
   overflow: auto;
   background-color: var(--bg-paper);
   border: 1px solid var(--border-paper);
-  border-radius: var(--radius-xl);
+  border-radius: var(--ui-radius-xl);
   box-shadow: var(--shadow-lift);
 }
 
 .menu-panel {
   background-color: var(--bg-paper);
   border: 1px solid var(--border-paper);
-  border-radius: var(--radius-lg);
+  border-radius: var(--ui-radius-lg);
   box-shadow: var(--shadow-lift);
   padding: 0.25rem;
   min-width: 10rem;
@@ -721,7 +722,7 @@ body {
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
-  border-radius: var(--radius-md);
+  border-radius: var(--ui-radius-md);
   font-family: var(--font-primary);
   font-size: 0.75rem;
   font-weight: 600;
@@ -742,7 +743,7 @@ body {
   align-items: flex-start;
   gap: 0.5rem;
   padding: 0.75rem;
-  border-radius: var(--radius-lg);
+  border-radius: var(--ui-radius-lg);
   border: 1px solid var(--border-paper);
   background-color: var(--bg-surface-subtle);
   color: var(--ink-secondary);
@@ -760,14 +761,14 @@ body {
   gap: 0.25rem;
   padding: 0.25rem;
   background-color: var(--bg-secondary);
-  border-radius: var(--radius-lg);
+  border-radius: var(--ui-radius-lg);
 }
 .tab {
   font-family: var(--font-primary);
   font-size: 0.75rem;
   font-weight: 700;
   padding: 0.375rem 0.875rem;
-  border-radius: var(--radius-md);
+  border-radius: var(--ui-radius-md);
   color: var(--ink-muted);
   cursor: pointer;
   transition: all var(--duration-fast) ease;
@@ -807,7 +808,7 @@ body {
 /* ---- Loading, empty and error states ---- */
 .skeleton {
   background-color: var(--bg-muted);
-  border-radius: var(--radius-lg);
+  border-radius: var(--ui-radius-lg);
   animation: pp-pulse 1.4s var(--ease-surface) infinite;
 }
 @keyframes pp-pulse {
@@ -817,7 +818,7 @@ body {
 .spinner {
   width: 1.25rem;
   height: 1.25rem;
-  border-radius: var(--radius-full);
+  border-radius: var(--ui-radius-full);
   border: 2px solid var(--border-paper);
   border-top-color: var(--brand-electric);
   animation: pp-spin 0.7s linear infinite;
@@ -832,7 +833,7 @@ body {
   text-align: center;
   padding: 2rem 1rem;
   border: 1px dashed var(--border-input);
-  border-radius: var(--radius-xl);
+  border-radius: var(--ui-radius-xl);
   background-color: var(--bg-paper-warm);
   color: var(--ink-muted);
   font-family: var(--font-primary);
@@ -859,7 +860,7 @@ body {
 }
 ::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb);
-  border-radius: var(--radius-full);
+  border-radius: var(--ui-radius-full);
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--scrollbar-thumb-hover);
