@@ -1,7 +1,7 @@
 // `npm run local:all` - db -> migrate -> seed -> api + web.
 import net from 'node:net';
 import { spawn } from 'node:child_process';
-import { ROOT, DB_PORT, run } from './lib.mjs';
+import { ROOT, DB_PORT, run, stopDb } from './lib.mjs';
 
 const kids = [];
 const start = (script) => {
@@ -14,10 +14,12 @@ const up = (port) => new Promise((r) => {
   s.on('connect', () => { s.destroy(); r(true); });
   s.on('error', () => r(false));
 });
-process.on('SIGINT', () => { kids.forEach((k) => k.kill()); process.exit(0); });
+let startedDb = false;
+process.on('SIGINT', () => { kids.forEach((k) => k.kill()); if (startedDb) stopDb(); process.exit(0); });
 
 if (!(await up(DB_PORT))) {
   start('local:db');
+  startedDb = true;
   for (let i = 0; i < 90 && !(await up(DB_PORT)); i++) await new Promise((r) => setTimeout(r, 1000));
 }
 await run('npm', ['run', 'local:migrate']);

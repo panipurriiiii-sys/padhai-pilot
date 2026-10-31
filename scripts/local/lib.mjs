@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 export const LOCAL_DIR = join(ROOT, '.local');
@@ -60,4 +60,12 @@ export function run(cmd, args, opts = {}) {
     p.on('exit', (c) => (c === 0 ? res() : rej(new Error(`${cmd} ${args.join(' ')} exited ${c}`))));
     p.on('error', rej);
   });
+}
+
+/** Stop the harness PostgreSQL cleanly (killing node alone orphans postgres.exe on Windows). */
+export function stopDb() {
+  const dir = join(ROOT, 'node_modules', '@embedded-postgres', `${process.platform}-${process.arch}`, 'native', 'bin');
+  const exe = join(dir, process.platform === 'win32' ? 'pg_ctl.exe' : 'pg_ctl');
+  if (!existsSync(exe) || !existsSync(join(PGDATA, 'postmaster.pid'))) return;
+  spawnSync(exe, ['stop', '-D', PGDATA, '-m', 'fast', '-w'], { stdio: 'ignore' });
 }

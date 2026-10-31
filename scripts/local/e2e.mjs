@@ -3,7 +3,7 @@
 import net from 'node:net';
 import { spawn, spawnSync } from 'node:child_process';
 import { join } from 'node:path';
-import { ROOT, DB_PORT, apiEnv, assertLocalDb, run } from './lib.mjs';
+import { ROOT, DB_PORT, apiEnv, assertLocalDb, run, stopDb } from './lib.mjs';
 
 assertLocalDb();
 const E2E_PORT = Number(process.env.E2E_API_PORT || 3199);
@@ -16,10 +16,12 @@ const wait = async (port, secs) => { for (let i = 0; i < secs && !(await up(port
 const kill = (p) => { if (p?.pid) spawnSync('taskkill', ['/PID', String(p.pid), '/T', '/F'], { stdio: 'ignore' }); };
 
 const started = [];
+let startedDb = false;
 try {
   if (!(await up(DB_PORT))) {
     const db = spawn('node', ['scripts/local/db.mjs'], { cwd: ROOT, stdio: 'inherit' });
     started.push(db);
+    startedDb = true;
     if (!(await wait(DB_PORT, 90))) throw new Error('local DB did not start');
   }
   await run('node', ['scripts/local/migrate.mjs']);
@@ -39,5 +41,8 @@ try {
     env: { ...process.env, E2E_API_URL: `http://localhost:${E2E_PORT}/api` },
   });
 } finally {
-  if (!process.env.E2E_KEEP) started.forEach(kill);
+  if (!process.env.E2E_KEEP) {
+    started.forEach(kill);
+    if (startedDb) stopDb();
+  }
 }
