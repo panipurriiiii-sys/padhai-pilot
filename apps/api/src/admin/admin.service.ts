@@ -218,6 +218,7 @@ export class AdminService {
               select: {
                 memberships: true,
                 batches: true,
+                facultyProfiles: true,
               },
             },
           },
@@ -230,23 +231,23 @@ export class AdminService {
             return {
               id: inst.id,
               name: inst.name,
-              subdomain: inst.subdomain || inst.name.toLowerCase().replace(/[^a-z0-9]/g, ''),
+              subdomain: inst.slug || inst.name.toLowerCase().replace(/[^a-z0-9]/g, ''),
               plan: ((inst.plan as SubscriptionPlan) || memoryFallback?.plan || 'GROWTH') as SubscriptionPlan,
-              status: (inst.status || memoryFallback?.status || 'ACTIVE') as 'ACTIVE' | 'SUSPENDED' | 'TRIAL',
+              status: (inst.isActive ? 'ACTIVE' : 'SUSPENDED') as 'ACTIVE' | 'SUSPENDED' | 'TRIAL',
               ownerName: memoryFallback?.ownerName || 'Tuition Administrator',
-              ownerEmail: memoryFallback?.ownerEmail || `admin@${inst.subdomain || 'institute'}.com`,
-              ownerPhone: memoryFallback?.ownerPhone,
+              ownerEmail: memoryFallback?.ownerEmail || `admin@${inst.slug || 'institute'}.com`,
+              ownerPhone: inst.contactPhone || memoryFallback?.ownerPhone,
               customDomain: inst.customDomain || memoryFallback?.customDomain,
-              isWhiteLabel: memoryFallback?.isWhiteLabel ?? true,
-              isDedicatedDb: memoryFallback?.isDedicatedDb ?? false,
-              studentCount: inst._count?.memberships || memoryFallback?.studentCount || 45,
-              teacherCount: memoryFallback?.teacherCount || 5,
+              isWhiteLabel: inst.plan === 'PRO' || inst.plan === 'ENTERPRISE' || (memoryFallback?.isWhiteLabel ?? true),
+              isDedicatedDb: inst.plan === 'ENTERPRISE' || (memoryFallback?.isDedicatedDb ?? false),
+              studentCount: inst._count?.memberships || memoryFallback?.studentCount || 0,
+              teacherCount: inst._count?.facultyProfiles || memoryFallback?.teacherCount || 0,
               createdAt: inst.createdAt.toISOString(),
               updatedAt: inst.updatedAt.toISOString(),
-              themePrimaryColor: memoryFallback?.themePrimaryColor,
+              themePrimaryColor: inst.themePrimaryColor || inst.primaryColor || memoryFallback?.themePrimaryColor,
               logoUrl: inst.logoUrl || memoryFallback?.logoUrl,
-              maxStudentsLimit: memoryFallback?.maxStudentsLimit || 500,
-              maxTeachersLimit: memoryFallback?.maxTeachersLimit || 25,
+              maxStudentsLimit: inst.maxStudentsLimit || memoryFallback?.maxStudentsLimit || 500,
+              maxTeachersLimit: inst.maxTeachersLimit || memoryFallback?.maxTeachersLimit || 25,
             };
           });
         }
@@ -259,6 +260,47 @@ export class AdminService {
   }
 
   async getInstituteById(id: string): Promise<InstituteTenantRecord> {
+    if (this.prisma.isConnected) {
+      try {
+        const inst = await this.prisma.institute.findUnique({
+          where: { id },
+          include: {
+            _count: {
+              select: {
+                memberships: true,
+                batches: true,
+                facultyProfiles: true,
+              },
+            },
+          },
+        });
+        if (inst) {
+          const memoryFallback = this.memoryInstitutes.get(inst.id);
+          return {
+            id: inst.id,
+            name: inst.name,
+            subdomain: inst.slug,
+            plan: inst.plan as SubscriptionPlan,
+            status: inst.isActive ? 'ACTIVE' : 'SUSPENDED',
+            ownerName: memoryFallback?.ownerName || 'Tuition Administrator',
+            ownerEmail: memoryFallback?.ownerEmail || `admin@${inst.slug}.com`,
+            ownerPhone: inst.contactPhone || memoryFallback?.ownerPhone,
+            customDomain: inst.customDomain || undefined,
+            isWhiteLabel: inst.plan === 'PRO' || inst.plan === 'ENTERPRISE',
+            isDedicatedDb: inst.plan === 'ENTERPRISE',
+            studentCount: inst._count.memberships,
+            teacherCount: inst._count.facultyProfiles,
+            createdAt: inst.createdAt.toISOString(),
+            updatedAt: inst.updatedAt.toISOString(),
+            themePrimaryColor: inst.themePrimaryColor || inst.primaryColor || undefined,
+            logoUrl: inst.logoUrl || undefined,
+            maxStudentsLimit: inst.maxStudentsLimit || 500,
+            maxTeachersLimit: inst.maxTeachersLimit || 25,
+          };
+        }
+      } catch {}
+    }
+
     const inst = this.memoryInstitutes.get(id);
     if (!inst) {
       throw new NotFoundException(`Institute tenant "${id}" not found.`);
@@ -270,21 +312,36 @@ export class AdminService {
     dto: CreateInstituteTenantDto,
     actor: { id: string; email: string },
   ): Promise<InstituteTenantRecord> {
-    // Check subdomain collision
+    const subdomainLower = dto.subdomain.toLowerCase().trim();
+
+    if (this.prisma.isConnected) {
+      try {
+        const collision = await this.prisma.institute.findFirst({
+          where: { slug: subdomainLower },
+        });
+        if (collision) {
+          throw new ConflictException(`Subdomain "${dto.subdomain}" is already claimed by another institute.`);
+        }
+      } catch (err) {
+        if (err instanceof ConflictException) throw err;
+      }
+    }
+
+    // Check subdomain collision in memory
     const existing = Array.from(this.memoryInstitutes.values()).find(
-      (i) => i.subdomain.toLowerCase() === dto.subdomain.toLowerCase(),
+      (i) => i.subdomain.toLowerCase() === subdomainLower,
     );
     if (existing) {
       throw new ConflictException(`Subdomain "${dto.subdomain}" is already claimed by another institute.`);
     }
 
-    const id = `inst_${dto.subdomain.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${Date.now().toString().slice(-4)}`;
+    const id = `inst_${subdomainLower.replace(/[^a-z0-9]/g, '_')}_${Date.now().toString().slice(-4)}`;
     const now = new Date().toISOString();
 
     const newInst: InstituteTenantRecord = {
       id,
       name: dto.name,
-      subdomain: dto.subdomain.toLowerCase(),
+      subdomain: subdomainLower,
       plan: dto.plan,
       status: dto.status || 'ACTIVE',
       ownerName: dto.ownerName,
@@ -310,6 +367,9 @@ export class AdminService {
             slug: newInst.subdomain,
             plan: newInst.plan,
             isActive: newInst.status !== 'SUSPENDED',
+            customDomain: newInst.customDomain,
+            maxStudentsLimit: newInst.maxStudentsLimit,
+            maxTeachersLimit: newInst.maxTeachersLimit,
           },
         });
       } catch {
@@ -414,6 +474,21 @@ export class AdminService {
     if (dto.maxTeachersLimit !== undefined) inst.maxTeachersLimit = dto.maxTeachersLimit;
     inst.updatedAt = new Date().toISOString();
 
+    if (this.prisma.isConnected) {
+      try {
+        await this.prisma.institute.update({
+          where: { id },
+          data: {
+            ...(dto.customDomain !== undefined ? { customDomain: dto.customDomain } : {}),
+            ...(dto.themePrimaryColor !== undefined ? { themePrimaryColor: dto.themePrimaryColor } : {}),
+            ...(dto.logoUrl !== undefined ? { logoUrl: dto.logoUrl } : {}),
+            ...(dto.maxStudentsLimit !== undefined ? { maxStudentsLimit: dto.maxStudentsLimit } : {}),
+            ...(dto.maxTeachersLimit !== undefined ? { maxTeachersLimit: dto.maxTeachersLimit } : {}),
+          },
+        });
+      } catch {}
+    }
+
     this.recordAuditLog({
       actorId: actor.id,
       actorEmail: actor.email,
@@ -473,6 +548,27 @@ export class AdminService {
   // --------------------------------------------------------------------------
 
   async getAuditLogs(limit: number = 50): Promise<PlatformAuditLog[]> {
+    if (this.prisma.isConnected && this.prisma.auditLog) {
+      try {
+        const logs = await this.prisma.auditLog.findMany({
+          orderBy: { createdAt: 'desc' },
+          take: limit,
+        });
+        if (logs.length > 0) {
+          return logs.map((l) => ({
+            id: l.id,
+            timestamp: l.createdAt.toISOString(),
+            actorId: l.userId || 'system',
+            actorEmail: l.actorEmail || 'unknown@padhaipilot.com',
+            action: l.action,
+            targetId: l.resourceId || undefined,
+            targetType: l.resourceType || undefined,
+            details: l.details || '',
+            status: (l.status as any) || 'SUCCESS',
+          }));
+        }
+      } catch {}
+    }
     return this.auditLogs.slice(0, limit);
   }
 
@@ -486,6 +582,23 @@ export class AdminService {
     if (this.auditLogs.length > 500) {
       this.auditLogs.pop();
     }
+
+    if (this.prisma.isConnected && this.prisma.auditLog?.create) {
+      this.prisma.auditLog
+        .create({
+          data: {
+            instituteId: log.targetType === 'INSTITUTE' ? log.targetId : null,
+            userId: log.actorId,
+            actorEmail: log.actorEmail,
+            action: log.action,
+            resourceType: log.targetType || 'PLATFORM',
+            resourceId: log.targetId,
+            details: log.details,
+            status: log.status,
+          },
+        })
+        .catch(() => {});
+    }
   }
 
   // --------------------------------------------------------------------------
@@ -493,6 +606,24 @@ export class AdminService {
   // --------------------------------------------------------------------------
 
   async getAnnouncements(): Promise<PlatformAnnouncement[]> {
+    if (this.prisma.isConnected && this.prisma.platformAnnouncement) {
+      try {
+        const anns = await this.prisma.platformAnnouncement.findMany({
+          orderBy: { createdAt: 'desc' },
+        });
+        if (anns.length > 0) {
+          return anns.map((a) => ({
+            id: a.id,
+            title: a.title,
+            message: a.message,
+            severity: a.severity as any,
+            targetAudience: a.targetAudience as any,
+            createdAt: a.createdAt.toISOString(),
+            expiresAt: a.expiresAt ? a.expiresAt.toISOString() : undefined,
+          }));
+        }
+      } catch {}
+    }
     return this.announcements;
   }
 
@@ -510,6 +641,22 @@ export class AdminService {
       expiresAt: dto.expiresAt,
     };
 
+    if (this.prisma.isConnected && this.prisma.platformAnnouncement?.create) {
+      try {
+        const created = await this.prisma.platformAnnouncement.create({
+          data: {
+            title: dto.title,
+            message: dto.message,
+            severity: dto.severity,
+            targetAudience: dto.targetAudience || 'ALL',
+            expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null,
+            createdById: actor.id,
+          },
+        });
+        announcement.id = created.id;
+      } catch {}
+    }
+
     this.announcements.unshift(announcement);
 
     this.recordAuditLog({
@@ -525,4 +672,3 @@ export class AdminService {
     return announcement;
   }
 }
-

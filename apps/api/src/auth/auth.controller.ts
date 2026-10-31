@@ -104,8 +104,12 @@ export class AuthController {
     @CurrentUser() user: AuthenticatedUser,
     @Body('oldPassword') oldPass: string,
     @Body('newPassword') newPass: string,
+    @Res({ passthrough: true }) res: Response,
   ) {
-    return this.authService.changePassword(user.id, oldPass, newPass);
+    const result = await this.authService.changePassword(user.id, oldPass, newPass);
+    // The password change invalidates all other sessions; the caller keeps working with a fresh token.
+    if (result.session) return this.startSession(res, result.session);
+    return { success: result.success };
   }
 
   @Put('profile')

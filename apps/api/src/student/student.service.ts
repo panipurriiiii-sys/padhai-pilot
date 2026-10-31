@@ -4,11 +4,25 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  ConflictException,
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service.js';
+import { AccessService } from '../common/access/access.service.js';
 import { AssessmentService } from '../assessment/assessment.service.js';
-import { TuitionService } from '../tuition/tuition.service.js';
 import type { AuthenticatedUser } from '../common/types.js';
+import { signSession } from '../common/security/session.js';
+import {
+  clampLimit,
+  isoDay,
+  isUniqueViolation,
+  optionalString,
+  optionalUrl,
+  parseDate,
+  requireString,
+  toDateOnly,
+} from '../common/db/db.js';
+import { randomBytes } from 'node:crypto';
 import type {
   AttendanceCorrectionRequestDto,
   CreateAcademicQueryDto,
@@ -19,7 +33,6 @@ import type {
   SubmitAssignmentDto,
   TestAnswerItemDto,
 } from './dto/student.dto.js';
-
 import type {
   StudentAttendanceSummary,
   StudentFeeSummary,
@@ -30,6 +43,8 @@ import type {
   AcademicQueryItem,
   PersonalStudyTaskItem,
   StudentDocumentItem,
+  StudentTimetableDay,
+  StudentJoinBatchResult,
 } from '@padhai-pilot/shared';
 export type {
   StudentAttendanceSummary,
@@ -43,106 +58,73 @@ export type {
   StudentDocumentItem,
 } from '@padhai-pilot/shared';
 
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const DEFAULT_NOTIFICATION_PREFS = { email: true, sms: true, inApp: true, results: true, fees: true };
+const SUPPORT_CATEGORIES = ['PROFILE_CORRECTION', 'ATTENDANCE_MISMATCH', 'PAYMENT_ISSUE', 'ACADEMIC_HELP', 'TECHNICAL_SUPPORT'];
+const MAX_TEST_ANSWERS = 300;
+
+function formatClock(hhmm: string): string {
+  const m = /^(\d{1,2}):(\d{2})/.exec(hhmm || '');
+  if (!m) return hhmm || '';
+  let h = parseInt(m[1], 10);
+  const suffix = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return `${String(h).padStart(2, '0')}:${m[2]} ${suffix}`;
+}
+
+const titleCaseDay = (d: string): string => (d ? d.charAt(0).toUpperCase() + d.slice(1).toLowerCase() : d);
+
+/**
+ * Student-facing service. Every query is scoped by the authenticated student's id and the institute taken
+ * from the verified JWT (never from client input), and batch-scoped data is limited to the student's own
+ * ACTIVE enrolments. There is no in-memory/fabricated fallback: with no database the API answers 503.
+ */
 @Injectable()
 export class StudentService {
-  // In-memory persistent stores for offline / local mode
-  private memSubmissions = new Map<string, any>();
-  private memTestAttempts = new Map<string, any>();
-  private memAttendanceCorrections: any[] = [];
-  private memAcademicQueries: AcademicQueryItem[] = [
-    {
-      id: 'query_01',
-      subject: 'Mathematics',
-      topic: 'Definite Integration — King Property',
-      questionText: 'Sir, when integrating sin(x)/(sin(x)+cos(x)) from 0 to pi/2, how do we prove the equivalence before adding the two integral equations?',
-      status: 'ANSWERED',
-      facultyReply: 'Apply the substitution x = (a+b) - t. Here a+b = pi/2, so sin(pi/2 - t) becomes cos(t). Then 2I = integral of 1 dt.',
-      repliedAt: '2026-10-29T14:30:00Z',
-      facultyName: 'Prof. Rajesh Sharma',
-      createdAt: '2026-10-29T11:00:00Z',
-    },
-  ];
-  private memStudyTasks: PersonalStudyTaskItem[] = [
-    {
-      id: 'task_01',
-      title: 'Solve 25 Problems from DPP #14 (Definite Integrals)',
-      subject: 'Mathematics',
-      dueDate: '2026-10-31',
-      priority: 'HIGH',
-      isCompleted: false,
-      createdAt: '2026-10-29T10:00:00Z',
-    },
-    {
-      id: 'task_02',
-      title: 'Review Ray Optics Sign Conventions and Mirror Formula',
-      subject: 'Physics',
-      dueDate: '2026-11-01',
-      priority: 'NORMAL',
-      isCompleted: true,
-      createdAt: '2026-10-28T09:00:00Z',
-    },
-    {
-      id: 'task_03',
-      title: 'Memorize Thermodynamic State Functions & Carnot Efficiency',
-      subject: 'Physics',
-      dueDate: '2026-11-02',
-      priority: 'NORMAL',
-      isCompleted: false,
-      createdAt: '2026-10-29T15:00:00Z',
-    },
-  ];
-  private memSupportRequests: any[] = [];
-
   constructor(
-    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(AccessService) private readonly access: AccessService,
     @Inject(AssessmentService) private readonly assessmentService: AssessmentService,
-    @Inject(TuitionService) private readonly tuitionService: TuitionService,
   ) {}
 
   // ==========================================================================
   // 1. DASHBOARD
   // ==========================================================================
   async getDashboard(user: AuthenticatedUser) {
-    const [results, materials, attendance, announcements, fees, diaries, assignments, tests, timetable] =
-      await Promise.all([
-        this.assessmentService.getStudentPublishedResults(user),
-        this.assessmentService.getStudentStudyMaterials(user),
-        this.getAttendance(user),
-        this.getAnnouncements(user),
-        this.getFees(user),
-        this.getTeachingDiaries(user),
-        this.getAssignments(user),
-        this.getTests(user),
-        this.getTimetable(user),
-      ]);
+    const profile = await this.getStudentProfile(user);
+    const [results, materials, attendance, announcements, fees, diaries, assignments, tests, timetable] = await Promise.all([
+      this.assessmentService.getStudentPublishedResults(user),
+      this.assessmentService.getStudentStudyMaterials(user),
+      this.getAttendance(user),
+      this.getAnnouncements(user),
+      this.getFees(user),
+      this.getTeachingDiaries(user, { limit: 2 }),
+      this.getAssignments(user),
+      this.getTests(user),
+      this.getTimetable(user),
+    ]);
 
-    const scoredResults = results.filter((r) => r.resultStatus === 'SCORED' && r.percentage !== null);
-    const avgScore =
-      scoredResults.length > 0
-        ? Math.round(
-            scoredResults.reduce((acc, curr) => acc + (curr.percentage || 0), 0) /
-              scoredResults.length,
-          )
-        : 0;
-
-    const pendingAssignments = assignments.filter((a) => a.status === 'PENDING').length;
+    const scored = results.filter((r) => r.resultStatus === 'SCORED' && r.percentage !== null);
+    const avgPercentage = scored.length
+      ? Math.round(scored.reduce((acc, r) => acc + (r.percentage || 0), 0) / scored.length)
+      : 0;
+    const today = new Date().toLocaleDateString('en-US', { weekday: 'long', timeZone: 'Asia/Kolkata' });
 
     return {
       student: {
         id: user.id,
-        fullName: user.fullName || 'Student',
-        email: user.email,
-        rollNumber: 'APX-2026-001',
-        instituteName: user.instituteName || 'Apex IIT-JEE & Medical Academy',
-        batchName: 'JEE Advanced — Mathematics Alpha',
-        academicYear: '2026-2027',
+        fullName: profile.fullName,
+        email: profile.email,
+        rollNumber: profile.rollNumber,
+        instituteName: profile.instituteName,
+        batchName: profile.batchName,
+        academicYear: profile.academicYear,
       },
       stats: {
         totalTests: results.length,
-        avgPercentage: avgScore,
+        avgPercentage,
         attendanceRate: attendance.percentage,
         totalMaterials: materials.length,
-        pendingAssignments,
+        pendingAssignments: assignments.filter((a) => a.status === 'PENDING').length,
         feeBalance: fees.balanceDue,
         classesAttended: attendance.attended,
         totalClasses: attendance.totalClasses,
@@ -153,8 +135,7 @@ export class StudentService {
       recentDiaries: diaries.slice(0, 2),
       upcomingAssignments: assignments.slice(0, 3),
       announcements: announcements.slice(0, 2),
-      timetable:
-        timetable.find((d) => d.day === new Date().toLocaleDateString('en-US', { weekday: 'long' }))?.slots ?? [],
+      timetable: timetable.find((d) => d.day === today)?.slots ?? [],
     };
   }
 
@@ -162,195 +143,220 @@ export class StudentService {
   // 2. INVITATION & BATCH ENROLLMENT
   // ==========================================================================
   async validateInvitation(code: string) {
-    if (!code || !code.trim()) {
-      throw new BadRequestException('Invitation code is required.');
+    const db = this.access.db();
+    const clean = requireString(code, 'Invitation code', 64);
+    const inv = await db.invitationCode.findUnique({
+      where: { code: clean },
+      select: {
+        code: true,
+        instituteId: true,
+        batchId: true,
+        expiresAt: true,
+        isRevoked: true,
+        usedCount: true,
+        maxUses: true,
+        institute: { select: { name: true, isActive: true } },
+        batch: { select: { name: true, subject: true, gradeLevel: true } },
+      },
+    });
+    if (!inv || inv.isRevoked || !inv.institute.isActive || inv.expiresAt < new Date() || inv.usedCount >= inv.maxUses) {
+      throw new BadRequestException('This invitation code is invalid, expired, or has reached its usage limit.');
     }
-    const cleanCode = code.trim();
-
-    if (this.prisma.isConnected) {
-      const inv = await this.prisma.invitationCode.findUnique({
-        where: { code: cleanCode },
-        include: { institute: true, batch: true },
-      });
-
-      if (!inv || inv.isRevoked || new Date(inv.expiresAt) < new Date() || inv.usedCount >= inv.maxUses) {
-        throw new BadRequestException('This invitation code is invalid, expired, or has reached its usage limit.');
-      }
-
-      return {
-        valid: true,
-        code: inv.code,
-        instituteId: inv.instituteId,
-        instituteName: inv.institute.name,
-        batchId: inv.batchId,
-        batchName: inv.batch?.name || 'Classroom Batch',
-        subject: inv.batch?.subject || 'All Subjects',
-        gradeLevel: inv.batch?.gradeLevel || 'Standard Batch',
-        expiresAt: inv.expiresAt.toISOString(),
-      };
-    }
-
-    // In-memory realistic validation
     return {
       valid: true,
-      code: cleanCode,
-      instituteId: 'inst_apex_academy',
-      instituteName: 'Apex IIT-JEE & Medical Academy',
-      batchId: 'btc_jee_math_adv',
-      batchName: 'JEE Advanced — Mathematics Alpha',
-      subject: 'Mathematics',
-      gradeLevel: 'Grade 12 / Repeaters',
-      expiresAt: '2027-03-31T23:59:59Z',
+      code: inv.code,
+      instituteId: inv.instituteId,
+      instituteName: inv.institute.name,
+      batchId: inv.batchId,
+      batchName: inv.batch?.name || 'Classroom Batch',
+      subject: inv.batch?.subject || 'All Subjects',
+      gradeLevel: inv.batch?.gradeLevel || 'Standard Batch',
+      expiresAt: inv.expiresAt.toISOString(),
     };
   }
 
-  async joinInstitute(user: AuthenticatedUser, code: string) {
-    const invData = await this.validateInvitation(code);
+  /**
+   * Redeems a student invitation code. Idempotent: re-sending the same code for an enrolment that already
+   * exists returns success without consuming another use. The use counter is claimed with a guarded
+   * updateMany inside the transaction so concurrent redemptions cannot exceed maxUses.
+   */
+  async joinInstitute(user: AuthenticatedUser, code: string): Promise<StudentJoinBatchResult> {
+    const db = this.access.db();
+    const clean = requireString(code, 'Invitation code', 64);
+    const invalid = () => new BadRequestException('This invitation code is invalid, expired, or has reached its usage limit.');
 
-    if (this.prisma.isConnected) {
-      // Upsert membership
-      await this.prisma.instituteMembership.upsert({
-        where: {
-          instituteId_userId: {
-            instituteId: invData.instituteId,
-            userId: user.id,
-          },
-        },
-        create: {
-          instituteId: invData.instituteId,
-          userId: user.id,
-          role: 'STUDENT',
-          status: 'ACTIVE',
-        },
-        update: {
-          role: 'STUDENT',
-          status: 'ACTIVE',
-        },
-      });
-
-      // If batch is assigned, enroll student
-      if (invData.batchId) {
-        await this.prisma.enrollment.upsert({
-          where: {
-            batchId_studentId: {
-              batchId: invData.batchId,
-              studentId: user.id,
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        return await db.$transaction(async (tx) => {
+          const inv = await tx.invitationCode.findUnique({
+            where: { code: clean },
+            select: {
+              id: true,
+              instituteId: true,
+              batchId: true,
+              maxUses: true,
+              institute: { select: { name: true, isActive: true } },
+              batch: { select: { name: true } },
             },
-          },
-          create: {
-            instituteId: invData.instituteId,
-            batchId: invData.batchId,
-            studentId: user.id,
-            rollNumber: `APX-${Date.now().toString().slice(-4)}`,
-            status: 'ACTIVE',
-          },
-          update: {
-            status: 'ACTIVE',
-          },
+          });
+          if (!inv || !inv.institute.isActive) throw invalid();
+
+          // Staff of an institute can never be turned into (or mixed up with) a student of it.
+          const membership = await tx.instituteMembership.findUnique({
+            where: { instituteId_userId: { instituteId: inv.instituteId, userId: user.id } },
+            select: { role: true, status: true },
+          });
+          if (membership && membership.role !== 'STUDENT') {
+            throw new ForbiddenException('This account already holds a staff role in that institute.');
+          }
+
+          const existingEnrollment = inv.batchId
+            ? await tx.enrollment.findUnique({
+                where: { batchId_studentId: { batchId: inv.batchId, studentId: user.id } },
+                select: { id: true, status: true },
+              })
+            : null;
+          const alreadyEnrolled = !!membership && membership.status === 'ACTIVE' && (!inv.batchId || existingEnrollment?.status === 'ACTIVE');
+
+          if (!alreadyEnrolled) {
+            const claimed = await tx.invitationCode.updateMany({
+              where: { id: inv.id, isRevoked: false, expiresAt: { gt: new Date() }, usedCount: { lt: inv.maxUses } },
+              data: { usedCount: { increment: 1 } },
+            });
+            if (claimed.count !== 1) throw invalid();
+
+            await tx.instituteMembership.upsert({
+              where: { instituteId_userId: { instituteId: inv.instituteId, userId: user.id } },
+              create: { instituteId: inv.instituteId, userId: user.id, role: 'STUDENT', status: 'ACTIVE' },
+              update: { status: 'ACTIVE', revokedAt: null },
+            });
+            if (inv.batchId) {
+              await tx.enrollment.upsert({
+                where: { batchId_studentId: { batchId: inv.batchId, studentId: user.id } },
+                create: {
+                  instituteId: inv.instituteId,
+                  batchId: inv.batchId,
+                  studentId: user.id,
+                  rollNumber: `STU-${randomBytes(3).toString('hex').toUpperCase()}`,
+                  status: 'ACTIVE',
+                },
+                update: { status: 'ACTIVE' },
+              });
+            }
+          }
+
+          const u = await tx.user.findUnique({ where: { id: user.id }, select: { tokenVersion: true, avatarUrl: true } });
+          const session: AuthenticatedUser = {
+            id: user.id,
+            email: user.email,
+            fullName: user.fullName,
+            role: 'STUDENT',
+            instituteId: inv.instituteId,
+            instituteName: inv.institute.name,
+            tv: u?.tokenVersion ?? 0,
+            ...(u?.avatarUrl ? { avatarUrl: u.avatarUrl } : {}),
+          };
+          const batchName = inv.batch?.name || 'Classroom Batch';
+          return {
+            success: true,
+            alreadyEnrolled,
+            message: alreadyEnrolled
+              ? `You are already enrolled in ${inv.institute.name} - ${batchName}.`
+              : `Successfully enrolled in ${inv.institute.name} - ${batchName}!`,
+            instituteName: inv.institute.name,
+            batchName,
+            token: signSession(session),
+            user: {
+              id: session.id,
+              email: session.email,
+              fullName: session.fullName,
+              role: session.role,
+              instituteId: session.instituteId,
+              instituteName: session.instituteName,
+            },
+          };
         });
+      } catch (err) {
+        if (isUniqueViolation(err) && attempt < 2) continue; // roll-number collision: retry with a new number
+        throw err;
       }
-
-      // Increment usage count
-      await this.prisma.invitationCode.updateMany({
-        where: { code: invData.code },
-        data: { usedCount: { increment: 1 } },
-      });
     }
-
-    return {
-      success: true,
-      message: `Successfully enrolled in ${invData.instituteName} — ${invData.batchName}!`,
-      instituteName: invData.instituteName,
-      batchName: invData.batchName,
-    };
+    throw invalid();
   }
 
   // ==========================================================================
   // 3. STUDENT PROFILE
   // ==========================================================================
   async getStudentProfile(user: AuthenticatedUser) {
-    if (this.prisma.isConnected) {
-      const dbUser = await this.prisma.user.findUnique({
-        where: { id: user.id },
-        include: {
-          enrollments: {
-            include: {
-              batch: true,
-              institute: true,
-            },
-          },
-        },
-      });
+    const db = this.access.db();
+    const dbUser = await db.user.findUnique({
+      where: { id: user.id },
+      select: { id: true, fullName: true, email: true, phone: true, avatarUrl: true, createdAt: true, notificationPreferences: true },
+    });
+    if (!dbUser) throw new NotFoundException('Student profile not found.');
 
-      if (dbUser) {
-        const firstEnrollment = dbUser.enrollments[0];
-        return {
-          id: dbUser.id,
-          fullName: dbUser.fullName,
-          email: dbUser.email,
-          phone: dbUser.phone || '+91 98765 43210',
-          avatarUrl: dbUser.avatarUrl || null,
-          role: 'STUDENT',
-          rollNumber: firstEnrollment?.rollNumber || 'APX-2026-001',
-          instituteId: firstEnrollment?.instituteId || user.instituteId,
-          instituteName: firstEnrollment?.institute?.name || user.instituteName || 'Apex IIT-JEE & Medical Academy',
-          batchId: firstEnrollment?.batchId || 'btc_jee_math_adv',
-          batchName: firstEnrollment?.batch?.name || 'JEE Advanced — Mathematics Alpha',
-          subject: firstEnrollment?.batch?.subject || 'Mathematics',
-          academicYear: '2026-2027',
-          joinedAt: dbUser.createdAt.toISOString(),
-          notificationPreferences: {
-            email: true,
-            sms: true,
-            inApp: true,
-            results: true,
-            fees: true,
+    const enrollment = user.instituteId
+      ? await db.enrollment.findFirst({
+          where: { studentId: user.id, instituteId: user.instituteId, status: 'ACTIVE' },
+          orderBy: { joinedAt: 'asc' },
+          select: {
+            rollNumber: true,
+            joinedAt: true,
+            batchId: true,
+            batch: { select: { name: true, subject: true } },
+            institute: { select: { id: true, name: true, academicYear: true } },
           },
-        };
-      }
-    }
+        })
+      : null;
+    const institute =
+      enrollment?.institute ??
+      (user.instituteId
+        ? await db.institute.findUnique({ where: { id: user.instituteId }, select: { id: true, name: true, academicYear: true } })
+        : null);
 
+    const prefs = (dbUser.notificationPreferences ?? {}) as Partial<typeof DEFAULT_NOTIFICATION_PREFS>;
     return {
-      id: user.id,
-      fullName: user.fullName || 'Aarav Patel',
-      email: user.email,
-      phone: '+91 98765 43210',
-      avatarUrl: null,
+      id: dbUser.id,
+      fullName: dbUser.fullName,
+      email: dbUser.email,
+      phone: dbUser.phone || '',
+      avatarUrl: dbUser.avatarUrl || null,
       role: 'STUDENT',
-      rollNumber: 'APX-2026-001',
-      instituteId: user.instituteId || 'inst_apex_academy',
-      instituteName: user.instituteName || 'Apex IIT-JEE & Medical Academy',
-      batchId: 'btc_jee_math_adv',
-      batchName: 'JEE Advanced — Mathematics Alpha',
-      subject: 'Mathematics',
-      academicYear: '2026-2027',
-      joinedAt: '2026-08-01T00:00:00Z',
-      notificationPreferences: {
-        email: true,
-        sms: true,
-        inApp: true,
-        results: true,
-        fees: true,
-      },
+      rollNumber: enrollment?.rollNumber || '',
+      instituteId: institute?.id || user.instituteId || '',
+      instituteName: institute?.name || '',
+      batchId: enrollment?.batchId || '',
+      batchName: enrollment?.batch.name || '',
+      subject: enrollment?.batch.subject || '',
+      academicYear: institute?.academicYear || '',
+      joinedAt: (enrollment?.joinedAt ?? dbUser.createdAt).toISOString(),
+      notificationPreferences: { ...DEFAULT_NOTIFICATION_PREFS, ...prefs },
     };
   }
 
   async updateStudentProfile(user: AuthenticatedUser, dto: UpdateStudentProfileDto) {
-    if (this.prisma.isConnected) {
-      await this.prisma.user.update({
-        where: { id: user.id },
-        data: {
-          fullName: dto.fullName?.trim() || undefined,
-          phone: dto.phone?.trim() || undefined,
-          avatarUrl: dto.avatarUrl || undefined,
-        },
-      });
+    const db = this.access.db();
+    const fullName = optionalString(dto?.fullName, 'Full name', 120);
+    const phone = optionalString(dto?.phone, 'Phone', 32);
+    const avatarUrl = optionalUrl(dto?.avatarUrl, 'Avatar URL');
+    let prefs: Record<string, boolean> | undefined;
+    if (dto?.notificationPreferences) {
+      prefs = {};
+      for (const k of Object.keys(DEFAULT_NOTIFICATION_PREFS)) {
+        const v = (dto.notificationPreferences as unknown as Record<string, unknown>)[k];
+        prefs[k] = typeof v === 'boolean' ? v : (DEFAULT_NOTIFICATION_PREFS as Record<string, boolean>)[k];
+      }
     }
-
-    return {
-      success: true,
-      message: 'Profile updated successfully.',
-    };
+    await db.user.update({
+      where: { id: user.id },
+      data: {
+        ...(fullName ? { fullName } : {}),
+        ...(phone ? { phone } : {}),
+        ...(avatarUrl ? { avatarUrl } : {}),
+        ...(prefs ? { notificationPreferences: prefs } : {}),
+      },
+    });
+    return { success: true, message: 'Profile updated successfully.' };
   }
 
   // ==========================================================================
@@ -358,253 +364,183 @@ export class StudentService {
   // ==========================================================================
   async getTeachingDiaries(
     user: AuthenticatedUser,
-    query?: { subject?: string; search?: string },
+    query?: { subject?: string; search?: string; limit?: number | string },
   ): Promise<StudentTeachingDiaryItem[]> {
-    if (this.prisma.isConnected) {
-      // Find batches student is enrolled in
-      const enrollments = await this.prisma.enrollment.findMany({
-        where: { studentId: user.id },
-        select: { batchId: true },
-      });
-      const batchIds = enrollments.map((e) => e.batchId);
+    const db = this.access.db();
+    const batchIds = await this.access.studentBatchIds(user);
+    if (batchIds.length === 0) return [];
+    const subject = query?.subject && query.subject !== 'ALL' ? query.subject.slice(0, 120) : undefined;
+    const search = query?.search?.trim().slice(0, 120);
 
-      const diaries = await this.prisma.dailyTeachingDiary.findMany({
-        where: {
-          status: 'PUBLISHED',
-          audience: 'BATCH',
-          ...(batchIds.length > 0 ? { batchId: { in: batchIds } } : {}),
-          ...(query?.subject && query.subject !== 'ALL' ? { subject: query.subject } : {}),
-        },
-        include: {
-          faculty: { select: { fullName: true } },
-          batch: { select: { name: true } },
-        },
-        orderBy: { lessonDate: 'desc' },
-      });
-
-      if (diaries.length > 0) {
-        return diaries.map((d) => ({
-          id: d.id,
-          lessonDate: d.lessonDate.toISOString().split('T')[0],
-          sessionTime: d.sessionTime || '09:00 - 10:30',
-          subject: d.subject,
-          facultyName: d.faculty.fullName,
-          batchName: d.batch.name,
-          chapterTitle: d.chapterTitle,
-          conceptsTaught: d.conceptsTaught,
-          learningObjectives: d.learningObjectives || undefined,
-          homeworkAssigned: d.homeworkAssigned || undefined,
-          attachmentUrl: d.attachmentUrl || undefined,
-          referenceLinks: d.referenceLinks || [],
-          createdAt: d.createdAt.toISOString(),
-        }));
-      }
-    }
-
-    // High fidelity realistic mock diaries
-    const allDiaries: StudentTeachingDiaryItem[] = [
-      {
-        id: 'diary_01',
-        lessonDate: '2026-10-29',
-        sessionTime: '09:00 - 10:30',
-        subject: 'Mathematics',
-        facultyName: 'Prof. Rajesh Sharma',
-        batchName: 'JEE Advanced — Mathematics Alpha',
-        chapterTitle: 'Definite Integration & King Property Applications',
-        conceptsTaught: 'Proved Leibniz integral rule, Walli formula, and substitution tricks for symmetric boundaries. Demonstrated 5 JEE Advanced 2024 problem models.',
-        learningObjectives: 'Master King Property transformations in non-standard trigonometric integrals.',
-        homeworkAssigned: 'Complete DPP #14 Problems 1 to 25. Upload answers to Study Material vault before Friday.',
-        attachmentUrl: 'https://media-hosting.dhyeyp254.workers.dev/1793335828256.json',
-        referenceLinks: ['https://mathworld.wolfram.com/DefiniteIntegral.html'],
-        createdAt: '2026-10-29T11:00:00Z',
+    const diaries = await db.dailyTeachingDiary.findMany({
+      where: {
+        instituteId: user.instituteId,
+        batchId: { in: batchIds },
+        status: 'PUBLISHED',
+        audience: 'BATCH',
+        ...(subject ? { subject: { equals: subject, mode: 'insensitive' } } : {}),
+        ...(search
+          ? {
+              OR: [
+                { chapterTitle: { contains: search, mode: 'insensitive' } },
+                { conceptsTaught: { contains: search, mode: 'insensitive' } },
+                { subject: { contains: search, mode: 'insensitive' } },
+              ],
+            }
+          : {}),
       },
-      {
-        id: 'diary_02',
-        lessonDate: '2026-10-28',
-        sessionTime: '11:00 - 12:30',
-        subject: 'Physics',
-        facultyName: 'Dr. Alok Verma',
-        batchName: 'JEE Advanced — Physics Prime',
-        chapterTitle: 'Wave Optics & Youngs Double Slit Interference',
-        conceptsTaught: 'Fringe width derivation, path difference in presence of thin glass slab, phase difference, and intensity distribution on screen.',
-        learningObjectives: 'Solve interference problems with multi-wavelength laser sources.',
-        homeworkAssigned: 'Sheet #8 numericals 1 to 15.',
-        attachmentUrl: 'https://media-hosting.dhyeyp254.workers.dev/1793338782614.json',
-        referenceLinks: [],
-        createdAt: '2026-10-28T13:00:00Z',
+      select: {
+        id: true,
+        lessonDate: true,
+        sessionTime: true,
+        subject: true,
+        chapterTitle: true,
+        conceptsTaught: true,
+        learningObjectives: true,
+        homeworkAssigned: true,
+        attachmentUrl: true,
+        referenceLinks: true,
+        createdAt: true,
+        faculty: { select: { fullName: true } },
+        batch: { select: { name: true } },
       },
-      {
-        id: 'diary_03',
-        lessonDate: '2026-10-26',
-        sessionTime: '09:00 - 10:30',
-        subject: 'Mathematics',
-        facultyName: 'Prof. Rajesh Sharma',
-        batchName: 'JEE Advanced — Mathematics Alpha',
-        chapterTitle: 'Indefinite Integrals & Partial Fractions',
-        conceptsTaught: 'Linear and quadratic irreducible factors in rational functions. Standard substitutions for quadratic surds.',
-        learningObjectives: 'Convert complex rational expressions into integrable standard forms in under 2 minutes.',
-        homeworkAssigned: 'Exercises 7.4 and 7.5 from standard advanced reference book.',
-        createdAt: '2026-10-26T11:00:00Z',
-      },
-    ];
+      orderBy: { lessonDate: 'desc' },
+      take: clampLimit(query?.limit, 50, 100),
+    });
 
-    if (query?.subject && query.subject !== 'ALL') {
-      return allDiaries.filter((d) => d.subject.toLowerCase() === query.subject?.toLowerCase());
-    }
-    if (query?.search && query.search.trim()) {
-      const q = query.search.toLowerCase();
-      return allDiaries.filter(
-        (d) =>
-          d.chapterTitle.toLowerCase().includes(q) ||
-          d.conceptsTaught.toLowerCase().includes(q) ||
-          d.subject.toLowerCase().includes(q),
-      );
-    }
-    return allDiaries;
+    return diaries.map((d) => ({
+      id: d.id,
+      lessonDate: isoDay(d.lessonDate),
+      sessionTime: d.sessionTime || undefined,
+      subject: d.subject,
+      facultyName: d.faculty.fullName,
+      batchName: d.batch.name,
+      chapterTitle: d.chapterTitle,
+      conceptsTaught: d.conceptsTaught,
+      learningObjectives: d.learningObjectives || undefined,
+      homeworkAssigned: d.homeworkAssigned || undefined,
+      attachmentUrl: d.attachmentUrl || undefined,
+      referenceLinks: d.referenceLinks || [],
+      createdAt: d.createdAt.toISOString(),
+    }));
   }
 
   // ==========================================================================
   // 5. TIMETABLE
   // ==========================================================================
-  async getTimetable(_user: AuthenticatedUser) {
-    return [
-      {
-        day: 'Monday',
-        slots: [
-          { time: '09:00 AM - 10:30 AM', subject: 'Mathematics', topic: 'Calculus', room: 'Hall 2', faculty: 'Prof. Rajesh Sharma' },
-          { time: '11:00 AM - 12:30 PM', subject: 'Physics', topic: 'Electromagnetism', room: 'Lab A', faculty: 'Dr. Alok Verma' },
-          { time: '02:00 PM - 03:30 PM', subject: 'Chemistry', topic: 'Coordination Compounds', room: 'Hall 1', faculty: 'Dr. Meera Iyer' },
-        ],
+  async getTimetable(user: AuthenticatedUser): Promise<StudentTimetableDay[]> {
+    const db = this.access.db();
+    const batchIds = await this.access.studentBatchIds(user);
+    if (batchIds.length === 0) return [];
+    const slots = await db.timetableSlot.findMany({
+      where: { instituteId: user.instituteId, batchId: { in: batchIds } },
+      select: {
+        subject: true,
+        dayOfWeek: true,
+        startTime: true,
+        endTime: true,
+        room: true,
+        teacher: { select: { fullName: true } },
+        batch: { select: { room: true } },
       },
-      {
-        day: 'Tuesday',
-        slots: [
-          { time: '09:00 AM - 10:30 AM', subject: 'Mathematics', topic: 'Differential Equations', room: 'Hall 2', faculty: 'Prof. Rajesh Sharma' },
-          { time: '11:00 AM - 12:30 PM', subject: 'Physics', topic: 'Wave Optics', room: 'Lab A', faculty: 'Dr. Alok Verma' },
-          { time: '02:00 PM - 03:30 PM', subject: 'Daily Problem Practice', topic: 'DPP Discussion', room: 'Study Wing 3', faculty: 'Faculty Assistant' },
-        ],
-      },
-      {
-        day: 'Wednesday',
-        slots: [
-          { time: '09:00 AM - 10:30 AM', subject: 'Mathematics', topic: 'Probability & Permutations', room: 'Hall 2', faculty: 'Prof. Rajesh Sharma' },
-          { time: '11:00 AM - 12:30 PM', subject: 'Chemistry', topic: 'Thermodynamics', room: 'Hall 1', faculty: 'Dr. Meera Iyer' },
-        ],
-      },
-      {
-        day: 'Thursday',
-        slots: [
-          { time: '09:00 AM - 10:30 AM', subject: 'Physics', topic: 'Modern Physics', room: 'Lab A', faculty: 'Dr. Alok Verma' },
-          { time: '11:00 AM - 12:30 PM', subject: 'Mathematics', topic: 'Definite Integrals', room: 'Hall 2', faculty: 'Prof. Rajesh Sharma' },
-          { time: '02:00 PM - 03:30 PM', subject: 'Doubt Clearing Clinic', topic: 'Open Faculty Session', room: 'Faculty Room 4', faculty: 'All Faculty' },
-        ],
-      },
-      {
-        day: 'Friday',
-        slots: [
-          { time: '09:00 AM - 10:30 AM', subject: 'Mathematics', topic: 'Vector 3D Geometry', room: 'Hall 2', faculty: 'Prof. Rajesh Sharma' },
-          { time: '11:00 AM - 12:30 PM', subject: 'Physics', topic: 'Rotational Motion', room: 'Lab A', faculty: 'Dr. Alok Verma' },
-          { time: '02:00 PM - 04:00 PM', subject: 'Weekly Assessment', topic: 'Full 100-Mark Model Exam', room: 'Main Exam Hall', faculty: 'Invigilator' },
-        ],
-      },
-      {
-        day: 'Saturday',
-        slots: [
-          { time: '10:00 AM - 01:00 PM', subject: 'All Subjects', topic: 'JEE Advanced Paper Discussion & Doubt Clinic', room: 'Auditorium', faculty: 'Prof. Sharma & Dr. Verma' },
-        ],
-      },
-    ];
+      orderBy: { startTime: 'asc' },
+      take: 200,
+    });
+    const byDay = new Map<string, StudentTimetableDay['slots']>();
+    for (const s of slots) {
+      const day = titleCaseDay(s.dayOfWeek);
+      const list = byDay.get(day) ?? [];
+      list.push({
+        time: `${formatClock(s.startTime)} - ${formatClock(s.endTime)}`,
+        subject: s.subject,
+        topic: s.subject,
+        room: s.room || s.batch.room || '',
+        faculty: s.teacher.fullName,
+      });
+      byDay.set(day, list);
+    }
+    return DAYS.filter((d) => byDay.has(d)).map((day) => ({ day, slots: byDay.get(day)! }));
   }
 
   // ==========================================================================
   // 6. ATTENDANCE & CORRECTION REQUESTS
   // ==========================================================================
   async getAttendance(user: AuthenticatedUser): Promise<StudentAttendanceSummary> {
-    if (this.prisma.isConnected) {
-      const records = await this.prisma.attendanceRecord.findMany({
-        where: { studentId: user.id },
-        include: { session: true },
-        orderBy: { createdAt: 'desc' },
+    const db = this.access.db();
+    if (!user.instituteId) return { totalClasses: 0, attended: 0, absent: 0, late: 0, percentage: 0, records: [] };
+    const where = { studentId: user.id, session: { instituteId: user.instituteId } };
+
+    // Totals are aggregated in SQL over the whole history; only the latest 30 rows travel to the client.
+    const [grouped, recent] = await Promise.all([
+      db.attendanceRecord.groupBy({ by: ['status'], where, _count: { _all: true } }),
+      db.attendanceRecord.findMany({
+        where,
+        select: {
+          id: true,
+          status: true,
+          note: true,
+          session: { select: { date: true, batch: { select: { subject: true } } } },
+        },
+        orderBy: { session: { date: 'desc' } },
         take: 30,
-      });
-
-      if (records.length > 0) {
-        const total = records.length;
-        const present = records.filter((r) => r.status === 'PRESENT').length;
-        const absent = records.filter((r) => r.status === 'ABSENT').length;
-        const late = records.filter((r) => r.status === 'LATE').length;
-        const pct = Math.round(((present + late * 0.5) / total) * 100);
-
-        return {
-          totalClasses: total,
-          attended: present,
-          absent,
-          late,
-          percentage: pct,
-          records: records.map((r) => ({
-            id: r.id,
-            date: r.session.date ? r.session.date.toISOString().split('T')[0] : r.createdAt.toISOString().split('T')[0],
-            status: r.status as any,
-            subjectName: 'JEE Mathematics',
-            remarks: r.note || undefined,
-          })),
-        };
-      }
-    }
-
-    const mockDates = [
-      { date: '2026-10-29', status: 'PRESENT' as const, remarks: 'On time, active participation' },
-      { date: '2026-10-28', status: 'PRESENT' as const, remarks: 'Verified present' },
-      { date: '2026-10-27', status: 'LATE' as const, remarks: 'Arrived 10 mins late' },
-      { date: '2026-10-26', status: 'PRESENT' as const, remarks: 'Full lecture attended' },
-      { date: '2026-10-25', status: 'PRESENT' as const, remarks: 'Sunday special test session' },
-      { date: '2026-10-24', status: 'PRESENT' as const, remarks: 'DPP discussion attended' },
-      { date: '2026-10-23', status: 'ABSENT' as const, remarks: 'Medical leave submitted' },
-      { date: '2026-10-22', status: 'PRESENT' as const, remarks: 'Verified present' },
-      { date: '2026-10-21', status: 'PRESENT' as const, remarks: 'Verified present' },
-      { date: '2026-10-20', status: 'PRESENT' as const, remarks: 'On time' },
-    ];
-
-    const total = 24;
-    const present = 22;
-    const absent = 1;
-    const late = 1;
-
+      }),
+    ]);
+    const count = (s: string) => grouped.find((g) => g.status === s)?._count._all ?? 0;
+    const present = count('PRESENT');
+    const late = count('LATE');
+    const absent = count('ABSENT');
+    const total = grouped.reduce((n, g) => n + g._count._all, 0);
     return {
       totalClasses: total,
       attended: present,
       absent,
       late,
-      percentage: Math.round(((present + late * 0.5) / total) * 100),
-      records: mockDates.map((item, idx) => ({
-        id: `att_rec_${idx + 1}`,
-        date: item.date,
-        status: item.status,
-        subjectName: 'Mathematics Alpha',
-        remarks: item.remarks,
+      percentage: total ? Math.round(((present + late * 0.5) / total) * 100) : 0,
+      records: recent.map((r) => ({
+        id: r.id,
+        date: isoDay(r.session.date),
+        status: r.status,
+        subjectName: r.session.batch.subject,
+        remarks: r.note || undefined,
       })),
     };
   }
 
   async submitAttendanceCorrection(user: AuthenticatedUser, dto: AttendanceCorrectionRequestDto) {
-    if (!dto.date || !dto.reason.trim()) {
-      throw new BadRequestException('Session date and reason for correction are required.');
-    }
+    const db = this.access.db();
+    const reason = requireString(dto?.reason, 'Reason', 1000);
+    if (reason.length < 5) throw new BadRequestException('Please explain the correction in at least 5 characters.');
+    const date = toDateOnly(requireString(dto?.date, 'Session date', 40), 'Session date');
+    const batchIds = await this.access.studentBatchIds(user);
 
-    this.memAttendanceCorrections.push({
-      id: `att_corr_${Date.now()}`,
-      studentId: user.id,
-      studentName: user.fullName,
-      date: dto.date,
-      reason: dto.reason.trim(),
-      status: 'PENDING',
-      submittedAt: new Date().toISOString(),
+    const session = await db.attendanceSession.findFirst({
+      where: {
+        instituteId: user.instituteId,
+        batchId: { in: batchIds },
+        date,
+        ...(dto?.sessionId ? { id: dto.sessionId } : {}),
+      },
+      select: { id: true, batchId: true },
     });
+    if (!session) throw new BadRequestException('No attendance was recorded for your batch on that date.');
 
+    // Idempotent: one pending request per student per day.
+    const existing = await db.attendanceCorrectionRequest.findFirst({
+      where: { studentId: user.id, instituteId: user.instituteId, date, status: 'PENDING' },
+      select: { id: true },
+    });
+    if (existing) {
+      return { success: true, message: 'A correction request for that date is already awaiting review.', status: 'PENDING', id: existing.id };
+    }
+    const created = await db.attendanceCorrectionRequest.create({
+      data: { instituteId: user.instituteId, studentId: user.id, batchId: session.batchId, sessionId: session.id, date, reason },
+      select: { id: true },
+    });
     return {
       success: true,
       message: 'Attendance correction request submitted to academic faculty for review.',
       status: 'PENDING',
+      id: created.id,
     };
   }
 
@@ -612,246 +548,289 @@ export class StudentService {
   // 7. HOMEWORK & ASSIGNMENTS
   // ==========================================================================
   async getAssignments(user: AuthenticatedUser): Promise<StudentAssignmentItem[]> {
-    const list: StudentAssignmentItem[] = [
-      {
-        id: 'asg_01',
-        title: 'Definite Integration & Walli Formula — DPP 14',
-        instructions: 'Solve all 25 problems with handwritten step-by-step calculus proofs. Submit scanned PDF or high-resolution images.',
-        subject: 'Mathematics',
-        dueDate: '2026-11-02T23:59:59Z',
-        maxMarks: 100,
-        attachmentUrl: 'https://media-hosting.dhyeyp254.workers.dev/1793335828256.json',
-        status: 'PENDING',
-      },
-      {
-        id: 'asg_02',
-        title: 'Wave Optics Interference Fringe Calculations',
-        instructions: 'Calculate fringe width, optical path change with mica sheet, and maximum orders visible in standard double-slit geometry.',
-        subject: 'Physics',
-        dueDate: '2026-10-31T18:00:00Z',
-        maxMarks: 50,
-        status: 'SUBMITTED',
-        submission: {
-          submittedAt: '2026-10-29T16:20:00Z',
-          content: 'Uploaded solved worksheet with 12 completed derivations.',
-          attachmentUrl: 'https://media-hosting.dhyeyp254.workers.dev/1793338782614.json',
-          marksObtained: 46,
-          feedback: 'Excellent work on the mica sheet path difference question! Clean diagrams.',
-        },
-      },
-      {
-        id: 'asg_03',
-        title: 'Thermodynamics State Functions Problem Set',
-        instructions: '15 numericals on adiabatic expansions and Carnot cycle efficiency.',
-        subject: 'Physics',
-        dueDate: '2026-10-25T23:59:59Z',
-        maxMarks: 50,
-        status: 'GRADED',
-        submission: {
-          submittedAt: '2026-10-24T20:00:00Z',
-          content: 'Completed all 15 questions.',
-          marksObtained: 48,
-          feedback: 'Accurate Carnot calculations. Neat handwriting.',
-        },
-      },
-    ];
-
-    // Check in-memory submissions
-    for (const item of list) {
-      const key = `${user.id}_${item.id}`;
-      if (this.memSubmissions.has(key)) {
-        const sub = this.memSubmissions.get(key);
-        item.status = sub.status;
-        item.submission = sub;
-      }
-    }
-
-    return list;
+    const db = this.access.db();
+    const batchIds = await this.access.studentBatchIds(user);
+    if (batchIds.length === 0) return [];
+    const assignments = await db.assignment.findMany({
+      where: { instituteId: user.instituteId, batchId: { in: batchIds }, status: 'PUBLISHED' },
+      select: { id: true, title: true, instructions: true, subject: true, dueDate: true, maxMarks: true, attachmentUrl: true },
+      orderBy: { dueDate: 'desc' },
+      take: 100,
+    });
+    if (assignments.length === 0) return [];
+    const subs = await db.assignmentSubmission.findMany({
+      where: { studentId: user.id, assignmentId: { in: assignments.map((a) => a.id) } },
+      select: { assignmentId: true, submittedAt: true, content: true, attachmentUrl: true, status: true, marksObtained: true, feedback: true },
+    });
+    const subById = new Map(subs.map((s) => [s.assignmentId, s]));
+    return assignments.map((a) => {
+      const sub = subById.get(a.id);
+      return {
+        id: a.id,
+        title: a.title,
+        instructions: a.instructions,
+        subject: a.subject,
+        dueDate: a.dueDate.toISOString(),
+        maxMarks: a.maxMarks,
+        attachmentUrl: a.attachmentUrl || undefined,
+        status: sub ? sub.status : 'PENDING',
+        ...(sub
+          ? {
+              submission: {
+                submittedAt: sub.submittedAt.toISOString(),
+                content: sub.content || undefined,
+                attachmentUrl: sub.attachmentUrl || undefined,
+                marksObtained: sub.marksObtained ?? undefined,
+                feedback: sub.feedback || undefined,
+              },
+            }
+          : {}),
+      };
+    });
   }
 
   async submitAssignment(user: AuthenticatedUser, assignmentId: string, dto: SubmitAssignmentDto) {
-    if (!dto.content?.trim() && !dto.attachmentUrl?.trim()) {
+    const db = this.access.db();
+    const content = optionalString(dto?.content, 'Content', 20000);
+    const attachmentUrl = optionalUrl(dto?.attachmentUrl, 'Attachment URL');
+    if (!content && !attachmentUrl) {
       throw new BadRequestException('Please provide written notes or upload an attachment document.');
     }
+    const batchIds = await this.access.studentBatchIds(user);
+    const assignment = await db.assignment.findFirst({
+      where: { id: assignmentId, instituteId: user.instituteId, batchId: { in: batchIds }, status: 'PUBLISHED' },
+      select: { id: true, dueDate: true },
+    });
+    if (!assignment) throw new NotFoundException('Assignment not found.');
 
-    const key = `${user.id}_${assignmentId}`;
-    const submissionRecord = {
-      submittedAt: new Date().toISOString(),
-      content: dto.content?.trim(),
-      attachmentUrl: dto.attachmentUrl?.trim(),
-      status: dto.isDraft ? 'PENDING' : 'SUBMITTED',
-      marksObtained: null,
-      feedback: dto.isDraft ? 'Draft saved.' : 'Submitted for faculty evaluation.',
-    };
+    const isDraft = dto?.isDraft === true;
+    const status = isDraft ? 'PENDING' : new Date() > assignment.dueDate ? 'LATE' : 'SUBMITTED';
+    const data = { content: content ?? null, attachmentUrl: attachmentUrl ?? null, status, submittedAt: new Date() } as const;
 
-    this.memSubmissions.set(key, submissionRecord);
-
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const existing = await db.assignmentSubmission.findUnique({
+        where: { assignmentId_studentId: { assignmentId, studentId: user.id } },
+        select: { id: true, status: true },
+      });
+      if (existing) {
+        // Graded work is final unless faculty explicitly reopened it (RESUBMIT).
+        const updated = await db.assignmentSubmission.updateMany({
+          where: { id: existing.id, status: { not: 'GRADED' } },
+          data,
+        });
+        if (updated.count !== 1) throw new ConflictException('This assignment has already been graded.');
+        break;
+      }
+      try {
+        await db.assignmentSubmission.create({ data: { assignmentId, studentId: user.id, ...data } });
+        break;
+      } catch (err) {
+        if (!isUniqueViolation(err) || attempt === 1) throw err; // double-submit race: fall through to update path
+      }
+    }
     return {
       success: true,
-      message: dto.isDraft ? 'Assignment draft saved successfully.' : 'Assignment submitted successfully to faculty!',
-      status: submissionRecord.status,
+      message: isDraft ? 'Assignment draft saved successfully.' : 'Assignment submitted successfully to faculty!',
+      status,
     };
   }
 
   // ==========================================================================
   // 8. TESTS, QUIZZES & EXAMINATIONS
   // ==========================================================================
+  private testWindowStatus(test: { scheduledDate: Date; closesAt: Date | null }, now = new Date()): 'UPCOMING' | 'ACTIVE' | 'CLOSED' {
+    if (now < test.scheduledDate) return 'UPCOMING';
+    if (test.closesAt && now > test.closesAt) return 'CLOSED';
+    return 'ACTIVE';
+  }
+
   async getTests(user: AuthenticatedUser): Promise<StudentTestItem[]> {
-    const list: StudentTestItem[] = [
-      {
-        id: 'tst_01',
-        title: 'JEE Advanced Calculus & Definite Integrals Speed Quiz',
-        instructions: '10 Questions. 30 Minutes. Correct Answer +4, Incorrect -1. Server-side countdown.',
-        subject: 'Mathematics',
-        scheduledDate: '2026-10-31T10:00:00Z',
-        durationMinutes: 30,
-        totalMarks: 40,
-        status: 'ACTIVE',
-      },
-      {
-        id: 'tst_02',
-        title: 'Wave Optics & Ray Optics Combined Test',
-        instructions: 'Comprehensive 15-question numerical and conceptual assessment.',
-        subject: 'Physics',
-        scheduledDate: '2026-11-05T09:00:00Z',
-        durationMinutes: 60,
-        totalMarks: 60,
-        status: 'UPCOMING',
-      },
-      {
-        id: 'tst_03',
-        title: 'Vector Algebra & 3D Geometry Unit Test',
-        instructions: 'Test completed on 2026-10-20.',
-        subject: 'Mathematics',
-        scheduledDate: '2026-10-20T09:00:00Z',
-        durationMinutes: 45,
-        totalMarks: 50,
-        status: 'COMPLETED',
-        attempt: {
-          submittedAt: '2026-10-20T09:42:00Z',
-          score: 44,
-          status: 'GRADED',
-          feedback: 'Outstanding spatial analysis in planes and shortest distance.',
-        },
-      },
-    ];
-
-    for (const test of list) {
-      const key = `${user.id}_${test.id}`;
-      if (this.memTestAttempts.has(key)) {
-        const att = this.memTestAttempts.get(key);
-        test.status = 'COMPLETED';
-        test.attempt = att;
-      }
-    }
-
-    return list;
-  }
-
-  async getTestDetails(_user: AuthenticatedUser, testId: string) {
-    if (testId === 'tst_01') {
+    const db = this.access.db();
+    const batchIds = await this.access.studentBatchIds(user);
+    if (batchIds.length === 0) return [];
+    const tests = await db.testQuiz.findMany({
+      where: { instituteId: user.instituteId, batchId: { in: batchIds }, status: { in: ['PUBLISHED', 'COMPLETED'] } },
+      select: { id: true, title: true, instructions: true, subject: true, scheduledDate: true, closesAt: true, durationMinutes: true, totalMarks: true },
+      orderBy: { scheduledDate: 'desc' },
+      take: 100,
+    });
+    if (tests.length === 0) return [];
+    const attempts = await db.testAttempt.findMany({
+      where: { studentId: user.id, testId: { in: tests.map((t) => t.id) } },
+      select: { testId: true, submittedAt: true, score: true, status: true, feedback: true },
+    });
+    const byTest = new Map(attempts.map((a) => [a.testId, a]));
+    return tests.map((t) => {
+      const attempt = byTest.get(t.id);
+      const window = this.testWindowStatus(t);
       return {
-        id: 'tst_01',
-        title: 'JEE Advanced Calculus & Definite Integrals Speed Quiz',
-        instructions: '10 Multiple Choice Questions. Read each question carefully. Correct: +4, Negative: -1.',
-        subject: 'Mathematics',
-        durationMinutes: 30,
-        totalMarks: 40,
-        questions: [
-          {
-            id: 'q1',
-            text: 'Evaluate the definite integral of sin(x) / (sin(x) + cos(x)) from 0 to pi/2.',
-            options: ['pi / 4', 'pi / 2', '1', '0'],
-            marks: 4,
-          },
-          {
-            id: 'q2',
-            text: 'What is the value of the integral from -1 to 1 of x^3 * cos(x) dx?',
-            options: ['0', 'pi', '2', '1/2'],
-            marks: 4,
-          },
-          {
-            id: 'q3',
-            text: 'Using King Property, the integral from a to b of f(x) dx equals the integral from a to b of:',
-            options: ['f(a + b - x) dx', 'f(x - a - b) dx', 'f(a - b + x) dx', 'f(2x) dx'],
-            marks: 4,
-          },
-          {
-            id: 'q4',
-            text: 'Evaluate the integral from 0 to 1 of x * (1 - x)^99 dx.',
-            options: ['1 / 10100', '1 / 100', '1 / 9900', '1 / 200'],
-            marks: 4,
-          },
-        ],
+        id: t.id,
+        title: t.title,
+        instructions: t.instructions || undefined,
+        subject: t.subject,
+        scheduledDate: t.scheduledDate.toISOString(),
+        durationMinutes: t.durationMinutes,
+        totalMarks: t.totalMarks,
+        status: attempt || window === 'CLOSED' ? 'COMPLETED' : window,
+        ...(attempt
+          ? { attempt: { submittedAt: attempt.submittedAt.toISOString(), score: attempt.score ?? 0, status: attempt.status, feedback: attempt.feedback || undefined } }
+          : {}),
       };
-    }
+    });
+  }
 
+  private async loadAttemptableTest(user: AuthenticatedUser, testId: string) {
+    const db = this.access.db();
+    const batchIds = await this.access.studentBatchIds(user);
+    const test = await db.testQuiz.findFirst({
+      where: { id: testId, instituteId: user.instituteId, batchId: { in: batchIds }, status: 'PUBLISHED' },
+      select: { id: true, title: true, instructions: true, subject: true, durationMinutes: true, totalMarks: true, scheduledDate: true, closesAt: true },
+    });
+    if (!test) throw new NotFoundException('Test not found.');
+    return test;
+  }
+
+  /** Returns the paper WITHOUT any answer key. Refused before the start time, after close, or once attempted. */
+  async getTestDetails(user: AuthenticatedUser, testId: string) {
+    const db = this.access.db();
+    const test = await this.loadAttemptableTest(user, testId);
+    const window = this.testWindowStatus(test);
+    if (window === 'UPCOMING') throw new ForbiddenException('This test has not started yet.');
+    if (window === 'CLOSED') throw new ForbiddenException('This test is closed.');
+    const attempt = await db.testAttempt.findUnique({
+      where: { testId_studentId: { testId, studentId: user.id } },
+      select: { id: true },
+    });
+    if (attempt) throw new ConflictException('You have already submitted this test.');
+
+    const questions = await db.testQuestion.findMany({
+      where: { testId },
+      select: { id: true, text: true, type: true, options: true, marks: true }, // never correctOptionIndex / negativeMarks
+      orderBy: { position: 'asc' },
+      take: MAX_TEST_ANSWERS,
+    });
     return {
-      id: testId,
-      title: 'Classroom Assessment',
-      instructions: 'Standard assessment guidelines apply.',
-      subject: 'Mathematics',
-      durationMinutes: 45,
-      totalMarks: 40,
-      questions: [
-        {
-          id: 'q1',
-          text: 'Find the derivative of f(x) = e^(2x) * cos(x).',
-          options: ['e^(2x) * (2cos(x) - sin(x))', '2e^(2x) * sin(x)', 'e^(2x) * (cos(x) + sin(x))', 'cos(2x)'],
-          marks: 4,
-        },
-      ],
+      id: test.id,
+      title: test.title,
+      instructions: test.instructions || undefined,
+      subject: test.subject,
+      durationMinutes: test.durationMinutes,
+      totalMarks: test.totalMarks,
+      questions: questions.map((q) => ({
+        id: q.id,
+        text: q.text,
+        type: (q.type === 'TEXT' ? 'TEXT' : 'MCQ') as 'MCQ' | 'TEXT',
+        options: q.options,
+        marks: q.marks,
+      })),
     };
   }
 
+  /**
+   * Scores a submission on the server from the stored answer key. Exactly one attempt per student per test is
+   * enforced by the (testId, studentId) unique index; a repeated submit returns the original result unchanged
+   * (idempotent), it never re-scores or creates a second attempt.
+   */
   async submitTestAttempt(user: AuthenticatedUser, testId: string, answers: TestAnswerItemDto[]) {
-    let score = 0;
-    const totalMarks = 40;
+    const db = this.access.db();
+    if (!Array.isArray(answers)) throw new BadRequestException('answers must be an array.');
+    if (answers.length > MAX_TEST_ANSWERS) throw new BadRequestException('Too many answers submitted.');
 
-    // Server-side scoring for tst_01
-    const correctMap: Record<string, number> = {
-      q1: 0, // pi/4
-      q2: 0, // 0 (odd function)
-      q3: 0, // f(a+b-x)
-      q4: 0, // 1/10100
+    const test = await this.loadAttemptableTest(user, testId);
+    const toResult = (a: { score: number | null; totalMarks: number | null; feedback: string | null; submittedAt: Date; status: string }) => {
+      const total = a.totalMarks ?? test.totalMarks;
+      const score = a.score ?? 0;
+      return {
+        success: true,
+        score,
+        totalMarks: total,
+        percentage: total > 0 ? Math.round((score / total) * 100) : 0,
+        feedback: a.feedback || '',
+        submittedAt: a.submittedAt.toISOString(),
+      };
     };
 
-    for (const ans of answers) {
-      if (correctMap[ans.questionId] !== undefined) {
-        if (ans.selectedOptionIndex === correctMap[ans.questionId]) {
-          score += 4;
-        } else if (ans.selectedOptionIndex !== undefined) {
-          score -= 1; // Negative marking
-        }
-      }
+    const prior = await db.testAttempt.findUnique({
+      where: { testId_studentId: { testId, studentId: user.id } },
+      select: { score: true, totalMarks: true, feedback: true, submittedAt: true, status: true },
+    });
+    if (prior) return toResult(prior);
+    if (this.testWindowStatus(test) !== 'ACTIVE') throw new ForbiddenException('This test is not open for submissions.');
+
+    const questions = await db.testQuestion.findMany({
+      where: { testId },
+      select: { id: true, type: true, options: true, correctOptionIndex: true, marks: true, negativeMarks: true },
+      take: MAX_TEST_ANSWERS,
+    });
+    if (questions.length === 0) throw new BadRequestException('This test has no questions yet.');
+
+    const submitted = new Map<string, TestAnswerItemDto>();
+    for (const a of answers) {
+      if (a && typeof a.questionId === 'string' && !submitted.has(a.questionId)) submitted.set(a.questionId, a);
     }
 
-    if (score < 0) score = 0;
+    let score = 0;
+    let totalMarks = 0;
+    let needsManualGrading = false;
+    const rows = questions.map((q) => {
+      totalMarks += q.marks;
+      const a = submitted.get(q.id);
+      let isCorrect: boolean | null = null;
+      let marksAwarded = 0;
+      let selectedOptionIndex: number | null = null;
+      let textAnswer: string | null = null;
+      if (q.type === 'TEXT') {
+        textAnswer = typeof a?.textAnswer === 'string' ? a.textAnswer.slice(0, 5000) : null;
+        if (textAnswer) needsManualGrading = true;
+      } else if (a && Number.isInteger(a.selectedOptionIndex) && (a.selectedOptionIndex as number) >= 0 && (a.selectedOptionIndex as number) < q.options.length) {
+        selectedOptionIndex = a.selectedOptionIndex as number;
+        isCorrect = selectedOptionIndex === q.correctOptionIndex;
+        marksAwarded = isCorrect ? q.marks : -q.negativeMarks;
+      }
+      score += marksAwarded;
+      return { questionId: q.id, selectedOptionIndex, textAnswer, isCorrect, marksAwarded };
+    });
+    score = Math.max(0, Math.round(score * 100) / 100);
+    const feedback = needsManualGrading
+      ? `Auto-graded questions scored ${score}/${totalMarks}. Written answers await faculty review.`
+      : `Online assessment verified. Score: ${score}/${totalMarks} (${totalMarks > 0 ? Math.round((score / totalMarks) * 100) : 0}%).`;
 
-    const attemptRecord = {
-      submittedAt: new Date().toISOString(),
-      score,
-      totalMarks,
-      percentage: Math.round((score / totalMarks) * 100),
-      status: 'GRADED',
-      feedback: `Online assessment verified. Score: ${score}/${totalMarks} (${Math.round((score / totalMarks) * 100)}%).`,
-    };
-
-    const key = `${user.id}_${testId}`;
-    this.memTestAttempts.set(key, attemptRecord);
-
-    return {
-      success: true,
-      score,
-      totalMarks,
-      percentage: attemptRecord.percentage,
-      feedback: attemptRecord.feedback,
-      submittedAt: attemptRecord.submittedAt,
-    };
+    try {
+      const attempt = await db.$transaction(async (tx) => {
+        const created = await tx.testAttempt.create({
+          data: {
+            testId,
+            studentId: user.id,
+            answers: rows.map((r) => ({ questionId: r.questionId, selectedOptionIndex: r.selectedOptionIndex, textAnswer: r.textAnswer })),
+            score,
+            totalMarks,
+            status: needsManualGrading ? 'SUBMITTED' : 'GRADED',
+            feedback,
+            gradedAt: needsManualGrading ? null : new Date(),
+          },
+          select: { id: true, score: true, totalMarks: true, feedback: true, submittedAt: true, status: true },
+        });
+        await tx.testAttemptAnswer.createMany({
+          data: rows.map((r) => ({ ...r, attemptId: created.id, studentId: user.id })),
+        });
+        return created;
+      });
+      return toResult(attempt);
+    } catch (err) {
+      if (isUniqueViolation(err)) {
+        // Concurrent double-submit: the other request won; return its stored result.
+        const winner = await db.testAttempt.findUnique({
+          where: { testId_studentId: { testId, studentId: user.id } },
+          select: { score: true, totalMarks: true, feedback: true, submittedAt: true, status: true },
+        });
+        if (winner) return toResult(winner);
+      }
+      throw err;
+    }
   }
 
   // ==========================================================================
-  // 9. RESULTS & STUDY MATERIALS
+  // 9. RESULTS & STUDY MATERIALS (published only, own records only)
   // ==========================================================================
   async getResults(user: AuthenticatedUser) {
     return this.assessmentService.getStudentPublishedResults(user);
@@ -865,229 +844,276 @@ export class StudentService {
   // 10. FEES & RECEIPTS
   // ==========================================================================
   async getFees(user: AuthenticatedUser): Promise<StudentFeeSummary> {
-    if (this.prisma.isConnected) {
-      const records = await this.prisma.studentFeeRecord.findMany({
-        where: { studentId: user.id },
-        orderBy: { createdAt: 'desc' },
-      });
-
-      if (records.length > 0) {
-        const total = records.reduce((s, r) => s + r.totalAmount, 0);
-        const paid = records.reduce((s, r) => s + r.paidAmount, 0);
-        const balance = total - paid;
-        return {
-          totalFees: total,
-          paidAmount: paid,
-          balanceDue: balance,
-          status: balance <= 0 ? 'PAID' : paid > 0 ? 'PARTIAL' : 'OVERDUE',
-          receipts: records.map((r) => ({
-            id: r.id,
-            title: r.feeTitle,
-            dueDate: r.dueDate ? r.dueDate.toISOString().split('T')[0] : '2026-11-15',
-            amount: r.totalAmount,
-            paidAmount: r.paidAmount,
-            status: r.status as any,
-            receiptNumber: `REC-${r.id.slice(-6).toUpperCase()}`,
-          })),
-        };
-      }
-    }
-
+    const db = this.access.db();
+    if (!user.instituteId) return { totalFees: 0, paidAmount: 0, balanceDue: 0, status: 'PAID', receipts: [] };
+    const records = await db.studentFeeRecord.findMany({
+      where: { studentId: user.id, instituteId: user.instituteId },
+      select: { id: true, feeTitle: true, totalAmount: true, paidAmount: true, dueDate: true },
+      orderBy: { dueDate: 'desc' },
+      take: 100,
+    });
+    const now = new Date();
+    const total = records.reduce((s, r) => s + r.totalAmount, 0);
+    const paid = records.reduce((s, r) => s + r.paidAmount, 0);
+    const balance = Math.max(0, total - paid);
+    const anyOverdue = records.some((r) => r.paidAmount < r.totalAmount && r.dueDate < now);
     return {
-      totalFees: 35000,
-      paidAmount: 20000,
-      balanceDue: 15000,
-      status: 'PARTIAL',
-      receipts: [
-        {
-          id: 'rec_01',
-          title: 'Term 1 Tuition & Comprehensive Test Series',
-          dueDate: '2026-08-15',
-          amount: 20000,
-          paidAmount: 20000,
-          status: 'PAID',
-          paidDate: '2026-08-10',
-          receiptNumber: 'REC-2026-0941',
-        },
-        {
-          id: 'rec_02',
-          title: 'Term 2 Study Vault & Advanced Problem Practice',
-          dueDate: '2026-11-15',
-          amount: 15000,
-          paidAmount: 0,
-          status: 'PENDING',
-          receiptNumber: 'INV-2026-1102',
-        },
-      ],
+      totalFees: total,
+      paidAmount: paid,
+      balanceDue: balance,
+      status: balance <= 0 ? 'PAID' : anyOverdue ? 'OVERDUE' : paid > 0 ? 'PARTIAL' : 'PENDING',
+      receipts: records.map((r) => ({
+        id: r.id,
+        title: r.feeTitle,
+        dueDate: isoDay(r.dueDate),
+        amount: r.totalAmount,
+        paidAmount: r.paidAmount,
+        status: r.paidAmount >= r.totalAmount ? 'PAID' : r.dueDate < now ? 'OVERDUE' : 'PENDING',
+        receiptNumber: `REC-${r.id.slice(-6).toUpperCase()}`,
+      })),
     };
   }
 
-  async getAnnouncements(_user: AuthenticatedUser): Promise<StudentAnnouncementItem[]> {
-    return [
-      {
-        id: 'ann_01',
-        title: 'JEE Advanced Full Syllabus Mock Test #4 Scheduled',
-        content: 'The 4th full-length JEE Advanced test is scheduled for this coming Sunday at 09:00 AM. Formulas and DPPs are available in your Study Materials vault.',
-        date: '2026-10-29',
-        priority: 'URGENT',
-        authorName: 'Academic Directorate',
+  // ==========================================================================
+  // 11. ANNOUNCEMENTS (institute-wide + the student's own batches)
+  // ==========================================================================
+  async getAnnouncements(user: AuthenticatedUser): Promise<StudentAnnouncementItem[]> {
+    const db = this.access.db();
+    if (!user.instituteId) return [];
+    const batchIds = await this.access.studentBatchIds(user);
+    const rows = await db.announcement.findMany({
+      where: {
+        instituteId: user.instituteId,
+        OR: [{ batchId: null }, ...(batchIds.length ? [{ batchId: { in: batchIds } }] : [])],
       },
-      {
-        id: 'ann_02',
-        title: 'Definite Integration & Vector Calculus Question Bank Uploaded',
-        content: 'Prof. Sharma has released 50 high-yield solved advanced questions. Check the Study Materials tab to download PDF notes directly from the media CDN.',
-        date: '2026-10-28',
-        priority: 'NORMAL',
-        authorName: 'Prof. Rajesh Sharma',
-      },
-      {
-        id: 'ann_03',
-        title: 'National Science & Olympiad Practice Lab Timings',
-        content: 'Physics lab will remain open until 06:00 PM every weekday for JEE aspirants practicing ray optics and mechanics apparatus.',
-        date: '2026-10-25',
-        priority: 'NORMAL',
-        authorName: 'Physics Department',
-      },
-    ];
+      select: { id: true, title: true, content: true, priority: true, createdAt: true, author: { select: { fullName: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+    return rows.map((a) => ({
+      id: a.id,
+      title: a.title,
+      content: a.content,
+      date: isoDay(a.createdAt),
+      priority: a.priority,
+      authorName: a.author.fullName,
+    }));
   }
 
   // ==========================================================================
-  // 11. ACADEMIC QUERIES & DOUBTS
+  // 12. ACADEMIC QUERIES & DOUBTS
   // ==========================================================================
-  async getAcademicQueries(_user: AuthenticatedUser): Promise<AcademicQueryItem[]> {
-    return this.memAcademicQueries;
+  async getAcademicQueries(user: AuthenticatedUser): Promise<AcademicQueryItem[]> {
+    const db = this.access.db();
+    if (!user.instituteId) return [];
+    const rows = await db.academicQuery.findMany({
+      where: { studentId: user.id, instituteId: user.instituteId },
+      select: {
+        id: true,
+        subject: true,
+        topic: true,
+        questionText: true,
+        attachmentUrl: true,
+        status: true,
+        createdAt: true,
+        replies: { select: { authorId: true, body: true, createdAt: true }, orderBy: { createdAt: 'desc' }, take: 1 },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+    const authorIds = [...new Set(rows.flatMap((r) => r.replies.map((x) => x.authorId)))];
+    const authors = authorIds.length
+      ? await db.user.findMany({ where: { id: { in: authorIds } }, select: { id: true, fullName: true } })
+      : [];
+    const nameById = new Map(authors.map((a) => [a.id, a.fullName]));
+    return rows.map((q) => {
+      const reply = q.replies[0];
+      return {
+        id: q.id,
+        subject: q.subject,
+        topic: q.topic || undefined,
+        questionText: q.questionText,
+        attachmentUrl: q.attachmentUrl || undefined,
+        status: q.status === 'ANSWERED' ? 'ANSWERED' : 'PENDING',
+        facultyReply: reply?.body,
+        repliedAt: reply?.createdAt.toISOString(),
+        facultyName: reply ? nameById.get(reply.authorId) : undefined,
+        createdAt: q.createdAt.toISOString(),
+      };
+    });
   }
 
   async submitAcademicQuery(user: AuthenticatedUser, dto: CreateAcademicQueryDto) {
-    if (!dto.subject || !dto.questionText.trim()) {
-      throw new BadRequestException('Subject and question description are required.');
+    const db = this.access.db();
+    const subject = requireString(dto?.subject, 'Subject', 120);
+    const questionText = requireString(dto?.questionText, 'Question', 5000);
+    const topic = optionalString(dto?.topic, 'Topic', 200);
+    const attachmentUrl = optionalUrl(dto?.attachmentUrl, 'Attachment URL');
+
+    const batchIds = await this.access.studentBatchIds(user);
+    if (batchIds.length === 0) throw new ForbiddenException('Join a batch before asking faculty a question.');
+    const batches = await db.batch.findMany({
+      where: { id: { in: batchIds }, instituteId: user.instituteId },
+      select: { id: true, subject: true, teacherId: true },
+    });
+    const batch = batches.find((b) => b.subject.toLowerCase() === subject.toLowerCase()) ?? batches[0];
+
+    let facultyId: string | undefined;
+    if (dto?.facultyId) {
+      const assigned = await db.batchFaculty.findFirst({
+        where: { facultyId: dto.facultyId, batchId: { in: batchIds }, instituteId: user.instituteId },
+        select: { id: true },
+      });
+      const leads = batches.some((b) => b.teacherId === dto.facultyId);
+      if (!assigned && !leads) throw new BadRequestException('That faculty member does not teach your batches.');
+      facultyId = dto.facultyId;
     }
 
+    // Idempotent against double-taps: identical question from the same student in the last minute.
+    const duplicate = await db.academicQuery.findFirst({
+      where: { studentId: user.id, questionText, createdAt: { gte: new Date(Date.now() - 60_000) } },
+      select: { id: true, createdAt: true },
+    });
+    const created =
+      duplicate ??
+      (await db.academicQuery.create({
+        data: {
+          instituteId: user.instituteId,
+          studentId: user.id,
+          batchId: batch?.id,
+          facultyId,
+          subject,
+          topic,
+          questionText,
+          attachmentUrl,
+        },
+        select: { id: true, createdAt: true },
+      }));
     const query: AcademicQueryItem = {
-      id: `query_${Date.now()}`,
-      subject: dto.subject,
-      topic: dto.topic?.trim() || undefined,
-      questionText: dto.questionText.trim(),
-      attachmentUrl: dto.attachmentUrl || undefined,
+      id: created.id,
+      subject,
+      topic,
+      questionText,
+      attachmentUrl,
       status: 'PENDING',
-      createdAt: new Date().toISOString(),
+      createdAt: created.createdAt.toISOString(),
     };
+    return { success: true, message: 'Your academic question has been submitted to faculty.', query };
+  }
 
-    this.memAcademicQueries.unshift(query);
-
+  // ==========================================================================
+  // 13. STUDY PLANNER & PERSONAL TASKS (private to the student)
+  // ==========================================================================
+  private toTask(t: { id: string; title: string; subject: string | null; dueDate: Date | null; priority: string; isCompleted: boolean; createdAt: Date }): PersonalStudyTaskItem {
     return {
-      success: true,
-      message: 'Your academic question has been submitted to faculty.',
-      query,
+      id: t.id,
+      title: t.title,
+      subject: t.subject || undefined,
+      dueDate: t.dueDate ? isoDay(t.dueDate) : undefined,
+      priority: t.priority === 'HIGH' || t.priority === 'LOW' ? t.priority : 'NORMAL',
+      isCompleted: t.isCompleted,
+      createdAt: t.createdAt.toISOString(),
     };
   }
 
-  // ==========================================================================
-  // 12. STUDY PLANNER & PERSONAL TASKS
-  // ==========================================================================
-  async getStudyTasks(_user: AuthenticatedUser): Promise<PersonalStudyTaskItem[]> {
-    return this.memStudyTasks;
+  private static readonly TASK_SELECT = { id: true, title: true, subject: true, dueDate: true, priority: true, isCompleted: true, createdAt: true } as const;
+
+  async getStudyTasks(user: AuthenticatedUser): Promise<PersonalStudyTaskItem[]> {
+    const db = this.access.db();
+    const rows = await db.studyTask.findMany({
+      where: { userId: user.id },
+      select: StudentService.TASK_SELECT,
+      orderBy: [{ isCompleted: 'asc' }, { dueDate: 'asc' }],
+      take: 200,
+    });
+    return rows.map((t) => this.toTask(t));
   }
 
-  async createStudyTask(_user: AuthenticatedUser, dto: CreateStudyTaskDto) {
-    if (!dto.title || !dto.title.trim()) {
-      throw new BadRequestException('Task title is required.');
-    }
-
-    const task: PersonalStudyTaskItem = {
-      id: `task_${Date.now()}`,
-      title: dto.title.trim(),
-      subject: dto.subject || 'General Study',
-      dueDate: dto.dueDate || undefined,
-      priority: dto.priority || 'NORMAL',
-      isCompleted: false,
-      createdAt: new Date().toISOString(),
-    };
-
-    this.memStudyTasks.unshift(task);
-    return task;
+  async createStudyTask(user: AuthenticatedUser, dto: CreateStudyTaskDto) {
+    const db = this.access.db();
+    const title = requireString(dto?.title, 'Task title', 300);
+    const priority = dto?.priority && ['LOW', 'NORMAL', 'HIGH'].includes(dto.priority) ? dto.priority : 'NORMAL';
+    const dueDate = dto?.dueDate ? parseDate(dto.dueDate, 'Due date') : undefined;
+    const count = await db.studyTask.count({ where: { userId: user.id, isCompleted: false } });
+    if (count >= 500) throw new BadRequestException('Too many open tasks. Complete or delete some first.');
+    const created = await db.studyTask.create({
+      data: {
+        userId: user.id,
+        instituteId: user.instituteId || null,
+        title,
+        subject: optionalString(dto?.subject, 'Subject', 120) ?? null,
+        dueDate: dueDate ?? null,
+        priority,
+      },
+      select: StudentService.TASK_SELECT,
+    });
+    return this.toTask(created);
   }
 
-  async updateStudyTask(_user: AuthenticatedUser, taskId: string, dto: UpdateStudyTaskDto) {
-    const task = this.memStudyTasks.find((t) => t.id === taskId);
-    if (!task) throw new NotFoundException('Task not found.');
-
-    if (dto.isCompleted !== undefined) task.isCompleted = dto.isCompleted;
-    if (dto.title !== undefined) task.title = dto.title.trim();
-
-    return task;
+  async updateStudyTask(user: AuthenticatedUser, taskId: string, dto: UpdateStudyTaskDto) {
+    const db = this.access.db();
+    const title = dto?.title !== undefined ? requireString(dto.title, 'Task title', 300) : undefined;
+    const result = await db.studyTask.updateMany({
+      where: { id: taskId, userId: user.id },
+      data: {
+        ...(typeof dto?.isCompleted === 'boolean' ? { isCompleted: dto.isCompleted } : {}),
+        ...(title ? { title } : {}),
+      },
+    });
+    if (result.count !== 1) throw new NotFoundException('Task not found.');
+    const row = await db.studyTask.findFirst({ where: { id: taskId, userId: user.id }, select: StudentService.TASK_SELECT });
+    if (!row) throw new NotFoundException('Task not found.');
+    return this.toTask(row);
   }
 
-  async deleteStudyTask(_user: AuthenticatedUser, taskId: string) {
-    this.memStudyTasks = this.memStudyTasks.filter((t) => t.id !== taskId);
+  async deleteStudyTask(user: AuthenticatedUser, taskId: string) {
+    const db = this.access.db();
+    const result = await db.studyTask.deleteMany({ where: { id: taskId, userId: user.id } });
+    if (result.count !== 1) throw new NotFoundException('Task not found.');
     return { success: true, message: 'Task deleted.' };
   }
 
   // ==========================================================================
-  // 13. STUDENT DOCUMENTS & PDF CENTER
+  // 14. STUDENT DOCUMENTS (metadata of issued files)
   // ==========================================================================
-  async getDocuments(_user: AuthenticatedUser): Promise<StudentDocumentItem[]> {
-    return [
-      {
-        id: 'doc_01',
-        title: 'Term 1 Official Academic Report Card & Cumulative Marks Sheet',
-        category: 'REPORT_CARD',
-        issueDate: '2026-10-15',
-        academicPeriod: 'Term 1 (2026-2027)',
-        downloadUrl: 'https://media-hosting.dhyeyp254.workers.dev/1793335828256.json',
-        fileSize: '1.8 MB',
-      },
-      {
-        id: 'doc_02',
-        title: 'Tuition Fee Payment Official Receipt #REC-2026-0941',
-        category: 'FEE_RECEIPT',
-        issueDate: '2026-08-10',
-        academicPeriod: 'Term 1 Fee Settlement',
-        downloadUrl: 'https://media-hosting.dhyeyp254.workers.dev/1793338782614.json',
-        fileSize: '650 KB',
-      },
-      {
-        id: 'doc_03',
-        title: 'JEE Advanced Definite Integrals Comprehensive Notes & Formulas',
-        category: 'STUDY_MATERIAL',
-        issueDate: '2026-10-28',
-        academicPeriod: 'Calculus Module',
-        downloadUrl: 'https://media-hosting.dhyeyp254.workers.dev/1793338881129.txt',
-        fileSize: '3.4 MB',
-      },
-      {
-        id: 'doc_04',
-        title: 'Academic Timetable & Classroom Wing Allocation Schedule',
-        category: 'TIMETABLE_SCHEDULE',
-        issueDate: '2026-10-01',
-        academicPeriod: 'Autumn Term 2026',
-        downloadUrl: 'https://media-hosting.dhyeyp254.workers.dev/1793338917831.txt',
-        fileSize: '420 KB',
-      },
-    ];
+  async getDocuments(user: AuthenticatedUser): Promise<StudentDocumentItem[]> {
+    const db = this.access.db();
+    if (!user.instituteId) return [];
+    const rows = await db.studentDocument.findMany({
+      where: { studentId: user.id, instituteId: user.instituteId },
+      select: { id: true, title: true, category: true, issueDate: true, academicPeriod: true, downloadUrl: true, fileSize: true },
+      orderBy: { issueDate: 'desc' },
+      take: 100,
+    });
+    return rows.map((d) => ({
+      id: d.id,
+      title: d.title,
+      category: d.category as StudentDocumentItem['category'],
+      issueDate: isoDay(d.issueDate),
+      academicPeriod: d.academicPeriod || '',
+      downloadUrl: d.downloadUrl,
+      fileSize: d.fileSize || undefined,
+    }));
   }
 
   // ==========================================================================
-  // 14. SUPPORT & HELP REQUESTS
+  // 15. SUPPORT & HELP REQUESTS
   // ==========================================================================
   async submitSupportRequest(user: AuthenticatedUser, dto: CreateSupportRequestDto) {
-    if (!dto.subject || !dto.description.trim()) {
-      throw new BadRequestException('Subject and description are required.');
-    }
+    const db = this.access.db();
+    const subject = requireString(dto?.subject, 'Subject', 200);
+    const description = requireString(dto?.description, 'Description', 5000);
+    if (!SUPPORT_CATEGORIES.includes(dto?.category)) throw new BadRequestException('Unknown support category.');
 
-    const ticket = {
-      id: `supp_${Date.now()}`,
-      studentId: user.id,
-      studentName: user.fullName,
-      category: dto.category,
-      subject: dto.subject.trim(),
-      description: dto.description.trim(),
-      status: 'SUBMITTED',
-      createdAt: new Date().toISOString(),
-    };
+    const recent = await db.supportRequest.count({
+      where: { userId: user.id, createdAt: { gte: new Date(Date.now() - 24 * 3600 * 1000) } },
+    });
+    if (recent >= 10) throw new HttpException('Too many support requests today. Please wait before sending more.', HttpStatus.TOO_MANY_REQUESTS);
 
-    this.memSupportRequests.push(ticket);
-
+    const ticket = await db.supportRequest.create({
+      data: { userId: user.id, instituteId: user.instituteId || null, category: dto.category, subject, description },
+      select: { id: true },
+    });
     return {
       success: true,
       ticketId: ticket.id,

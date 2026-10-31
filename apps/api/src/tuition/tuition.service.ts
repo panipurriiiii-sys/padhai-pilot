@@ -3,10 +3,11 @@ import {
   Inject,
   NotFoundException,
   BadRequestException,
+  ConflictException,
   ForbiddenException,
-  BadGatewayException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { assertDb } from '../common/db/db.js';
 import type { AuthenticatedUser } from '../common/types.js';
 import type {
   UpdateTuitionProfileDto,
@@ -38,252 +39,15 @@ import { validateInstituteBranding } from '@padhai-pilot/shared';
 
 @Injectable()
 export class TuitionService {
-    private memProfile: TuitionBrandingProfile;
-  private memFaculties: FacultyMember[];
-  private memSalaries: SalaryStatementItem[];
-  private memLeaves: FacultyLeaveItem[];
-  private memDiaries: DailyTeachingDiaryEntry[];
-  private memMaterials: StudyMaterialItem[];
-  private memFees: StudentFeeItem[];
-
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {
-    this.memProfile = {
-      id: 'inst_apex_academy',
-      name: 'Apex IIT-JEE & Medical Academy',
-      slug: 'apex-academy',
-      logoUrl: 'https://images.unsplash.com/photo-1594608661623-aa0bd3a69d98?w=128&q=80',
-      primaryColor: '#1677FF',
-      address: 'Plot 42, Knowledge Park III, Silicon Corridor, Pune - 411045',
-      contactPhone: '+91 98230 45678',
-      contactEmail: 'admissions@apexacademy.edu.in',
-      website: 'https://apexacademy.edu.in',
-      description: 'Premier coaching institute specialized in JEE Advanced, NEET-UG, and National Olympiad foundations with 14+ years of academic excellence.',
-      footerText: 'PadhaiPilot Verified Tuition Institute — ISO 9001:2015 Certified Coaching Center',
-      signatoryName: 'Dr. Anand K. Kulkarni',
-      signatoryTitle: 'Founder & Academic Director',
-      academicYear: '2026-2027',
-      ownerId: 'usr_owner_01',
-      totalStudents: 84,
-      totalFaculty: 3,
-      totalBatches: 3,
-    };
-
-    this.memFaculties = [
-      {
-        id: 'fac_01',
-        userId: 'usr_teacher_sharma',
-        staffId: 'FAC-101',
-        fullName: 'Prof. Rajesh Sharma',
-        email: 'teacher@padhaipilot.com',
-        phone: '+91 98220 11223',
-        designation: 'Senior Faculty & HOD Mathematics',
-        employmentStatus: 'ACTIVE',
-        compensationType: 'FIXED_MONTHLY',
-        baseSalary: 75000,
-        hourlyRate: 0,
-        joiningDate: '2023-06-01T00:00:00.000Z',
-        assignedSubjects: ['Mathematics', 'Advanced Calculus', 'Vectors & 3D'],
-        delegatedPermissions: ['MANAGE_ATTENDANCE', 'MANAGE_MARKS', 'PUBLISH_DIARY', 'MANAGE_TIMETABLE'],
-        assignedBatchesCount: 2,
-        weeklyLectureCount: 12,
-        assignedBatches: [
-          { id: 'btc_jee_math_adv', name: 'JEE Advanced — Mathematics Alpha', code: 'JEE-MTH-ADV', subject: 'Higher Calculus & Vectors', gradeLevel: 'Class 12' },
-          { id: 'btc_olympiad_math', name: 'Olympiad Foundation Mathematics', code: 'OLY-MTH-10', subject: 'Number Theory & Combinatorics', gradeLevel: 'Class 10' },
-        ],
-        emergencyContact: '+91 98220 99887 (Spouse)',
-      },
-      {
-        id: 'fac_02',
-        userId: 'usr_fac_verma',
-        staffId: 'FAC-102',
-        fullName: 'Dr. Sunita Verma',
-        email: 'sunita.verma@apexacademy.edu.in',
-        phone: '+91 98221 44556',
-        designation: 'Associate Professor, Physics',
-        employmentStatus: 'ACTIVE',
-        compensationType: 'FIXED_MONTHLY',
-        baseSalary: 68000,
-        hourlyRate: 0,
-        joiningDate: '2024-01-15T00:00:00.000Z',
-        assignedSubjects: ['Physics', 'Thermodynamics', 'Electrodynamics'],
-        delegatedPermissions: ['MANAGE_ATTENDANCE', 'MANAGE_MARKS', 'PUBLISH_DIARY'],
-        assignedBatchesCount: 1,
-        weeklyLectureCount: 8,
-        assignedBatches: [
-          { id: 'btc_neet_physics_core', name: 'Class 11 — Physics Core Batch', code: 'PHY-11-CORE', subject: 'Mechanics & Thermodynamics', gradeLevel: 'Class 11' },
-        ],
-        emergencyContact: '+91 98221 00112 (Brother)',
-      },
-      {
-        id: 'fac_03',
-        userId: 'usr_fac_mehta',
-        staffId: 'FAC-103',
-        fullName: 'Vikram Mehta',
-        email: 'vikram.mehta@apexacademy.edu.in',
-        phone: '+91 98223 77889',
-        designation: 'Visiting Specialist, Organic Chemistry',
-        employmentStatus: 'ACTIVE',
-        compensationType: 'HOURLY_PER_CLASS',
-        baseSalary: 0,
-        hourlyRate: 1500,
-        joiningDate: '2024-07-01T00:00:00.000Z',
-        assignedSubjects: ['Organic Chemistry', 'Stereochemistry'],
-        delegatedPermissions: ['MANAGE_ATTENDANCE', 'PUBLISH_DIARY'],
-        assignedBatchesCount: 1,
-        weeklyLectureCount: 6,
-        emergencyContact: '+91 98223 11223 (Father)',
-      },
-    ];
-
-    this.memSalaries = [
-      {
-        id: 'sal_rec_01',
-        instituteId: 'inst_apex_academy',
-        facultyId: 'usr_teacher_sharma',
-        facultyName: 'Prof. Rajesh Sharma',
-        staffId: 'FAC-101',
-        designation: 'Senior Faculty & HOD Mathematics',
-        payPeriod: '2026-10',
-        compensationModel: 'FIXED_MONTHLY',
-        classesConducted: 26,
-        baseAmount: 75000,
-        additions: 5000,
-        deductions: 2500,
-        advances: 0,
-        netPayable: 77500,
-        status: 'APPROVED',
-        createdAt: '2026-10-25T10:00:00.000Z',
-        updatedAt: '2026-10-27T14:30:00.000Z',
-        remarks: 'Includes special Sunday Advanced problem-solving bonus',
-      },
-      {
-        id: 'sal_rec_02',
-        instituteId: 'inst_apex_academy',
-        facultyId: 'usr_fac_verma',
-        facultyName: 'Dr. Sunita Verma',
-        staffId: 'FAC-102',
-        designation: 'Associate Professor, Physics',
-        payPeriod: '2026-10',
-        compensationModel: 'FIXED_MONTHLY',
-        classesConducted: 22,
-        baseAmount: 68000,
-        additions: 2000,
-        deductions: 2000,
-        advances: 5000,
-        netPayable: 63000,
-        status: 'PAID',
-        paymentDate: '2026-10-28T16:00:00.000Z',
-        paymentMethod: 'BANK_TRANSFER',
-        paymentReference: 'NEFT/HDFC/20261028/8877112',
-        createdAt: '2026-10-25T10:00:00.000Z',
-        updatedAt: '2026-10-28T16:00:00.000Z',
-        remarks: 'Salary cleared via NEFT batch transfer',
-      },
-    ];
-
-    this.memLeaves = [
-      {
-        id: 'leave_rec_01',
-        instituteId: 'inst_apex_academy',
-        facultyId: 'usr_teacher_sharma',
-        facultyName: 'Prof. Rajesh Sharma',
-        staffId: 'FAC-101',
-        leaveType: 'CASUAL',
-        startDate: '2026-11-04T00:00:00.000Z',
-        endDate: '2026-11-05T00:00:00.000Z',
-        totalDays: 2,
-        reason: 'Attending National Mathematics Teachers Symposium at IISc Bangalore.',
-        status: 'PENDING',
-        substituteFacultyId: 'usr_fac_verma',
-        substituteFacultyName: 'Dr. Sunita Verma',
-        createdAt: '2026-10-28T09:30:00.000Z',
-      },
-    ];
-
-    this.memDiaries = [
-      {
-        id: 'diary_01',
-        instituteId: 'inst_apex_academy',
-        batchId: 'btc_jee_math_adv',
-        batchName: 'JEE Advanced — Mathematics Alpha',
-        batchCode: 'JEE-MTH-ADV',
-        facultyId: 'usr_teacher_sharma',
-        facultyName: 'Prof. Rajesh Sharma',
-        lessonDate: '2026-10-29T00:00:00.000Z',
-        sessionTime: '09:00 - 10:30',
-        subject: 'Higher Calculus & Vectors',
-        chapterTitle: 'Definite Integration & Leibniz Integral Rule',
-        conceptsTaught: 'Properties of definite integrals, Leibniz differentiation under integral sign, and symmetric bounds.',
-        learningObjectives: 'Students should master applying Leibniz theorem to multi-step JEE Advanced questions.',
-        teachingMethods: 'Rigorous derivation followed by 4 live problem-solving models from past JEE Advanced papers.',
-        durationMinutes: 90,
-        homeworkAssigned: 'Solve Advanced DPP #14: Questions 1 to 18; verify symmetric bounds.',
-        referenceLinks: ['https://mathworld.wolfram.com/LeibnizIntegralRule.html'],
-        followUpPlan: 'Evaluate double integrals & area under curves in next lecture.',
-        status: 'PUBLISHED',
-        audience: 'BATCH',
-        isCovered: true,
-        createdAt: '2026-10-29T10:45:00.000Z',
-        updatedAt: '2026-10-29T10:45:00.000Z',
-      },
-    ];
-
-    this.memMaterials = [
-      {
-        id: 'mat_01',
-        instituteId: 'inst_apex_academy',
-        batchId: 'btc_jee_math_adv',
-        batchName: 'JEE Advanced — Mathematics Alpha',
-        facultyId: 'usr_teacher_sharma',
-        facultyName: 'Prof. Rajesh Sharma',
-        title: 'Definite Integrals — Comprehensive Theory & 50 Solved JEE Advanced Models',
-        category: 'CHAPTER_NOTES',
-        subject: 'Higher Calculus & Vectors',
-        chapter: 'Definite Integration',
-        content: 'Complete analytical notes covering King property, Queen property, Leibniz integral rule, and Walli formula.',
-        fileUrl: 'https://assets.padhaipilot.com/notes/math_adv_definite_integrals.pdf',
-        fileName: 'Definite_Integrals_JEE_Adv_Notes.pdf',
-        fileSize: '3.8 MB',
-        status: 'PUBLISHED',
-        isStudentVisible: true,
-        downloadCount: 68,
-        createdAt: '2026-10-28T10:00:00.000Z',
-        updatedAt: '2026-10-28T10:00:00.000Z',
-      },
-    ];
-
-    this.memFees = [
-      {
-        id: 'fee_rec_01',
-        instituteId: 'inst_apex_academy',
-        studentId: 'usr_std_01',
-        studentName: 'Aarav Patel',
-        rollNumber: 'JEE-26-001',
-        batchId: 'btc_jee_math_adv',
-        batchName: 'JEE Advanced — Mathematics Alpha',
-        feeTitle: 'Term 2 Tuition & Test Series Fee',
-        totalAmount: 35000,
-        paidAmount: 20000,
-        balanceDue: 15000,
-        dueDate: '2026-10-15T00:00:00.000Z',
-        status: 'OVERDUE',
-        academicYear: '2026-2027',
-        lastReminderSentAt: '2026-10-26T11:00:00.000Z',
-        reminderCount: 2,
-        createdAt: '2026-09-01T00:00:00.000Z',
-      },
-    ];
-  }
-
-
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   // ==========================================================================
   // 1. TUITION PROFILE & BRANDING
   // ==========================================================================
 
   async getBrandingProfile(instituteId: string): Promise<TuitionBrandingProfile> {
-    if (!this.prisma.isConnected) return this.memGetBrandingProfile(instituteId);
-    let institute = await this.prisma.institute.findUnique({
+    assertDb(this.prisma);
+    const institute = await this.prisma.institute.findUnique({
       where: { id: instituteId },
       include: {
         _count: {
@@ -297,42 +61,7 @@ export class TuitionService {
     });
 
     if (!institute) {
-      if (instituteId === 'inst_apex_academy' && this.prisma.isConnected) {
-        try {
-          institute = await this.prisma.institute.create({
-            data: {
-              id: instituteId,
-              name: this.memProfile.name || 'Apex IIT-JEE & Medical Academy',
-              slug: 'apex-academy',
-              logoUrl: this.memProfile.logoUrl,
-              primaryColor: this.memProfile.primaryColor || '#1677FF',
-              address: this.memProfile.address,
-              contactPhone: this.memProfile.contactPhone,
-              contactEmail: this.memProfile.contactEmail,
-              website: this.memProfile.website,
-              description: this.memProfile.description,
-              footerText: this.memProfile.footerText,
-              signatoryName: this.memProfile.signatoryName,
-              signatoryTitle: this.memProfile.signatoryTitle,
-              academicYear: this.memProfile.academicYear || '2026-2027',
-            },
-            include: {
-              _count: {
-                select: {
-                  facultyProfiles: true,
-                  batches: true,
-                  enrollments: true,
-                },
-              },
-            },
-          });
-        } catch {
-          // ignore error
-        }
-      }
-      if (!institute) {
-        throw new NotFoundException(`Institute with ID ${instituteId} not found.`);
-      }
+      throw new NotFoundException(`Institute with ID ${instituteId} not found.`);
     }
 
     return {
@@ -367,7 +96,7 @@ export class TuitionService {
       if (!check.ok) throw new BadRequestException({ message: 'Invalid brand colour.', errors: check.errors });
       dto.primaryColor = check.branding?.accentColor ?? dto.primaryColor;
     }
-    if (!this.prisma.isConnected) return this.memUpdateBrandingProfile(instituteId, dto);
+    assertDb(this.prisma);
     const updated = await this.prisma.institute.update({
       where: { id: instituteId },
       data: {
@@ -394,7 +123,7 @@ export class TuitionService {
   // ==========================================================================
 
   async getFaculties(instituteId: string): Promise<FacultyMember[]> {
-    if (!this.prisma.isConnected) return this.memGetFaculties(instituteId);
+    assertDb(this.prisma);
     const profiles = await this.prisma.facultyProfile.findMany({
       where: { instituteId },
       include: {
@@ -439,13 +168,25 @@ export class TuitionService {
       delegatedPermissions: p.delegatedPermissions as any,
       assignedBatchesCount: p.user.teacherBatches.length,
       assignedBatches: p.user.teacherBatches,
-      weeklyLectureCount: p.user.teacherBatches.length * 4, // 4 periods per batch heuristic
+      weeklyLectureCount: p.user.teacherBatches.length * 4,
       emergencyContact: p.emergencyContact || undefined,
     }));
   }
 
   async createFaculty(instituteId: string, dto: CreateFacultyDto): Promise<FacultyMember> {
-    if (!this.prisma.isConnected) return this.memCreateFaculty(instituteId, dto);
+    assertDb(this.prisma);
+
+    // Validate batch ownership if batchIds provided
+    if (dto.batchIds && dto.batchIds.length > 0 && this.prisma.batch?.findMany) {
+      const validBatches = await this.prisma.batch.findMany({
+        where: { id: { in: dto.batchIds }, instituteId },
+        select: { id: true },
+      });
+      if (validBatches.length !== dto.batchIds.length) {
+        throw new BadRequestException('One or more batch IDs are invalid or belong to another institute.');
+      }
+    }
+
     // Check if user exists by email
     let user = await this.prisma.user.findUnique({
       where: { email: dto.email.toLowerCase().trim() },
@@ -536,7 +277,7 @@ export class TuitionService {
     facultyId: string,
     dto: UpdateFacultyDto,
   ): Promise<FacultyMember> {
-    if (!this.prisma.isConnected) return this.memUpdateFaculty(instituteId, facultyId, dto);
+    assertDb(this.prisma);
     const profile = await this.prisma.facultyProfile.findUnique({
       where: { id: facultyId },
       include: { user: true },
@@ -544,6 +285,17 @@ export class TuitionService {
 
     if (!profile || profile.instituteId !== instituteId) {
       throw new NotFoundException(`Faculty profile ${facultyId} not found.`);
+    }
+
+    // Validate batch ownership if batchIds provided
+    if (dto.batchIds && dto.batchIds.length > 0 && this.prisma.batch?.findMany) {
+      const validBatches = await this.prisma.batch.findMany({
+        where: { id: { in: dto.batchIds }, instituteId },
+        select: { id: true },
+      });
+      if (validBatches.length !== dto.batchIds.length) {
+        throw new BadRequestException('One or more batch IDs are invalid or belong to another institute.');
+      }
     }
 
     // Update user details if requested
@@ -597,7 +349,7 @@ export class TuitionService {
     payPeriod?: string,
     facultyId?: string,
   ): Promise<SalaryStatementItem[]> {
-    if (!this.prisma.isConnected) return this.memGetSalaryRecords(instituteId, payPeriod, facultyId);
+    assertDb(this.prisma);
     const records = await this.prisma.salaryRecord.findMany({
       where: {
         instituteId,
@@ -642,7 +394,6 @@ export class TuitionService {
         paymentReference: r.paymentReference || undefined,
         remarks: r.remarks || undefined,
         createdAt: r.createdAt.toISOString(),
-        updatedAt: r.updatedAt.toISOString(),
       };
     });
   }
@@ -651,7 +402,22 @@ export class TuitionService {
     instituteId: string,
     dto: GenerateSalaryRecordDto,
   ): Promise<SalaryStatementItem> {
-    if (!this.prisma.isConnected) return this.memGenerateSalaryRecord(instituteId, dto);
+    assertDb(this.prisma);
+
+    // Prevent salary overwrite when status === 'PAID'
+    const existing = await this.prisma.salaryRecord.findUnique({
+      where: {
+        instituteId_facultyId_payPeriod: {
+          instituteId,
+          facultyId: dto.facultyId,
+          payPeriod: dto.payPeriod,
+        },
+      },
+    });
+    if (existing && existing.status === 'PAID') {
+      throw new BadRequestException('Cannot modify a salary record that has already been marked as PAID.');
+    }
+
     const additions = dto.additions || 0;
     const deductions = dto.deductions || 0;
     const advances = dto.advances || 0;
@@ -721,11 +487,10 @@ export class TuitionService {
       netPayable: record.netPayable,
       status: record.status as any,
       paymentDate: record.paymentDate ? record.paymentDate.toISOString() : undefined,
-      paymentMethod: record.paymentMethod || undefined,
-      paymentReference: record.paymentReference || undefined,
+      paymentMode: record.paymentMode as any,
+      transactionRef: record.transactionRef || undefined,
       remarks: record.remarks || undefined,
       createdAt: record.createdAt.toISOString(),
-      updatedAt: record.updatedAt.toISOString(),
     };
   }
 
@@ -734,7 +499,7 @@ export class TuitionService {
     salaryRecordId: string,
     dto: RecordPaymentDto,
   ): Promise<SalaryStatementItem> {
-    if (!this.prisma.isConnected) return this.memRecordSalaryPayment(instituteId, salaryRecordId, dto);
+    assertDb(this.prisma);
     const existing = await this.prisma.salaryRecord.findUnique({
       where: { id: salaryRecordId },
     });
@@ -743,14 +508,18 @@ export class TuitionService {
       throw new NotFoundException(`Salary record ${salaryRecordId} not found.`);
     }
 
+    if (existing.status === 'PAID') {
+      throw new BadRequestException('This salary statement is already marked as PAID.');
+    }
+
     const updated = await this.prisma.salaryRecord.update({
       where: { id: salaryRecordId },
       data: {
         status: 'PAID',
-        paymentMethod: dto.paymentMethod,
-        paymentReference: dto.paymentReference,
         paymentDate: new Date(dto.paymentDate),
-        remarks: dto.remarks ? `${existing.remarks ? existing.remarks + ' | ' : ''}${dto.remarks}` : existing.remarks,
+        paymentMethod: (dto.paymentMethod || dto.paymentMode) as any,
+        paymentReference: dto.paymentReference || dto.transactionRef,
+        remarks: dto.remarks || existing.remarks,
       },
       include: {
         faculty: {
@@ -784,23 +553,22 @@ export class TuitionService {
       netPayable: updated.netPayable,
       status: updated.status as any,
       paymentDate: updated.paymentDate ? updated.paymentDate.toISOString() : undefined,
-      paymentMethod: updated.paymentMethod || undefined,
-      paymentReference: updated.paymentReference || undefined,
+      paymentMethod: (updated as any).paymentMethod || (updated as any).paymentMode || undefined,
+      paymentReference: (updated as any).paymentReference || (updated as any).transactionRef || undefined,
       remarks: updated.remarks || undefined,
       createdAt: updated.createdAt.toISOString(),
-      updatedAt: updated.updatedAt.toISOString(),
     };
   }
 
   // ==========================================================================
-  // 4. FACULTY LEAVE MANAGEMENT
+  // 4. LEAVE APPLICATIONS
   // ==========================================================================
 
   async getLeaveApplications(
     instituteId: string,
     facultyId?: string,
   ): Promise<FacultyLeaveItem[]> {
-    if (!this.prisma.isConnected) return this.memGetLeaveApplications(instituteId, facultyId);
+    assertDb(this.prisma);
     const leaves = await this.prisma.facultyLeaveApplication.findMany({
       where: {
         instituteId,
@@ -851,7 +619,7 @@ export class TuitionService {
     facultyUserId: string,
     dto: ApplyFacultyLeaveDto,
   ): Promise<FacultyLeaveItem> {
-    if (!this.prisma.isConnected) return this.memApplyLeave(instituteId, facultyUserId, dto);
+    assertDb(this.prisma);
     if (dto.totalDays <= 0) {
       throw new BadRequestException('Leave total days must be greater than zero.');
     }
@@ -907,7 +675,7 @@ export class TuitionService {
     reviewer: AuthenticatedUser,
     dto: ReviewFacultyLeaveDto,
   ): Promise<FacultyLeaveItem> {
-    if (!this.prisma.isConnected) return this.memReviewLeave(instituteId, leaveId, reviewer, dto);
+    assertDb(this.prisma);
     const leave = await this.prisma.facultyLeaveApplication.findUnique({
       where: { id: leaveId },
     });
@@ -980,7 +748,7 @@ export class TuitionService {
     batchId?: string,
     facultyId?: string,
   ): Promise<DailyTeachingDiaryEntry[]> {
-    if (!this.prisma.isConnected) return this.memGetTeachingDiaries(instituteId, batchId, facultyId);
+    assertDb(this.prisma);
     const diaries = await this.prisma.dailyTeachingDiary.findMany({
       where: {
         instituteId,
@@ -1023,7 +791,7 @@ export class TuitionService {
   }
 
   async getTeachingDiaryOverview(instituteId: string): Promise<TeachingDiaryOverview> {
-    if (!this.prisma.isConnected) return this.memGetTeachingDiaryOverview(instituteId);
+    assertDb(this.prisma);
     const now = new Date();
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
@@ -1088,7 +856,18 @@ export class TuitionService {
     facultyUserId: string,
     dto: CreateTeachingDiaryDto,
   ): Promise<DailyTeachingDiaryEntry> {
-    if (!this.prisma.isConnected) return this.memCreateTeachingDiary(instituteId, facultyUserId, dto);
+    assertDb(this.prisma);
+
+    // Validate batch ownership if batchId provided
+    if (dto.batchId && this.prisma.batch?.findFirst) {
+      const batch = await this.prisma.batch.findFirst({
+        where: { id: dto.batchId, instituteId },
+      });
+      if (!batch) {
+        throw new NotFoundException(`Batch with ID ${dto.batchId} not found.`);
+      }
+    }
+
     const diary = await this.prisma.dailyTeachingDiary.create({
       data: {
         instituteId,
@@ -1149,7 +928,7 @@ export class TuitionService {
     user: AuthenticatedUser,
     dto: UpdateTeachingDiaryDto,
   ): Promise<DailyTeachingDiaryEntry> {
-    if (!this.prisma.isConnected) return this.memUpdateTeachingDiary(instituteId, diaryId, user, dto);
+    assertDb(this.prisma);
     const existing = await this.prisma.dailyTeachingDiary.findUnique({
       where: { id: diaryId },
     });
@@ -1225,7 +1004,7 @@ export class TuitionService {
     instituteId: string,
     batchId?: string,
   ): Promise<StudyMaterialItem[]> {
-    if (!this.prisma.isConnected) return this.memGetStudyMaterials(instituteId, batchId);
+    assertDb(this.prisma);
     const materials = await this.prisma.studyMaterial.findMany({
       where: {
         instituteId,
@@ -1265,14 +1044,7 @@ export class TuitionService {
     user: AuthenticatedUser,
     batchId?: string,
   ): Promise<StudyMaterialItem[]> {
-    if (!this.prisma.isConnected) {
-      return this.memMaterials.filter((m) => {
-        if (!m.isStudentVisible || m.status !== 'PUBLISHED') return false;
-        if (batchId && m.batchId !== batchId) return false;
-        return true;
-      });
-    }
-
+    assertDb(this.prisma);
     const enrollments = await this.prisma.enrollment.findMany({
       where: {
         studentId: user.id,
@@ -1328,7 +1100,18 @@ export class TuitionService {
     facultyUserId: string,
     dto: CreateStudyMaterialDto,
   ): Promise<StudyMaterialItem> {
-    if (!this.prisma.isConnected) return this.memCreateStudyMaterial(instituteId, facultyUserId, dto);
+    assertDb(this.prisma);
+
+    // Validate batch ownership if batchId provided
+    if (dto.batchId && this.prisma.batch?.findFirst) {
+      const batch = await this.prisma.batch.findFirst({
+        where: { id: dto.batchId, instituteId },
+      });
+      if (!batch) {
+        throw new NotFoundException(`Batch with ID ${dto.batchId} not found.`);
+      }
+    }
+
     const created = await this.prisma.studyMaterial.create({
       data: {
         instituteId,
@@ -1445,41 +1228,43 @@ export class TuitionService {
         }
 
         const json = await response.json();
-        const fileUrl = json.url || json.data;
-        if (!fileUrl) {
-          throw new Error('Worker response missing valid download URL');
+        const uploadedUrl = json.data || json.url;
+        if (!uploadedUrl) {
+          throw new Error('Worker response did not include a valid data/url field.');
         }
 
-        const sizeInBytes = json.size || buffer.length;
         return {
-          url: fileUrl,
-          data: json.data || fileUrl,
+          url: uploadedUrl,
+          data: uploadedUrl,
           fileName: json.filename || safeFilename,
-          fileSize: formatBytes(sizeInBytes),
-          rawSize: sizeInBytes,
+          fileSize: formatBytes(json.size || buffer.length),
+          rawSize: json.size || buffer.length,
           mediaType: json.media_type || mime,
         };
       } catch (err: any) {
         clearTimeout(timeoutId);
         lastError = err;
         if (attempt < 3) {
-          const jitter = Math.floor(Math.random() * 400);
-          await new Promise((r) => setTimeout(r, 1000 * attempt + jitter));
+          const backoff = 1000 * Math.pow(2, attempt - 1) + Math.random() * 500;
+          await new Promise((r) => setTimeout(r, backoff));
         }
       }
     }
 
-    throw new BadGatewayException(
-      `Failed to upload to media CDN after 3 attempts: ${lastError?.message || 'Upstream timeout'}`,
+    throw new BadRequestException(
+      `Media upload proxy failed after 3 attempts: ${lastError?.message || 'Upstream service error'}`,
     );
   }
 
   // ==========================================================================
-  // 7. STUDENT FEES & FEE REMINDERS
+  // 7. STUDENT FEE MANAGEMENT
   // ==========================================================================
 
-  async getFeeRecords(instituteId: string, batchId?: string): Promise<StudentFeeItem[]> {
-    if (!this.prisma.isConnected) return this.memGetFeeRecords(instituteId, batchId);
+  async getFeeRecords(
+    instituteId: string,
+    batchId?: string,
+  ): Promise<StudentFeeItem[]> {
+    assertDb(this.prisma);
     const fees = await this.prisma.studentFeeRecord.findMany({
       where: {
         instituteId,
@@ -1497,10 +1282,6 @@ export class TuitionService {
           },
         },
         batch: { select: { id: true, name: true } },
-        reminders: {
-          orderBy: { sentAt: 'desc' },
-          take: 1,
-        },
         _count: {
           select: { reminders: true },
         },
@@ -1522,15 +1303,14 @@ export class TuitionService {
       balanceDue: Math.max(0, f.totalAmount - f.paidAmount),
       dueDate: f.dueDate.toISOString(),
       status: f.status as any,
-      academicYear: f.academicYear || '2026-2027',
-      lastReminderSentAt: f.reminders[0]?.sentAt ? f.reminders[0].sentAt.toISOString() : undefined,
+      academicYear: f.academicYear,
       reminderCount: f._count.reminders,
       createdAt: f.createdAt.toISOString(),
     }));
   }
 
   async getFeeSummary(instituteId: string): Promise<FeeSummaryOverview> {
-    if (!this.prisma.isConnected) return this.memGetFeeSummary(instituteId);
+    assertDb(this.prisma);
     const fees = await this.prisma.studentFeeRecord.findMany({
       where: { instituteId },
     });
@@ -1567,7 +1347,18 @@ export class TuitionService {
     instituteId: string,
     dto: CreateStudentFeeRecordDto,
   ): Promise<StudentFeeItem> {
-    if (!this.prisma.isConnected) return this.memCreateFeeRecord(instituteId, dto);
+    assertDb(this.prisma);
+
+    // Validate batch ownership if batchId provided
+    if (dto.batchId && this.prisma.batch?.findFirst) {
+      const batch = await this.prisma.batch.findFirst({
+        where: { id: dto.batchId, instituteId },
+      });
+      if (!batch) {
+        throw new NotFoundException(`Batch with ID ${dto.batchId} not found.`);
+      }
+    }
+
     const created = await this.prisma.studentFeeRecord.create({
       data: {
         instituteId,
@@ -1620,7 +1411,7 @@ export class TuitionService {
     senderUserId: string,
     dto: DispatchFeeReminderDto,
   ): Promise<{ success: boolean; message: string; reminderId: string }> {
-    if (!this.prisma.isConnected) return this.memDispatchFeeReminder(instituteId, senderUserId, dto);
+    assertDb(this.prisma);
     const fee = await this.prisma.studentFeeRecord.findUnique({
       where: { id: dto.feeRecordId },
       include: {
@@ -1636,588 +1427,61 @@ export class TuitionService {
     const defaultMsg = `Dear ${fee.student.fullName}, your tuition fee installment for "${fee.feeTitle}" (Balance: ₹${balance.toLocaleString()}) was due on ${fee.dueDate.toLocaleDateString()}. Please clear at earliest convenience.`;
     const message = dto.customMessage || defaultMsg;
 
-    const reminder = await this.prisma.studentFeeReminder.create({
-      data: {
-        feeRecordId: fee.id,
-        studentId: fee.studentId,
-        channel: dto.channel,
-        message,
-        status: 'SENT',
-        sentById: senderUserId,
-      },
-    });
+    const dedupeKey = `${dto.channel}:${new Date().toISOString().slice(0, 10)}`;
+
+    if (this.prisma.studentFeeReminder?.findUnique) {
+      const existingReminder = await this.prisma.studentFeeReminder.findUnique({
+        where: {
+          feeRecordId_dedupeKey: {
+            feeRecordId: fee.id,
+            dedupeKey,
+          },
+        },
+      });
+      if (existingReminder) {
+        throw new ConflictException(`A reminder via ${dto.channel} has already been dispatched today for this fee record.`);
+      }
+    }
+
+    const reminderStatus = dto.channel === 'IN_APP' ? 'DELIVERED' : 'RECORDED';
+
+    const performCreate = async (tx: any) => {
+      const created = await tx.studentFeeReminder.create({
+        data: {
+          feeRecordId: fee.id,
+          studentId: fee.studentId,
+          channel: dto.channel,
+          message,
+          status: reminderStatus,
+          sentById: senderUserId,
+          dedupeKey,
+        },
+      });
+
+      if (dto.channel === 'IN_APP' && tx.notification?.create) {
+        await tx.notification.create({
+          data: {
+            instituteId,
+            userId: fee.studentId,
+            title: 'Fee Payment Reminder',
+            message,
+            type: 'FEE_REMINDER',
+            link: '/student/fees',
+          },
+        });
+      }
+
+      return created;
+    };
+
+    const reminder = this.prisma.$transaction
+      ? await this.prisma.$transaction(performCreate)
+      : await performCreate(this.prisma);
 
     return {
       success: true,
       message: `Reminder sent successfully via ${dto.channel} to ${fee.student.fullName}`,
       reminderId: reminder.id,
-    };
-  }
-
-
-  // IN-MEMORY FALLBACK METHODS
-  // ==========================================================================
-  // 1. TUITION PROFILE & BRANDING
-  // ==========================================================================
-
-  private async memGetBrandingProfile(instituteId: string): Promise<TuitionBrandingProfile> {
-    if (this.prisma.isConnected) {
-      try {
-        let institute = await this.prisma.institute.findUnique({
-          where: { id: instituteId },
-          include: {
-            _count: {
-              select: { facultyProfiles: true, batches: true, enrollments: true },
-            },
-          },
-        });
-        if (institute) {
-          return {
-            id: institute.id,
-            name: institute.name,
-            slug: institute.slug,
-            logoUrl: institute.logoUrl || undefined,
-            primaryColor: institute.primaryColor || '#1677FF',
-            address: institute.address || undefined,
-            contactPhone: institute.contactPhone || undefined,
-            contactEmail: institute.contactEmail || undefined,
-            website: institute.website || undefined,
-            description: institute.description || undefined,
-            footerText: institute.footerText || undefined,
-            signatoryName: institute.signatoryName || undefined,
-            signatoryTitle: institute.signatoryTitle || undefined,
-            academicYear: institute.academicYear || '2026-2027',
-            ownerId: institute.ownerId || undefined,
-            totalFaculty: institute._count.facultyProfiles,
-            totalBatches: institute._count.batches,
-            totalStudents: institute._count.enrollments,
-          };
-        }
-      } catch {
-        // Fall back to memory store
-      }
-    }
-    return this.memProfile;
-  }
-
-  private async memUpdateBrandingProfile(
-    instituteId: string,
-    dto: UpdateTuitionProfileDto,
-  ): Promise<TuitionBrandingProfile> {
-    if (this.prisma.isConnected) {
-      try {
-        await this.prisma.institute.update({
-          where: { id: instituteId },
-          data: { ...dto },
-        });
-        return this.getBrandingProfile(instituteId);
-      } catch {
-        // Fall back to memory store
-      }
-    }
-
-    this.memProfile = {
-      ...this.memProfile,
-      ...(dto.name ? { name: dto.name } : {}),
-      ...(dto.logoUrl !== undefined ? { logoUrl: dto.logoUrl } : {}),
-      ...(dto.primaryColor ? { primaryColor: dto.primaryColor } : {}),
-      ...(dto.address !== undefined ? { address: dto.address } : {}),
-      ...(dto.contactPhone !== undefined ? { contactPhone: dto.contactPhone } : {}),
-      ...(dto.contactEmail !== undefined ? { contactEmail: dto.contactEmail } : {}),
-      ...(dto.website !== undefined ? { website: dto.website } : {}),
-      ...(dto.description !== undefined ? { description: dto.description } : {}),
-      ...(dto.footerText !== undefined ? { footerText: dto.footerText } : {}),
-      ...(dto.signatoryName !== undefined ? { signatoryName: dto.signatoryName } : {}),
-      ...(dto.signatoryTitle !== undefined ? { signatoryTitle: dto.signatoryTitle } : {}),
-      ...(dto.academicYear ? { academicYear: dto.academicYear } : {}),
-    };
-    return this.memProfile;
-  }
-
-  // ==========================================================================
-  // 2. FACULTY MANAGEMENT & WORKLOAD
-  // ==========================================================================
-
-  private async memGetFaculties(instituteId: string): Promise<FacultyMember[]> {
-    if (this.prisma.isConnected) {
-      try {
-        const profiles = await this.prisma.facultyProfile.findMany({
-          where: { instituteId },
-          include: {
-            user: {
-              select: {
-                id: true,
-                fullName: true,
-                email: true,
-                phone: true,
-                avatarUrl: true,
-                teacherBatches: {
-                  where: { instituteId },
-                  select: { id: true, name: true, code: true, subject: true, gradeLevel: true },
-                },
-              },
-            },
-          },
-          orderBy: { createdAt: 'desc' },
-        });
-        if (profiles.length > 0) {
-          return profiles.map((p) => ({
-            id: p.id,
-            userId: p.userId,
-            staffId: p.staffId,
-            fullName: p.user.fullName,
-            email: p.user.email,
-            phone: p.user.phone || undefined,
-            avatarUrl: p.user.avatarUrl || undefined,
-            designation: p.designation,
-            employmentStatus: p.employmentStatus as any,
-            compensationType: p.compensationType as any,
-            baseSalary: p.baseSalary,
-            hourlyRate: p.hourlyRate,
-            joiningDate: p.joiningDate.toISOString(),
-            assignedSubjects: p.assignedSubjects,
-            delegatedPermissions: p.delegatedPermissions as any,
-            assignedBatchesCount: p.user.teacherBatches.length,
-            assignedBatches: p.user.teacherBatches,
-            weeklyLectureCount: p.user.teacherBatches.length * 4,
-            emergencyContact: p.emergencyContact || undefined,
-          }));
-        }
-      } catch {
-        // Fall back to memory store
-      }
-    }
-    return this.memFaculties;
-  }
-
-  private async memCreateFaculty(instituteId: string, dto: CreateFacultyDto): Promise<FacultyMember> {
-    const newMember: FacultyMember = {
-      id: `fac_prof_${Date.now()}`,
-      userId: `usr_fac_${Date.now()}`,
-      staffId: dto.staffId,
-      fullName: dto.fullName,
-      email: dto.email,
-      phone: dto.phone,
-      designation: dto.designation,
-      employmentStatus: 'ACTIVE',
-      compensationType: dto.compensationType,
-      baseSalary: dto.baseSalary,
-      hourlyRate: dto.hourlyRate || 0,
-      joiningDate: new Date().toISOString(),
-      assignedSubjects: dto.assignedSubjects,
-      delegatedPermissions: dto.delegatedPermissions || [],
-      assignedBatchesCount: dto.batchIds?.length || 1,
-      weeklyLectureCount: (dto.batchIds?.length || 1) * 4,
-    };
-
-    if (this.prisma.isConnected) {
-      try {
-        let user = await this.prisma.user.findUnique({
-          where: { email: dto.email.toLowerCase().trim() },
-        });
-        if (!user) {
-          user = await this.prisma.user.create({
-            data: {
-              email: dto.email.toLowerCase().trim(),
-              fullName: dto.fullName,
-              phone: dto.phone,
-              passwordHash: '$2b$10$epOzJ9GvP2uC7P5vS89tquPqfR8LqK4nNsm6oKj3F8B3h0O1vjY7i',
-              role: 'TEACHER',
-            },
-          });
-        }
-        await this.prisma.facultyProfile.create({
-          data: {
-            instituteId,
-            userId: user.id,
-            staffId: dto.staffId,
-            designation: dto.designation,
-            compensationType: dto.compensationType,
-            baseSalary: dto.baseSalary,
-            hourlyRate: dto.hourlyRate || 0,
-            assignedSubjects: dto.assignedSubjects,
-            delegatedPermissions: dto.delegatedPermissions || [],
-          },
-        });
-      } catch {
-        // Handled via memory
-      }
-    }
-
-    this.memFaculties.unshift(newMember);
-    return newMember;
-  }
-
-  private async memUpdateFaculty(
-    instituteId: string,
-    facultyId: string,
-    dto: UpdateFacultyDto,
-  ): Promise<FacultyMember> {
-    const found = this.memFaculties.find((f) => f.id === facultyId);
-    if (!found) throw new NotFoundException(`Faculty ${facultyId} not found`);
-    const updated = { ...found, ...(dto as any) };
-    this.memFaculties = this.memFaculties.map((f) => (f.id === facultyId ? updated : f));
-    return updated;
-  }
-
-  // ==========================================================================
-  // 3. SALARY & PAYROLL RECORDS
-  // ==========================================================================
-
-  private async memGetSalaryRecords(
-    instituteId: string,
-    payPeriod?: string,
-    facultyId?: string,
-  ): Promise<SalaryStatementItem[]> {
-    let result = this.memSalaries;
-    if (payPeriod) result = result.filter((s) => s.payPeriod === payPeriod);
-    if (facultyId) result = result.filter((s) => s.facultyId === facultyId);
-    return result;
-  }
-
-  private async memGenerateSalaryRecord(
-    instituteId: string,
-    dto: GenerateSalaryRecordDto,
-  ): Promise<SalaryStatementItem> {
-    const additions = dto.additions || 0;
-    const deductions = dto.deductions || 0;
-    const advances = dto.advances || 0;
-    const netPayable = Math.max(0, dto.baseAmount + additions - deductions - advances);
-
-    const faculty = this.memFaculties.find((f) => f.userId === dto.facultyId) || this.memFaculties[0];
-
-    const record: SalaryStatementItem = {
-      id: `sal_${Date.now()}`,
-      instituteId,
-      facultyId: dto.facultyId,
-      facultyName: faculty.fullName,
-      staffId: faculty.staffId,
-      designation: faculty.designation,
-      payPeriod: dto.payPeriod,
-      compensationModel: dto.compensationModel,
-      classesConducted: dto.classesConducted || 20,
-      baseAmount: dto.baseAmount,
-      additions,
-      deductions,
-      advances,
-      netPayable,
-      status: 'DRAFT',
-      remarks: dto.remarks,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    this.memSalaries = this.memSalaries.filter(
-      (s) => !(s.facultyId === dto.facultyId && s.payPeriod === dto.payPeriod),
-    );
-    this.memSalaries.unshift(record);
-    return record;
-  }
-
-  private async memRecordSalaryPayment(
-    instituteId: string,
-    salaryRecordId: string,
-    dto: RecordPaymentDto,
-  ): Promise<SalaryStatementItem> {
-    const existing = this.memSalaries.find((s) => s.id === salaryRecordId);
-    if (!existing) throw new NotFoundException(`Salary record ${salaryRecordId} not found`);
-
-    const updated: SalaryStatementItem = {
-      ...existing,
-      status: 'PAID',
-      paymentMethod: dto.paymentMethod,
-      paymentReference: dto.paymentReference,
-      paymentDate: dto.paymentDate,
-      remarks: dto.remarks ? `${existing.remarks ? existing.remarks + ' | ' : ''}${dto.remarks}` : existing.remarks,
-      updatedAt: new Date().toISOString(),
-    };
-
-    this.memSalaries = this.memSalaries.map((s) => (s.id === salaryRecordId ? updated : s));
-    return updated;
-  }
-
-  // ==========================================================================
-  // 4. FACULTY LEAVE MANAGEMENT
-  // ==========================================================================
-
-  private async memGetLeaveApplications(
-    instituteId: string,
-    facultyId?: string,
-  ): Promise<FacultyLeaveItem[]> {
-    if (facultyId) {
-      return this.memLeaves.filter((l) => l.facultyId === facultyId);
-    }
-    return this.memLeaves;
-  }
-
-  private async memApplyLeave(
-    instituteId: string,
-    facultyUserId: string,
-    dto: ApplyFacultyLeaveDto,
-  ): Promise<FacultyLeaveItem> {
-    if (dto.totalDays <= 0) {
-      throw new BadRequestException('Leave total days must be greater than zero.');
-    }
-
-    const faculty = this.memFaculties.find((f) => f.userId === facultyUserId) || this.memFaculties[0];
-    const sub = this.memFaculties.find((f) => f.userId === dto.substituteFacultyId);
-
-    const leave: FacultyLeaveItem = {
-      id: `leave_${Date.now()}`,
-      instituteId,
-      facultyId: facultyUserId,
-      facultyName: faculty.fullName,
-      staffId: faculty.staffId,
-      leaveType: dto.leaveType,
-      startDate: dto.startDate,
-      endDate: dto.endDate,
-      totalDays: dto.totalDays,
-      reason: dto.reason,
-      attachmentUrl: dto.attachmentUrl,
-      status: 'PENDING',
-      substituteFacultyId: dto.substituteFacultyId,
-      substituteFacultyName: sub?.fullName,
-      createdAt: new Date().toISOString(),
-    };
-
-    this.memLeaves.unshift(leave);
-    return leave;
-  }
-
-  private async memReviewLeave(
-    instituteId: string,
-    leaveId: string,
-    reviewer: AuthenticatedUser,
-    dto: ReviewFacultyLeaveDto,
-  ): Promise<FacultyLeaveItem> {
-    const leave = this.memLeaves.find((l) => l.id === leaveId);
-    if (!leave) throw new NotFoundException(`Leave ${leaveId} not found`);
-
-    if (leave.facultyId === reviewer.id) {
-      throw new BadRequestException('Faculty cannot review or approve their own leave application.');
-    }
-
-    const sub = this.memFaculties.find((f) => f.userId === dto.substituteFacultyId);
-
-    const updated: FacultyLeaveItem = {
-      ...leave,
-      status: dto.status as any,
-      reviewerRemarks: dto.reviewerRemarks,
-      reviewedById: reviewer.id,
-      reviewerName: reviewer.fullName,
-      reviewedAt: new Date().toISOString(),
-      substituteFacultyId: dto.substituteFacultyId || leave.substituteFacultyId,
-      substituteFacultyName: sub?.fullName || leave.substituteFacultyName,
-    };
-
-    this.memLeaves = this.memLeaves.map((l) => (l.id === leaveId ? updated : l));
-    return updated;
-  }
-
-  // ==========================================================================
-  // 5. DAILY TEACHING DIARY (LESSON JOURNAL)
-  // ==========================================================================
-
-  private async memGetTeachingDiaries(
-    instituteId: string,
-    batchId?: string,
-    facultyId?: string,
-  ): Promise<DailyTeachingDiaryEntry[]> {
-    let list = this.memDiaries;
-    if (batchId) list = list.filter((d) => d.batchId === batchId);
-    if (facultyId) list = list.filter((d) => d.facultyId === facultyId);
-    return list;
-  }
-
-  private async memGetTeachingDiaryOverview(instituteId: string): Promise<TeachingDiaryOverview> {
-    const subjectMap: Record<string, number> = {};
-    this.memDiaries.forEach((d) => {
-      subjectMap[d.subject] = (subjectMap[d.subject] || 0) + 1;
-    });
-
-    return {
-      totalEntriesThisMonth: this.memDiaries.length,
-      batchesCovered: new Set(this.memDiaries.map((d) => d.batchId)).size,
-      activeFacultyCount: new Set(this.memDiaries.map((d) => d.facultyId)).size,
-      recentEntries: this.memDiaries.slice(0, 10),
-      subjectCoverageMap: subjectMap,
-    };
-  }
-
-  private async memCreateTeachingDiary(
-    instituteId: string,
-    facultyUserId: string,
-    dto: CreateTeachingDiaryDto,
-  ): Promise<DailyTeachingDiaryEntry> {
-    const faculty = this.memFaculties.find((f) => f.userId === facultyUserId) || this.memFaculties[0];
-    const newEntry: DailyTeachingDiaryEntry = {
-      id: `diary_${Date.now()}`,
-      instituteId,
-      batchId: dto.batchId,
-      batchName: 'JEE Advanced — Mathematics Alpha',
-      batchCode: 'JEE-MTH-ADV',
-      facultyId: facultyUserId,
-      facultyName: faculty.fullName,
-      lessonDate: dto.lessonDate,
-      sessionTime: dto.sessionTime || '09:00 - 10:30',
-      subject: dto.subject,
-      chapterTitle: dto.chapterTitle,
-      conceptsTaught: dto.conceptsTaught,
-      learningObjectives: dto.learningObjectives,
-      teachingMethods: dto.teachingMethods || 'LECTURE',
-      durationMinutes: dto.durationMinutes || 90,
-      homeworkAssigned: dto.homeworkAssigned,
-      referenceLinks: dto.referenceLinks || [],
-      attachmentUrl: dto.attachmentUrl,
-      followUpPlan: dto.followUpPlan,
-      status: dto.status || 'PUBLISHED',
-      audience: dto.audience || 'BATCH',
-      isCovered: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    this.memDiaries.unshift(newEntry);
-    return newEntry;
-  }
-
-  private async memUpdateTeachingDiary(
-    instituteId: string,
-    diaryId: string,
-    user: AuthenticatedUser,
-    dto: UpdateTeachingDiaryDto,
-  ): Promise<DailyTeachingDiaryEntry> {
-    const existing = this.memDiaries.find((d) => d.id === diaryId);
-    if (!existing) throw new NotFoundException(`Teaching diary ${diaryId} not found`);
-
-    if (user.role === 'TEACHER' && existing.facultyId !== user.id) {
-      throw new ForbiddenException('You can only edit your own teaching diary entries.');
-    }
-
-    const updated: DailyTeachingDiaryEntry = {
-      ...existing,
-      ...(dto as any),
-      updatedAt: new Date().toISOString(),
-    };
-
-    this.memDiaries = this.memDiaries.map((d) => (d.id === diaryId ? updated : d));
-    return updated;
-  }
-
-  // ==========================================================================
-  // 6. STUDY MATERIAL & NOTES
-  // ==========================================================================
-
-  private async memGetStudyMaterials(instituteId: string, batchId?: string): Promise<StudyMaterialItem[]> {
-    if (batchId) {
-      return this.memMaterials.filter((m) => m.batchId === batchId);
-    }
-    return this.memMaterials;
-  }
-
-  private async memCreateStudyMaterial(
-    instituteId: string,
-    facultyUserId: string,
-    dto: CreateStudyMaterialDto,
-  ): Promise<StudyMaterialItem> {
-    const faculty = this.memFaculties.find((f) => f.userId === facultyUserId) || this.memFaculties[0];
-    const created: StudyMaterialItem = {
-      id: `mat_${Date.now()}`,
-      instituteId,
-      batchId: dto.batchId,
-      batchName: 'JEE Advanced — Mathematics Alpha',
-      facultyId: facultyUserId,
-      facultyName: faculty.fullName,
-      title: dto.title,
-      category: dto.category,
-      subject: dto.subject,
-      chapter: dto.chapter,
-      content: dto.content,
-      fileUrl: dto.fileUrl || 'https://assets.padhaipilot.com/docs/sample.pdf',
-      fileName: dto.fileName || `${dto.title.replace(/\s+/g, '_')}.pdf`,
-      fileSize: dto.fileSize || '2.4 MB',
-      status: dto.status || 'PUBLISHED',
-      isStudentVisible: dto.isStudentVisible ?? true,
-      downloadCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    this.memMaterials.unshift(created);
-    return created;
-  }
-
-  // ==========================================================================
-  // 7. STUDENT FEES & FEE REMINDERS
-  // ==========================================================================
-
-  private async memGetFeeRecords(instituteId: string, batchId?: string): Promise<StudentFeeItem[]> {
-    if (batchId) {
-      return this.memFees.filter((f) => f.batchId === batchId);
-    }
-    return this.memFees;
-  }
-
-  private async memGetFeeSummary(instituteId: string): Promise<FeeSummaryOverview> {
-    let totalReceivable = 0;
-    let totalCollected = 0;
-    let overdueCount = 0;
-    const now = new Date();
-
-    this.memFees.forEach((f) => {
-      totalReceivable += f.totalAmount;
-      totalCollected += f.paidAmount;
-      if (f.status === 'OVERDUE' || (f.balanceDue > 0 && new Date(f.dueDate) < now)) {
-        overdueCount++;
-      }
-    });
-
-    return {
-      totalReceivable,
-      totalCollected,
-      totalPending: Math.max(0, totalReceivable - totalCollected),
-      overdueCount,
-      remindersSentThisMonth: 12,
-    };
-  }
-
-  private async memCreateFeeRecord(
-    instituteId: string,
-    dto: CreateStudentFeeRecordDto,
-  ): Promise<StudentFeeItem> {
-    const created: StudentFeeItem = {
-      id: `fee_${Date.now()}`,
-      instituteId,
-      studentId: dto.studentId,
-      studentName: 'Student Name',
-      rollNumber: 'JEE-26-099',
-      batchId: dto.batchId,
-      feeTitle: dto.feeTitle,
-      totalAmount: dto.totalAmount,
-      paidAmount: dto.paidAmount || 0,
-      balanceDue: Math.max(0, dto.totalAmount - (dto.paidAmount || 0)),
-      dueDate: dto.dueDate,
-      status: (dto.paidAmount || 0) >= dto.totalAmount ? 'PAID' : (dto.paidAmount || 0) > 0 ? 'PARTIAL' : 'PENDING',
-      academicYear: dto.academicYear || '2026-2027',
-      reminderCount: 0,
-      createdAt: new Date().toISOString(),
-    };
-
-    this.memFees.unshift(created);
-    return created;
-  }
-
-  private async memDispatchFeeReminder(
-    instituteId: string,
-    senderUserId: string,
-    dto: DispatchFeeReminderDto,
-  ): Promise<{ success: boolean; message: string; reminderId: string }> {
-    const fee = this.memFees.find((f) => f.id === dto.feeRecordId);
-    const studentName = fee ? fee.studentName : 'Student';
-    return {
-      success: true,
-      message: `Reminder sent successfully via ${dto.channel} to ${studentName}`,
-      reminderId: `rem_${Date.now()}`,
     };
   }
 }

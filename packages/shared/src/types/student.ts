@@ -19,7 +19,7 @@ export interface StudentFeeSummary {
   totalFees: number;
   paidAmount: number;
   balanceDue: number;
-  status: 'PAID' | 'PARTIAL' | 'OVERDUE';
+  status: 'PAID' | 'PARTIAL' | 'OVERDUE' | 'PENDING';
   receipts: Array<{
     id: string;
     title: string;
@@ -165,6 +165,8 @@ export interface StudentProfile {
 export interface StudentTestQuestion {
   id: string;
   text: string;
+  /** MCQ questions carry options; TEXT questions are graded manually by faculty. */
+  type?: 'MCQ' | 'TEXT';
   options: string[];
   marks: number;
 }
@@ -215,4 +217,15 @@ export interface StudentDashboard {
   upcomingAssignments: StudentAssignmentItem[];
   announcements: StudentAnnouncementItem[];
   timetable: StudentTimetableSlot[];
+}
+
+/** Response of POST /student/join-batch. `token`/`user` are a fresh session scoped to the joined institute. */
+export interface StudentJoinBatchResult {
+  success: boolean;
+  message: string;
+  instituteName: string;
+  batchName: string;
+  alreadyEnrolled?: boolean;
+  token?: string;
+  user?: { id: string; email: string; fullName: string; role: string; instituteId: string; instituteName: string };
 }

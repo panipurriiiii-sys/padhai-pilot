@@ -392,3 +392,5 @@ export function calculateGradeAndPercentage(
 export * from './features.js';
 export * from './tuition.js';
 export * from './student.js';
+
+export * from './analytics.js';

@@ -15,7 +15,7 @@ import { TeacherService } from './teacher.service.js';
 import { AuthGuard } from '../common/guards/auth.guard.js';
 import { RolesGuard } from '../common/guards/roles.guard.js';
 import { Roles } from '../common/decorators/roles.decorator.js';
-import { STAFF_ROLES, MANAGEMENT_ROLES, STUDENT_ROLES, isManagement } from '../common/security/roles.js';
+import { STAFF_ROLES } from '../common/security/roles.js';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import type { AuthenticatedUser } from '../common/types.js';
 
@@ -48,7 +48,7 @@ export class TeacherController {
   @Post('batches')
   @HttpCode(HttpStatus.CREATED)
   createBatch(
-    @Body() body: { name: string; code: string; subject: string; gradeLevel: string; room?: string },
+    @Body() body: { name: string; code?: string; subject: string; gradeLevel?: string; room?: string },
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.teacherService.createBatch(body, user);
@@ -237,5 +237,24 @@ export class TeacherController {
   @Get('reports')
   getReports(@CurrentUser() user: AuthenticatedUser) {
     return this.teacherService.getReports(user);
+  }
+
+  // 11. Academic Queries & Replies
+  @Get('queries')
+  getQueries(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('status') status?: string,
+    @Query('batchId') batchId?: string,
+  ) {
+    return this.teacherService.getQueries(user, { status, batchId });
+  }
+
+  @Post('queries/:id/reply')
+  replyToQuery(
+    @Param('id') queryId: string,
+    @Body('body') body: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.teacherService.replyToQuery(queryId, body, user);
   }
 }

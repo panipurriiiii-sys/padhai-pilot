@@ -13,4 +13,6 @@ export interface AuthenticatedUser {
   instituteId: string;
   instituteName: string;
   avatarUrl?: string;
+  /** User.tokenVersion at issue time; checked on every request (see AccessService). */
+  tv?: number;
 }
