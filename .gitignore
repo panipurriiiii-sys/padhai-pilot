@@ -40,3 +40,6 @@ Thumbs.db
 # Temporary / scratch scripts
 extract_palette.py
 palette_analysis.json
+
+# Local dev harness (embedded PostgreSQL data, generated secrets, logs)
+.local/
