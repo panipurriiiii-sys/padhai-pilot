@@ -34,6 +34,7 @@ import type {
   StudentFeeItem,
   FeeSummaryOverview,
 } from '@padhai-pilot/shared';
+import { validateInstituteBranding } from '@padhai-pilot/shared';
 
 @Injectable()
 export class TuitionService {
@@ -360,6 +361,12 @@ export class TuitionService {
     instituteId: string,
     dto: UpdateTuitionProfileDto,
   ): Promise<TuitionBrandingProfile> {
+    if (dto.primaryColor) {
+      // Institute accent colours are validated server-side (hex only + WCAG contrast); see docs/global-design-system.md.
+      const check = validateInstituteBranding({ accentColor: dto.primaryColor });
+      if (!check.ok) throw new BadRequestException({ message: 'Invalid brand colour.', errors: check.errors });
+      dto.primaryColor = check.branding?.accentColor ?? dto.primaryColor;
+    }
     if (!this.prisma.isConnected) return this.memUpdateBrandingProfile(instituteId, dto);
     const updated = await this.prisma.institute.update({
       where: { id: instituteId },

@@ -65,7 +65,9 @@ export function isOriginAllowed(origin: string | undefined): boolean {
 }
 
 export const CORS_METHODS = ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'];
-export const CORS_HEADERS = ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'X-CSRF-Token'];
+export const CORS_HEADERS = ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'X-CSRF-Token', 'If-None-Match'];
+/** Response headers browsers may read cross-origin (theme revision signalling + ETag). */
+export const CORS_EXPOSED_HEADERS = ['X-Theme-Revision', 'ETag'];
 
 export const corsOptions = {
   origin: (origin: string | undefined, cb: (err: Error | null, allow?: boolean) => void) =>
@@ -73,4 +75,5 @@ export const corsOptions = {
   credentials: true,
   methods: CORS_METHODS,
   allowedHeaders: CORS_HEADERS,
+  exposedHeaders: CORS_EXPOSED_HEADERS,
 };

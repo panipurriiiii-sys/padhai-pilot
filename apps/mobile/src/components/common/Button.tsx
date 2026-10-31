@@ -1,20 +1,16 @@
 import React from 'react';
-import {
-  Pressable,
-  ActivityIndicator,
-  StyleSheet,
-  StyleProp,
-  ViewStyle,
-  TextStyle,
-  Text,
-} from 'react-native';
+import { ActivityIndicator, Pressable, StyleProp, Text, TextStyle, View, ViewStyle } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
+import { electricGlow, paperShadow } from '../../theme/shadows';
+import { Icon, IconName } from './Icon';
 
 export interface ButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline';
+  /** primary = .btn-primary, secondary = .btn-secondary, subtle = .btn-subtle */
+  variant?: 'primary' | 'secondary' | 'subtle' | 'ghost' | 'danger' | 'outline';
   size?: 'md' | 'lg' | 'sm' | 'small';
+  icon?: IconName;
   loading?: boolean;
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
@@ -27,109 +23,74 @@ export const Button: React.FC<ButtonProps> = ({
   onPress,
   variant = 'primary',
   size = 'md',
+  icon,
   loading = false,
   disabled = false,
   style,
   textStyle,
   accessibilityLabel,
 }) => {
-  const { colors, spacing, radii, typography } = useTheme();
+  const { colors, radii, typography, isDark } = useTheme();
+  const small = size === 'sm' || size === 'small';
 
-  const minHeight = size === 'lg' ? 52 : size === 'sm' || size === 'small' ? 38 : 46;
-  const paddingHorizontal = size === 'lg' ? spacing.xl : size === 'sm' || size === 'small' ? spacing.md : spacing.lg;
+  const palette = {
+    primary: { bg: colors.primary, fg: '#FFFFFF', border: colors.primary, shadow: electricGlow() },
+    secondary: { bg: colors.surface, fg: colors.textPrimary, border: colors.border, shadow: paperShadow(isDark) },
+    subtle: {
+      bg: isDark ? colors.primarySubtle : '#EFF6FF',
+      fg: colors.primary,
+      border: isDark ? colors.primarySubtle : '#BFDBFE',
+      shadow: {} as ViewStyle,
+    },
+    ghost: { bg: 'transparent', fg: colors.primary, border: 'transparent', shadow: {} as ViewStyle },
+    outline: { bg: 'transparent', fg: colors.textPrimary, border: colors.borderStrong, shadow: {} as ViewStyle },
+    danger: { bg: colors.error, fg: '#FFFFFF', border: colors.error, shadow: {} as ViewStyle },
+  }[variant];
 
-  const isOutline = variant === 'outline' || variant === 'secondary';
-
-  const getBackgroundColor = (pressed: boolean) => {
-    if (disabled) return colors.surfaceSubtle;
-    switch (variant) {
-      case 'primary':
-        return pressed ? colors.primaryHover || '#3395FF' : colors.primary;
-      case 'secondary':
-        return pressed ? colors.borderStrong : colors.surfaceSubtle;
-      case 'outline':
-        return pressed ? colors.primarySubtle : colors.surfaceSubtle;
-      case 'danger':
-        return pressed ? '#B91C1C' : colors.error;
-      case 'ghost':
-        return pressed ? colors.surfaceSubtle : 'transparent';
-      default:
-        return colors.primary;
-    }
-  };
-
-  const getTextColor = () => {
-    if (disabled) return colors.textMuted;
-    switch (variant) {
-      case 'primary':
-      case 'danger':
-        return colors.primaryContrast;
-      case 'outline':
-        return colors.primary;
-      case 'secondary':
-        return colors.textPrimary;
-      case 'ghost':
-        return colors.primary;
-      default:
-        return colors.primaryContrast;
-    }
-  };
-
+  const inactive = disabled || loading;
   return (
     <Pressable
-      onPress={onPress}
-      disabled={disabled || loading}
       accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel || title}
-      accessibilityState={{ disabled: disabled || loading }}
+      accessibilityLabel={accessibilityLabel ?? title}
+      accessibilityState={{ disabled: inactive, busy: loading }}
+      disabled={inactive}
+      onPress={onPress}
       style={({ pressed }) => [
-        styles.base,
         {
-          minHeight,
-          paddingHorizontal,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
+          minHeight: small ? 36 : 44,
+          paddingHorizontal: small ? 14 : 18,
+          paddingVertical: small ? 6 : 10,
           borderRadius: radii.md,
-          backgroundColor: getBackgroundColor(pressed),
-          borderColor: isOutline ? colors.border : 'transparent',
-          borderWidth: isOutline ? 1 : 0,
-          opacity: disabled ? 0.6 : pressed ? 0.92 : 1,
-          transform: [{ scale: pressed ? 0.985 : 1 }],
+          borderWidth: 1,
+          backgroundColor: palette.bg,
+          borderColor: palette.border,
+          opacity: inactive ? 0.5 : 1,
+          transform: [{ scale: pressed ? 0.97 : 1 }],
         },
+        inactive ? {} : palette.shadow,
         style,
       ]}
     >
       {loading ? (
-        <ActivityIndicator
-          size="small"
-          color={variant === 'primary' || variant === 'danger' ? colors.primaryContrast : colors.primary}
-        />
+        <ActivityIndicator size="small" color={palette.fg} />
       ) : (
-        <Text
-          style={[
-            styles.text,
-            {
-              fontFamily: typography.fonts.ui,
-              fontSize: typography.sizes.base,
-              fontWeight: typography.weights.semibold,
-              color: getTextColor(),
-            },
-            textStyle,
-          ]}
-        >
-          {title}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          {icon ? <Icon name={icon} size={small ? 14 : 16} color={palette.fg} /> : null}
+          <Text
+            numberOfLines={1}
+            style={[
+              { fontFamily: typography.fonts.ui, fontWeight: '700', fontSize: small ? 12 : 13, color: palette.fg },
+              textStyle,
+            ]}
+          >
+            {title}
+          </Text>
+        </View>
       )}
     </Pressable>
   );
 };
-
-const styles = StyleSheet.create({
-  base: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  text: {
-    textAlign: 'center',
-  },
-});
-

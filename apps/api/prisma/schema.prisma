@@ -822,3 +822,28 @@ model StudentFeeReminder {
   @@index([feeRecordId])
   @@index([studentId])
 }
+
+// -------------------------------------------------------------
+// GLOBAL DESIGN SYSTEM: PLATFORM THEME REVISIONS
+// Immutable, append-only history of the platform-wide appearance config. The row with isActive = true is what
+// GET /api/theme serves. Contains NO secrets (public, CDN-cacheable). Written only by SUPER_ADMIN via the Admin Web.
+// -------------------------------------------------------------
+model PlatformThemeRevision {
+  id               String   @id @default(cuid())
+  revision         Int      @unique
+  revisionId       String   @unique // opaque cache key / ETag, e.g. r12-3fa91c2b
+  checksum         String
+  config           Json
+  action           String // PUBLISH, RESTORE
+  restoredFrom     Int?
+  previousRevision Int?
+  changeSummary    Json?
+  reason           String?
+  actorId          String
+  actorEmail       String
+  isActive         Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  @@index([isActive])
+  @@index([createdAt])
+}

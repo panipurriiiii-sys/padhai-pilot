@@ -34,7 +34,7 @@ export const Input: React.FC<InputProps> = ({
     ? colors.error
     : isFocused
     ? colors.primary
-    : colors.border;
+    : colors.borderStrong;
 
   return (
     <View style={[styles.container, { marginBottom: spacing.md }, containerStyle]}>
@@ -44,9 +44,11 @@ export const Input: React.FC<InputProps> = ({
             styles.label,
             {
               fontFamily: typography.fonts.ui,
-              fontSize: typography.sizes.sm,
-              fontWeight: typography.weights.medium,
-              color: colors.textSecondary,
+              fontSize: 11,
+              fontWeight: typography.weights.bold,
+              letterSpacing: 0.6,
+              textTransform: 'uppercase',
+              color: colors.textMuted,
               marginBottom: spacing.xs,
             },
           ]}
@@ -59,14 +61,19 @@ export const Input: React.FC<InputProps> = ({
           styles.input,
           {
             fontFamily: typography.fonts.ui,
-            minHeight: 48,
-            paddingHorizontal: spacing.lg,
+            minHeight: props.multiline ? 92 : 46,
+            paddingHorizontal: 14,
+            paddingVertical: props.multiline ? 12 : 8,
+            textAlignVertical: props.multiline ? 'top' : 'center',
             borderRadius: radii.md,
-            backgroundColor: colors.surfaceSubtle,
+            backgroundColor: colors.surface,
             borderColor,
-            borderWidth: isFocused ? 1.5 : 1,
+            borderWidth: 1,
             color: colors.textPrimary,
-            fontSize: typography.sizes.base,
+            fontSize: 14,
+            ...(isFocused
+              ? { shadowColor: '#1677FF', shadowOpacity: 0.25, shadowRadius: 4, shadowOffset: { width: 0, height: 0 }, elevation: 1 }
+              : {}),
           },
           style,
         ]}

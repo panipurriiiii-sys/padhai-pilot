@@ -14,11 +14,13 @@ import type {
   DailyTeachingDiaryEntry,
   FacultyLeaveItem,
   InvitationCode,
+  LessonPlan,
   SalaryStatementItem,
   StudentRosterItem,
   StudyMaterialCategory,
   StudyMaterialItem,
   TeacherDashboardMetrics,
+  TestQuiz,
   TimetableSlot,
 } from '@padhai-pilot/shared';
 
@@ -37,11 +39,13 @@ export type {
   DailyTeachingDiaryEntry,
   FacultyLeaveItem,
   InvitationCode,
+  LessonPlan,
   SalaryStatementItem,
   StudentRosterItem,
   StudyMaterialCategory,
   StudyMaterialItem,
   TeacherDashboardMetrics,
+  TestQuiz,
   TimetableSlot,
 };
 
@@ -93,6 +97,16 @@ export const teacherService = {
     list(await apiClient.get<AssignmentSubmission[]>(`/teacher/assignments/${assignmentId}/submissions`)),
   gradeSubmission: (submissionId: string, data: { marksObtained: number; feedback?: string; resubmit?: boolean }) =>
     apiClient.post<AssignmentSubmission>(`/teacher/assignments/submissions/${submissionId}/grade`, data),
+
+  // Tests & quizzes (creation with question editing stays on the web portal)
+  getTests: async () => list(await apiClient.get<TestQuiz[]>('/teacher/tests')),
+  toggleTestResults: (testId: string) => apiClient.post<TestQuiz>(`/teacher/tests/${testId}/release-results`, {}),
+
+  // Curriculum plans
+  getLessonPlans: async () => list(await apiClient.get<LessonPlan[]>('/teacher/lesson-plans')),
+  createLessonPlan: (data: { batchId: string; title: string; topic: string; subject: string; weekNumber: number; content: string }) =>
+    apiClient.post<LessonPlan>('/teacher/lesson-plans', data),
+  toggleLessonPlan: (planId: string) => apiClient.put<LessonPlan>(`/teacher/lesson-plans/${planId}/toggle`, {}),
 
   // Invitations
   getInvitations: async () => list(await apiClient.get<InvitationCode[]>('/teacher/invitations')),
