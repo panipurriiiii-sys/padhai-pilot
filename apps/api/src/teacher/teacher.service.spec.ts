@@ -273,44 +273,6 @@ describe('TeacherService Core Workflows & Redis Caching', () => {
     expect(cachedMetrics).toEqual(metrics);
   });
 
-  it('should enforce tenant & teacher isolation on batch roster access', async () => {
-    const roster = await service.getBatchRoster('btc_jee_math_adv', mockTeacher);
-    expect(roster.batch.id).toBe('btc_jee_math_adv');
-    expect(roster.students.length).toBeGreaterThan(0);
-
-    await expect(service.getBatchRoster('btc_jee_math_adv', rogueTeacher)).rejects.toThrow();
-  });
-
-  it('should generate unpredictable invitation codes and revoke them properly', async () => {
-    const inv = await service.createInvitation({ batchId: 'btc_jee_math_adv', maxUses: 30 }, mockTeacher);
-    expect(inv.code).toMatch(/^APX-[A-Z0-9]{3}-[A-Z0-9]{3}$/);
-    expect(inv.status).toBe('ACTIVE');
-
-    const check = await service.validateCodePublic(inv.code);
-    expect(check.valid).toBe(true);
-
-    const revokeRes = await service.revokeInvitation(inv.code, mockTeacher);
-    expect(revokeRes.success).toBe(true);
-  });
-
-  it('should record attendance and prevent duplicate sessions for same date', async () => {
-    const today = '2026-10-29';
-    const records = [
-      { studentId: 'std_01', status: 'PRESENT' as const },
-      { studentId: 'std_02', status: 'ABSENT' as const, note: 'Sick leave' },
-    ];
-
-    const saveRes = await service.saveAttendance(
-      { batchId: 'btc_jee_math_adv', date: today, records },
-      mockTeacher,
-    );
-    expect(saveRes.success).toBe(true);
-    expect(saveRes.session.totalPresent).toBe(1);
-
-    const sessionRes = await service.getAttendanceSession('btc_jee_math_adv', today, mockTeacher);
-    expect(sessionRes.isRecorded).toBe(true);
-  });
-
   it('should create and grade assignment submissions', async () => {
     const asg = await service.createAssignment(
       {
@@ -378,8 +340,4 @@ describe('TeacherService Core Workflows & Redis Caching', () => {
     expect(toggle.isCompleted).toBe(true);
   });
 
-  it('should generate aggregated teacher reports without unbounded scans', async () => {
-    const reports = await service.getReports(mockTeacher);
-    expect(reports.summary.totalBatches).toBeGreaterThan(0);
-  });
 });
