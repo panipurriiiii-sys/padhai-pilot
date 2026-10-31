@@ -22,6 +22,8 @@ import { StudentMoreScreen } from '../features/student/StudentMoreScreen';
 import { BottomTabBar } from './BottomTabBar';
 import { useTheme } from '../theme/ThemeContext';
 import { isStaffRole } from '../lib/format';
+import { resolveDeepLinkTab, subscribeDeepLinks } from '../lib/deepLinks';
+import { loadPush } from '../services/push';
 
 export const RootNavigator: React.FC = () => {
   const { colors } = useTheme();
@@ -40,6 +42,21 @@ export const RootNavigator: React.FC = () => {
       }
     }
   }, [isAuthenticated, isTeacher]);
+
+  // Deep links (padhaipilot://...) and push-notification taps; ignored until signed in.
+  useEffect(() => {
+    if (!isAuthenticated) return undefined;
+    const open = (url: string | null) => {
+      const tab = resolveDeepLinkTab(url, isTeacher);
+      if (tab) setTab(tab);
+    };
+    const unsubLinks = subscribeDeepLinks(open);
+    const unsubPush = loadPush().onMessage(open);
+    return () => {
+      unsubLinks();
+      unsubPush();
+    };
+  }, [isAuthenticated, isTeacher, setTab]);
 
   if (!isAuthenticated) {
     return <LoginScreen />;

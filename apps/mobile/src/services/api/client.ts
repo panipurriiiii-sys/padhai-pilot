@@ -19,7 +19,10 @@ export class ApiError extends Error {
 const REQUEST_TIMEOUT_MS = 20000;
 
 // Configurable endpoint with production default
-const DEFAULT_API_BASE_URL = 'https://padhai-pilot.vercel.app/api';
+export const PROD_API_BASE_URL = 'https://padhai-pilot.vercel.app/api';
+/** Android emulator alias for the host machine's localhost (local stack: `npm run local:*`). */
+export const DEV_API_BASE_URL = 'http://10.0.2.2:3001/api';
+export const DEFAULT_API_BASE_URL = __DEV__ ? DEV_API_BASE_URL : PROD_API_BASE_URL;
 
 class ApiClient {
   private baseUrl: string = DEFAULT_API_BASE_URL;
