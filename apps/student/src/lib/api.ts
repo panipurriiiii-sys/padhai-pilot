@@ -5,13 +5,16 @@ import {
   StudyMaterialItem,
 } from '@padhai-pilot/shared';
 
+const PRODUCTION_API_URL = 'https://padhai-pilot.vercel.app/api';
+
 function getCleanApiBaseUrl(): string {
   let base = process.env.NEXT_PUBLIC_API_URL?.trim();
   if (!base) {
     if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
       return 'http://localhost:3001/api';
     }
-    return '/api';
+    // Each portal is its own Vercel project, so a relative '/api' would hit the portal itself.
+    return PRODUCTION_API_URL;
   }
   base = base.replace(/\/+$/, '');
   if (!base.endsWith('/api')) {

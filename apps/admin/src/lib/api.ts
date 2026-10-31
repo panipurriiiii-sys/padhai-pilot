@@ -64,8 +64,11 @@ export interface PlatformAnnouncementItem {
   expiresAt?: string;
 }
 
+const PRODUCTION_API_URL = 'https://padhai-pilot.vercel.app/api';
+
 function getCleanApiBaseUrl(): string {
-  const envUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+  const isLocal = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+  const envUrl = process.env.NEXT_PUBLIC_API_URL || (isLocal ? 'http://localhost:3001/api' : PRODUCTION_API_URL);
   let clean = envUrl.trim().replace(/\/+$/, '');
   if (!clean.endsWith('/api')) {
     clean += '/api';
