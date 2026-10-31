@@ -1,3 +1,4 @@
+import { inheritBatchFees } from '../finance/fee-core.js';
 import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import type { BatchRoster, PromoteBatchResult, TeacherBatch } from '@padhai-pilot/shared';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -331,6 +332,8 @@ export class BatchesService {
               },
             });
           }
+          // Students moving into the target inherit its active fee structures (idempotent).
+          await inheritBatchFees(tx, user.instituteId, target.id, src.studentId);
         }
         await tx.enrollment.update({ where: { id: src.id }, data: { status: 'PROMOTED', endedAt: now } });
       }

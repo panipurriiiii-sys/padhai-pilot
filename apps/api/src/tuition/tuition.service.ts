@@ -411,6 +411,9 @@ export class TuitionService {
   ): Promise<SalaryStatementItem> {
     assertDb(this.prisma);
 
+    if (!dto || typeof dto.facultyId !== 'string' || !dto.facultyId.trim()) {
+      throw new BadRequestException('facultyId is required.');
+    }
     await this.assertFacultyInInstitute(instituteId, dto.facultyId);
     if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(dto.payPeriod || '')) {
       throw new BadRequestException('payPeriod must be YYYY-MM.');
@@ -1367,6 +1370,10 @@ export class TuitionService {
   ): Promise<StudentFeeItem> {
     assertDb(this.prisma);
 
+    if (!dto || typeof dto.studentId !== 'string' || !dto.studentId.trim()) {
+      throw new BadRequestException('studentId is required.');
+    }
+    if (typeof dto.feeTitle !== 'string' || !dto.feeTitle.trim()) throw new BadRequestException('feeTitle is required.');
     if (dto.batchId) {
       const batch = await this.prisma.batch.findFirst({ where: { id: dto.batchId, instituteId }, select: { id: true } });
       if (!batch) throw new NotFoundException(`Batch with ID ${dto.batchId} not found.`);
@@ -1434,6 +1441,12 @@ export class TuitionService {
     dto: DispatchFeeReminderDto,
   ): Promise<{ success: boolean; message: string; reminderId: string }> {
     assertDb(this.prisma);
+    if (!dto || typeof dto.feeRecordId !== 'string' || !dto.feeRecordId.trim()) {
+      throw new BadRequestException('feeRecordId is required.');
+    }
+    if (dto.channel !== 'IN_APP' && dto.channel !== 'EMAIL' && dto.channel !== 'SMS' && dto.channel !== 'WHATSAPP') {
+      throw new BadRequestException('channel must be IN_APP, EMAIL, SMS or WHATSAPP.');
+    }
     const fee = await this.prisma.studentFeeRecord.findUnique({
       where: { id: dto.feeRecordId },
       include: {

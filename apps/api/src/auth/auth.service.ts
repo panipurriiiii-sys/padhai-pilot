@@ -1,3 +1,4 @@
+import { inheritBatchFees } from '../finance/fee-core.js';
 import {
   Injectable,
   UnauthorizedException,
@@ -303,7 +304,12 @@ export class AuthService {
             if (!inv || !inv.institute.isActive) throw invalidCode();
             // Atomic claim: concurrent redemptions cannot exceed maxUses or revive revoked/expired codes.
             const claimed = await tx.invitationCode.updateMany({
-              where: { id: inv.id, isRevoked: false, expiresAt: { gt: new Date() }, usedCount: { lt: inv.maxUses } },
+              where: {
+                id: inv.id,
+                isRevoked: false,
+                OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+                usedCount: { lt: inv.maxUses },
+              },
               data: { usedCount: { increment: 1 } },
             });
             if (claimed.count !== 1) throw invalidCode();
@@ -336,6 +342,9 @@ export class AuthService {
                 : {}),
             },
           });
+
+          // New enrolments inherit the batch's active fee structures as PENDING records.
+          if (instituteId && batchId) await inheritBatchFees(tx, instituteId, batchId, newUser.id);
 
           return this.issue({
             id: newUser.id,

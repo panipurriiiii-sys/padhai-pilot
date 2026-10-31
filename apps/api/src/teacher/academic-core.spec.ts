@@ -146,6 +146,7 @@ describe('promote batch to next class', () => {
       { id: 'e3', instituteId: 'i1', batchId: 'b2', studentId: 's2', rollNumber: '9', status: 'ACTIVE' }, // already in target
     ];
     const promotions: any[] = [];
+    const feeRecords: any[] = [];
     const batches = [batchRow(), batchRow({ id: 'b2', name: 'JEE 12', code: 'J12' })];
     const match = (e: any, w: any) =>
       (!w.batchId || e.batchId === w.batchId) && (!w.status || e.status === w.status) && (!w.instituteId || e.instituteId === w.instituteId) &&
@@ -157,15 +158,20 @@ describe('promote batch to next class', () => {
         create: vi.fn(async ({ data }: any) => { enrollments.push({ id: `n${enrollments.length}`, ...data }); }),
         update: vi.fn(async ({ where, data }: any) => { Object.assign(enrollments.find((e) => e.id === where.id), data); }),
       },
+      batchFeeStructure: {
+        findMany: vi.fn(async ({ where }: any) =>
+          where.batchId === 'b2' ? [{ id: 'fs1', title: 'Tuition', academicYear: '2026-2027', schedule: [{ label: 'Q1', amount: 5000, dueDate: '2026-12-01' }] }] : []),
+      },
+      studentFeeRecord: { createMany: vi.fn(async ({ data }: any) => { feeRecords.push(...data); return { count: data.length }; }) },
       batchPromotion: { create: vi.fn(async ({ data }: any) => { promotions.push(data); return { id: `p${promotions.length}` }; }) },
       batch: { update: vi.fn(async ({ where, data }: any) => Object.assign(batches.find((b) => b.id === where.id)!, data)) },
     };
     const db: any = { isConnected: true, ...batchStore(batches), $transaction: async (fn: any) => fn(tx) };
-    return { db, enrollments, promotions };
+    return { db, enrollments, promotions, feeRecords };
   }
 
   it('moves active students once, keeps history, and is idempotent', async () => {
-    const { db, enrollments, promotions } = promoteDb();
+    const { db, enrollments, promotions, feeRecords } = promoteDb();
     const svc = new BatchesService(db, undefined, new AccessService(db));
     const first = await svc.promote('b1', { targetBatchId: 'b2', archiveSource: true }, lead);
     expect(first).toMatchObject({ movedCount: 1, skippedCount: 1, alreadyPromoted: false, sourceArchived: true });
@@ -174,6 +180,9 @@ describe('promote batch to next class', () => {
     expect(moved).toMatchObject({ status: 'ACTIVE', promotedFromBatchId: 'b1' });
     expect(enrollments.filter((e) => e.batchId === 'b2' && e.studentId === 's2')).toHaveLength(1);
     expect(promotions).toHaveLength(1);
+    // The moved student inherits the target batch's ACTIVE fee structure as a PENDING record.
+    expect(feeRecords).toHaveLength(1);
+    expect(feeRecords[0]).toMatchObject({ studentId: 's1', batchId: 'b2', structureId: 'fs1', status: 'PENDING', totalAmount: 5000 });
 
     const second = await svc.promote('b1', { targetBatchId: 'b2' }, lead);
     expect(second).toMatchObject({ movedCount: 0, alreadyPromoted: true, promotionId: null });
