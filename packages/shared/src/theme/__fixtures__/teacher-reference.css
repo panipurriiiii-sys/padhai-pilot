@@ -1,0 +1,479 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   PADHAIPILOT GLOBAL DESIGN SYSTEM — AK PAPER-DESK THEME
+   Strict Centralized Design Tokens & Global Style Library
+   ========================================================================== */
+
+:root {
+  /* ------------------------------------------------------------------------
+     1. TYPOGRAPHY TOKENS (Strictly Permitted 3 Families)
+     ------------------------------------------------------------------------ */
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-primary: 'Raleway', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-data: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* ------------------------------------------------------------------------
+     2. SURFACES & PAPER TOKENS (Light / Warm Paper Mode)
+     ------------------------------------------------------------------------ */
+  --bg-desk: #F8F7F4;              /* Desk surface (warm off-white/ivory) */
+  --bg-paper: #FFFFFF;             /* Fresh white paper sheet, card base */
+  --bg-paper-warm: #FAF8F5;        /* Warm cream paper, container base */
+  --bg-surface-subtle: #F3EFE9;    /* Recessed secondary surface, tags */
+  --bg-surface-2: #F3EFE9;
+  --bg-secondary: #EEE9E2;         /* Secondary buttons / chip base */
+  --bg-muted: #EEEAE5;             /* Muted background pill */
+
+  /* ------------------------------------------------------------------------
+     3. BORDERS & INPUTS
+     ------------------------------------------------------------------------ */
+  --border-paper: #E3DFD9;         /* Warm subtle paper border lines */
+  --border-input: #DDD8D2;         /* Form input borders */
+  --border-focus: #1677FF;         /* Focus ring border */
+
+  /* ------------------------------------------------------------------------
+     4. BRAND & ACCENT COLORS
+     ------------------------------------------------------------------------ */
+  --brand-electric: #1677FF;       /* AK Signature Royal Electric Blue */
+  --brand-hover: #0A6FE8;          /* Electric Blue Hover */
+  --brand-cyan: #0A6FE8;           /* Cyan micro-highlights */
+  --brand-glow: rgba(22, 119, 255, 0.45);
+
+  /* ------------------------------------------------------------------------
+     5. STICKY NOTES PASTEL TOKENS
+     ------------------------------------------------------------------------ */
+  --sticky-yellow: #FFF3C4;
+  --sticky-yellow-border: #F6E09E;
+  --sticky-yellow-text: #5C3D00;
+
+  --sticky-pink: #FDE2E4;
+  --sticky-pink-border: #F8BCC2;
+  --sticky-pink-text: #6D1B28;
+
+  --sticky-mint: #DAF5E4;
+  --sticky-mint-border: #B2E6C4;
+  --sticky-mint-text: #0E4A28;
+
+  --sticky-blue: #E1EDFF;
+  --sticky-blue-border: #BBD4FC;
+  --sticky-blue-text: #0A3D78;
+
+  --sticky-beige: #F2E8DC;
+  --sticky-beige-border: #DECDBD;
+  --sticky-beige-text: #4A3728;
+
+  --tape-frost: rgba(224, 218, 208, 0.55);
+
+  /* ------------------------------------------------------------------------
+     6. TEXT INK TOKENS
+     ------------------------------------------------------------------------ */
+  --ink-primary: #1C1917;          /* Deepest crisp ink */
+  --ink-secondary: #44403C;        /* Secondary reading ink */
+  --ink-muted: #78716C;            /* Caption / metadata ink */
+  --ink-faint: #A8A29E;            /* Disabled / watermark ink */
+
+  /* ------------------------------------------------------------------------
+     7. MULTI-LAYER PHYSICAL DROP SHADOWS
+     ------------------------------------------------------------------------ */
+  --shadow-paper: 0 1px 2px rgba(60, 52, 40, 0.06), 0 6px 16px -4px rgba(60, 52, 40, 0.1);
+  --shadow-lift: 0 2px 4px rgba(60, 52, 40, 0.08), 0 14px 28px -6px rgba(60, 52, 40, 0.16);
+  --shadow-sticky: 0 1px 1px rgba(60, 52, 40, 0.08), 0 8px 14px -6px rgba(60, 52, 40, 0.22);
+  --shadow-neon: 0 0 0 1px rgba(22, 119, 255, 0.35), 0 10px 24px -10px rgba(22, 119, 255, 0.4);
+}
+
+/* --------------------------------------------------------------------------
+   DARK THEME PALETTE (.dark / .admin-dark)
+   -------------------------------------------------------------------------- */
+.dark, .admin-dark {
+  --bg-desk: #050608;
+  --bg-paper: #0A0D12;
+  --bg-paper-warm: #10151D;
+  --bg-surface-subtle: #141A24;
+  --bg-surface-2: #10151D;
+  --bg-secondary: #161D28;
+  --bg-muted: #1A2230;
+
+  --border-paper: rgba(255, 255, 255, 0.09);
+  --border-input: rgba(255, 255, 255, 0.14);
+  --border-focus: #00D9FF;
+
+  --brand-electric: #1677FF;
+  --brand-hover: #3395FF;
+  --brand-cyan: #00D9FF;
+  --brand-glow: rgba(0, 217, 255, 0.45);
+
+  --ink-primary: #F5F7FA;
+  --ink-secondary: #C3CAD6;
+  --ink-muted: #929BAA;
+  --ink-faint: #55595F;
+
+  --shadow-paper: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-lift: 0 4px 20px rgba(0, 0, 0, 0.6);
+  --shadow-sticky: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+@theme inline {
+  --font-display: var(--font-display);
+  --font-sans: var(--font-primary);
+  --font-primary: var(--font-primary);
+  --font-data: var(--font-data);
+
+  --color-desk: var(--bg-desk);
+  --color-paper: var(--bg-paper);
+  --color-paper-warm: var(--bg-paper-warm);
+  --color-surface-subtle: var(--bg-surface-subtle);
+  --color-border-paper: var(--border-paper);
+  --color-border-input: var(--border-input);
+  --color-electric: var(--brand-electric);
+  --color-ink-primary: var(--ink-primary);
+  --color-ink-secondary: var(--ink-secondary);
+  --color-ink-muted: var(--ink-muted);
+}
+
+/* ==========================================================================
+   GLOBAL BASE STYLES
+   ========================================================================== */
+body {
+  background-color: var(--bg-desk);
+  color: var(--ink-primary);
+  font-family: var(--font-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ==========================================================================
+   SIGNATURE DESK BACKGROUNDS & TEXTURES
+   ========================================================================== */
+
+/* 5-Layer Master Desk Background */
+.ak-desk-surface {
+  background-color: #F8F7F4;
+  background-image:
+    radial-gradient(60% 50% at 15% 0%, rgba(244, 230, 202, 0.7) 0%, transparent 70%),
+    radial-gradient(50% 40% at 90% 10%, rgba(254, 222, 196, 0.45) 0%, transparent 70%),
+    linear-gradient(rgba(208, 205, 202, 0.25) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(208, 205, 202, 0.25) 1px, transparent 1px),
+    radial-gradient(rgba(107, 97, 87, 0.05) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    100% 100%,
+    40px 40px,
+    40px 40px,
+    6px 6px;
+}
+
+/* Drafting Technical Grid */
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(208, 205, 202, 0.35) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(208, 205, 202, 0.35) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* Corkboard surface texture */
+.corkboard-surface {
+  background-color: #DEB078;
+  background-image:
+    radial-gradient(#AA672D 1px, transparent 1px),
+    radial-gradient(#97571E 0.8px, #D49E5F 0.8px);
+  background-size: 16px 16px;
+  background-position: 0 0, 8px 8px;
+}
+
+/* Electric Blue Spotlight */
+.electric-spotlight {
+  background: radial-gradient(55% 50% at 50% 50%, rgba(22, 119, 255, 0.08) 0%, transparent 70%);
+}
+
+/* Frosted Glass Navigation Bar */
+.glass-nav {
+  background: rgba(248, 247, 244, 0.88);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border-paper);
+}
+
+/* Scotch Tape Effect */
+.tape-strip {
+  background: var(--tape-frost);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  border: 1px solid rgba(200, 195, 185, 0.4);
+  box-shadow: 0 1px 3px rgba(60, 52, 40, 0.08);
+}
+
+/* Multi-drop elevation shortcuts */
+.paper-sheet-shadow { box-shadow: var(--shadow-paper); }
+.paper-lift-shadow { box-shadow: var(--shadow-lift); }
+.sticky-shadow { box-shadow: var(--shadow-sticky); }
+.neon-glow { box-shadow: var(--shadow-neon); }
+
+/* ==========================================================================
+   GLOBAL COMPONENT CLASSES (Use strictly across all views)
+   ========================================================================== */
+
+/* Flat paper sheet card */
+.paper-card {
+  background-color: var(--bg-paper);
+  border: 1px solid var(--border-paper);
+  border-radius: 1rem;
+  box-shadow: var(--shadow-paper);
+}
+
+/* Interactive lifted paper card */
+.paper-card-interactive {
+  background-color: var(--bg-paper);
+  border: 1px solid var(--border-paper);
+  border-radius: 1rem;
+  box-shadow: var(--shadow-paper);
+  transition: all 0.2s ease-out;
+}
+.paper-card-interactive:hover {
+  transform: translateY(-2px);
+  border-color: #B8B2A6;
+  box-shadow: var(--shadow-lift);
+}
+
+/* Selected active paper card */
+.paper-card-selected {
+  background-color: #F0F6FF;
+  border: 1.5px solid var(--brand-electric);
+  border-radius: 1rem;
+  box-shadow: 0 2px 12px rgba(22, 119, 255, 0.15);
+}
+
+/* KPI Summary Cards */
+.kpi-card {
+  background-color: var(--bg-paper);
+  border: 1px solid var(--border-paper);
+  border-radius: 1rem;
+  padding: 1.25rem;
+  box-shadow: var(--shadow-paper);
+  transition: all 0.2s ease-out;
+}
+.kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lift);
+}
+
+/* Recessed Surface */
+.recessed-surface {
+  background-color: var(--bg-surface-subtle);
+  border: 1px solid var(--border-paper);
+  border-radius: 0.75rem;
+}
+
+/* --------------------------------------------------------------------------
+   GLOBAL BUTTON CLASSES
+   -------------------------------------------------------------------------- */
+.btn-primary {
+  background-color: var(--brand-electric);
+  color: #FFFFFF;
+  font-family: var(--font-primary);
+  font-weight: 700;
+  font-size: 0.75rem;
+  padding: 0.625rem 1rem;
+  border-radius: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 2px 10px rgba(22, 119, 255, 0.35);
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+.btn-primary:hover {
+  background-color: var(--brand-hover);
+  box-shadow: 0 4px 14px rgba(22, 119, 255, 0.45);
+}
+.btn-primary:active {
+  transform: scale(0.97);
+}
+
+.btn-secondary {
+  background-color: var(--bg-paper);
+  color: var(--ink-primary);
+  border: 1px solid var(--border-paper);
+  font-family: var(--font-primary);
+  font-weight: 700;
+  font-size: 0.75rem;
+  padding: 0.625rem 1rem;
+  border-radius: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: var(--shadow-paper);
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+.btn-secondary:hover {
+  background-color: var(--bg-paper-warm);
+  border-color: #B8B2A6;
+}
+.btn-secondary:active {
+  transform: scale(0.97);
+}
+
+.btn-subtle {
+  background-color: #EFF6FF;
+  color: var(--brand-electric);
+  border: 1px solid #BFDBFE;
+  font-family: var(--font-primary);
+  font-weight: 700;
+  font-size: 0.75rem;
+  padding: 0.375rem 0.875rem;
+  border-radius: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+.btn-subtle:hover {
+  background-color: var(--brand-electric);
+  color: #FFFFFF;
+}
+.btn-subtle:active {
+  transform: scale(0.96);
+}
+
+/* --------------------------------------------------------------------------
+   GLOBAL FORM CONTROLS
+   -------------------------------------------------------------------------- */
+.input-paper {
+  background-color: var(--bg-paper);
+  border: 1px solid var(--border-input);
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.875rem;
+  font-family: var(--font-primary);
+  font-size: 0.75rem;
+  color: var(--ink-primary);
+  outline: none;
+  box-shadow: inset 0 1px 2px rgba(60, 52, 40, 0.04);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.input-paper:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(22, 119, 255, 0.15);
+}
+
+.select-paper {
+  background-color: var(--bg-paper);
+  border: 1px solid var(--border-input);
+  border-radius: 0.75rem;
+  padding: 0.375rem 0.75rem;
+  font-family: var(--font-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ink-primary);
+  outline: none;
+  cursor: pointer;
+}
+
+/* --------------------------------------------------------------------------
+   GLOBAL BADGES & PILLS
+   -------------------------------------------------------------------------- */
+.badge-code {
+  font-family: var(--font-data);
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.5rem;
+  background-color: var(--bg-surface-subtle);
+  color: var(--brand-electric);
+  border: 1px solid rgba(22, 119, 255, 0.2);
+}
+
+.badge-session {
+  font-family: var(--font-data);
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.375rem;
+  background-color: #DAF5E4;
+  color: #0E4A28;
+  border: 1px solid #B2E6C4;
+}
+
+.badge-urgent {
+  font-family: var(--font-primary);
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  background-color: #FDE2E4;
+  color: #6D1B28;
+  border: 1px solid #F8BCC2;
+}
+
+/* --------------------------------------------------------------------------
+   GLOBAL TACTILE RUBBER STAMPS (Attendance P / A / L / E)
+   -------------------------------------------------------------------------- */
+.stamp-base {
+  font-family: var(--font-primary);
+  font-size: 0.75rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  transition: all 0.15s ease-out;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.stamp-p-active {
+  background-color: #DAF5E4;
+  border-color: #10B981;
+  color: #0E4A28;
+  font-weight: 800;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.08);
+  transform: scale(0.96);
+}
+
+.stamp-a-active {
+  background-color: #FDE2E4;
+  border-color: #F43F5E;
+  color: #6D1B28;
+  font-weight: 800;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.08);
+  transform: scale(0.96);
+}
+
+.stamp-l-active {
+  background-color: #FEF3C7;
+  border-color: #F59E0B;
+  color: #78350F;
+  font-weight: 800;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.08);
+  transform: scale(0.96);
+}
+
+.stamp-e-active {
+  background-color: #E1EDFF;
+  border-color: #3B82F6;
+  color: #0A3D78;
+  font-weight: 800;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.08);
+  transform: scale(0.96);
+}
+
+/* --------------------------------------------------------------------------
+   GLOBAL SCROLLBAR
+   -------------------------------------------------------------------------- */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #D5D0C7;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #B8B2A6;
+}
