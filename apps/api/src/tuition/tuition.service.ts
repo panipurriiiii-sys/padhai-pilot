@@ -1,13 +1,16 @@
 import {
   Injectable,
   Inject,
+  Optional,
   NotFoundException,
   BadRequestException,
   ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { assertDb } from '../common/db/db.js';
+import { assertDb, clampLimit, parseDate } from '../common/db/db.js';
+import { AccessService } from '../common/access/access.service.js';
+import { isManagement } from '../common/security/roles.js';
 import type { AuthenticatedUser } from '../common/types.js';
 import type {
   UpdateTuitionProfileDto,
@@ -39,7 +42,23 @@ import { validateInstituteBranding } from '@padhai-pilot/shared';
 
 @Injectable()
 export class TuitionService {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  private readonly access: AccessService;
+
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Optional() @Inject(AccessService) access?: AccessService,
+  ) {
+    this.access = access ?? new AccessService(prisma);
+  }
+
+  /** The user must hold a faculty profile in this institute (tenant check for facultyId inputs). */
+  private async assertFacultyInInstitute(instituteId: string, facultyUserId: string, label = 'facultyId') {
+    const p = await this.prisma.facultyProfile.findFirst({
+      where: { instituteId, userId: facultyUserId },
+      select: { id: true },
+    });
+    if (!p) throw new BadRequestException(`${label} does not belong to a faculty member of this institute.`);
+  }
 
   // ==========================================================================
   // 1. TUITION PROFILE & BRANDING
@@ -148,6 +167,7 @@ export class TuitionService {
         },
       },
       orderBy: { createdAt: 'desc' },
+      take: 300,
     });
 
     return profiles.map((p) => ({
@@ -187,39 +207,22 @@ export class TuitionService {
       }
     }
 
-    // Check if user exists by email
-    let user = await this.prisma.user.findUnique({
-      where: { email: dto.email.toLowerCase().trim() },
-    });
-
-    if (!user) {
-      user = await this.prisma.user.create({
-        data: {
-          email: dto.email.toLowerCase().trim(),
-          fullName: dto.fullName,
-          phone: dto.phone,
-          passwordHash: '$2b$10$epOzJ9GvP2uC7P5vS89tquPqfR8LqK4nNsm6oKj3F8B3h0O1vjY7i', // Temporary placeholder
-          role: 'TEACHER',
-        },
-      });
+    // Faculty accounts are created ONLY through the invitation flow (POST /faculty-invitations): this endpoint
+    // never creates a user or a credential, and never links an arbitrary existing account. It can only
+    // update the profile of someone who already holds a TEACHER/FACULTY membership in this institute.
+    const email = dto.email.toLowerCase().trim();
+    const user = await this.prisma.user.findUnique({ where: { email }, select: { id: true } });
+    const membership = user
+      ? await this.prisma.instituteMembership.findUnique({
+          where: { instituteId_userId: { instituteId, userId: user.id } },
+          select: { role: true, status: true },
+        })
+      : null;
+    if (!user || !membership || !['FACULTY', 'TEACHER'].includes(membership.role)) {
+      throw new BadRequestException(
+        'Faculty must join through an invitation. Use POST /faculty-invitations to invite this person.',
+      );
     }
-
-    // Ensure InstituteMembership exists
-    await this.prisma.instituteMembership.upsert({
-      where: {
-        instituteId_userId: {
-          instituteId,
-          userId: user.id,
-        },
-      },
-      update: { role: 'TEACHER' },
-      create: {
-        instituteId,
-        userId: user.id,
-        role: 'TEACHER',
-        status: 'ACTIVE',
-      },
-    });
 
     // Create or update FacultyProfile
     const profile = await this.prisma.facultyProfile.upsert({
@@ -369,6 +372,7 @@ export class TuitionService {
         },
       },
       orderBy: { createdAt: 'desc' },
+      take: 300,
     });
 
     return records.map((r) => {
@@ -394,6 +398,7 @@ export class TuitionService {
         paymentReference: r.paymentReference || undefined,
         remarks: r.remarks || undefined,
         createdAt: r.createdAt.toISOString(),
+        updatedAt: r.updatedAt.toISOString(),
       };
     });
   }
@@ -404,70 +409,63 @@ export class TuitionService {
   ): Promise<SalaryStatementItem> {
     assertDb(this.prisma);
 
-    // Prevent salary overwrite when status === 'PAID'
-    const existing = await this.prisma.salaryRecord.findUnique({
-      where: {
-        instituteId_facultyId_payPeriod: {
-          instituteId,
-          facultyId: dto.facultyId,
-          payPeriod: dto.payPeriod,
-        },
-      },
-    });
-    if (existing && existing.status === 'PAID') {
-      throw new BadRequestException('Cannot modify a salary record that has already been marked as PAID.');
+    await this.assertFacultyInInstitute(instituteId, dto.facultyId);
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(dto.payPeriod || '')) {
+      throw new BadRequestException('payPeriod must be YYYY-MM.');
     }
-
+    for (const [k, v] of [['baseAmount', dto.baseAmount], ['additions', dto.additions || 0], ['deductions', dto.deductions || 0], ['advances', dto.advances || 0]] as const) {
+      if (typeof v !== 'number' || !Number.isFinite(v) || v < 0) throw new BadRequestException(`${k} must be a non-negative number.`);
+    }
     const additions = dto.additions || 0;
     const deductions = dto.deductions || 0;
     const advances = dto.advances || 0;
     const netPayable = Math.max(0, dto.baseAmount + additions - deductions - advances);
+    const where = { instituteId_facultyId_payPeriod: { instituteId, facultyId: dto.facultyId, payPeriod: dto.payPeriod } };
+    const include = {
+      faculty: {
+        select: {
+          id: true,
+          fullName: true,
+          facultyProfiles: { where: { instituteId }, select: { staffId: true, designation: true } },
+        },
+      },
+    } as const;
+    const values = {
+      compensationModel: dto.compensationModel,
+      classesConducted: dto.classesConducted || 0,
+      baseAmount: dto.baseAmount,
+      additions,
+      deductions,
+      advances,
+      netPayable,
+      remarks: dto.remarks,
+    };
 
-    const record = await this.prisma.salaryRecord.upsert({
-      where: {
-        instituteId_facultyId_payPeriod: {
-          instituteId,
-          facultyId: dto.facultyId,
-          payPeriod: dto.payPeriod,
-        },
-      },
-      update: {
-        compensationModel: dto.compensationModel,
-        classesConducted: dto.classesConducted || 0,
-        baseAmount: dto.baseAmount,
-        additions,
-        deductions,
-        advances,
-        netPayable,
-        remarks: dto.remarks,
-      },
-      create: {
-        instituteId,
-        facultyId: dto.facultyId,
-        payPeriod: dto.payPeriod,
-        compensationModel: dto.compensationModel,
-        classesConducted: dto.classesConducted || 0,
-        baseAmount: dto.baseAmount,
-        additions,
-        deductions,
-        advances,
-        netPayable,
-        remarks: dto.remarks,
-        status: 'DRAFT',
-      },
-      include: {
-        faculty: {
-          select: {
-            id: true,
-            fullName: true,
-            facultyProfiles: {
-              where: { instituteId },
-              select: { staffId: true, designation: true },
-            },
-          },
-        },
-      },
-    });
+    const existing = await this.prisma.salaryRecord.findUnique({ where });
+    let record;
+    if (existing) {
+      // Guarded update: a record that is (or becomes, concurrently) PAID is never overwritten.
+      const res = await this.prisma.salaryRecord.updateMany({
+        where: { id: existing.id, instituteId, status: { not: 'PAID' } },
+        data: values,
+      });
+      if (res.count !== 1) {
+        throw new BadRequestException('Cannot modify a salary record that has already been marked as PAID.');
+      }
+      record = await this.prisma.salaryRecord.findUniqueOrThrow({ where: { id: existing.id }, include });
+    } else {
+      try {
+        record = await this.prisma.salaryRecord.create({
+          data: { instituteId, facultyId: dto.facultyId, payPeriod: dto.payPeriod, ...values, status: 'DRAFT' },
+          include,
+        });
+      } catch (err) {
+        if ((err as { code?: string }).code === 'P2002') {
+          throw new ConflictException('A salary record for this faculty and period already exists. Retry to update it.');
+        }
+        throw err;
+      }
+    }
 
     const profile = record.faculty.facultyProfiles[0];
     return {
@@ -487,10 +485,11 @@ export class TuitionService {
       netPayable: record.netPayable,
       status: record.status as any,
       paymentDate: record.paymentDate ? record.paymentDate.toISOString() : undefined,
-      paymentMode: record.paymentMode as any,
-      transactionRef: record.transactionRef || undefined,
+      paymentMethod: record.paymentMethod || undefined,
+      paymentReference: record.paymentReference || undefined,
       remarks: record.remarks || undefined,
       createdAt: record.createdAt.toISOString(),
+      updatedAt: record.updatedAt.toISOString(),
     };
   }
 
@@ -512,15 +511,19 @@ export class TuitionService {
       throw new BadRequestException('This salary statement is already marked as PAID.');
     }
 
-    const updated = await this.prisma.salaryRecord.update({
-      where: { id: salaryRecordId },
+    const claim = await this.prisma.salaryRecord.updateMany({
+      where: { id: salaryRecordId, instituteId, status: { not: 'PAID' } },
       data: {
         status: 'PAID',
-        paymentDate: new Date(dto.paymentDate),
-        paymentMethod: (dto.paymentMethod || dto.paymentMode) as any,
-        paymentReference: dto.paymentReference || dto.transactionRef,
+        paymentDate: parseDate(dto.paymentDate, 'paymentDate'),
+        paymentMethod: dto.paymentMethod,
+        paymentReference: dto.paymentReference,
         remarks: dto.remarks || existing.remarks,
       },
+    });
+    if (claim.count !== 1) throw new BadRequestException('This salary statement is already marked as PAID.');
+    const updated = await this.prisma.salaryRecord.findUniqueOrThrow({
+      where: { id: salaryRecordId },
       include: {
         faculty: {
           select: {
@@ -553,10 +556,11 @@ export class TuitionService {
       netPayable: updated.netPayable,
       status: updated.status as any,
       paymentDate: updated.paymentDate ? updated.paymentDate.toISOString() : undefined,
-      paymentMethod: (updated as any).paymentMethod || (updated as any).paymentMode || undefined,
-      paymentReference: (updated as any).paymentReference || (updated as any).transactionRef || undefined,
+      paymentMethod: updated.paymentMethod || undefined,
+      paymentReference: updated.paymentReference || undefined,
       remarks: updated.remarks || undefined,
       createdAt: updated.createdAt.toISOString(),
+      updatedAt: updated.updatedAt.toISOString(),
     };
   }
 
@@ -590,6 +594,7 @@ export class TuitionService {
         },
       },
       orderBy: { createdAt: 'desc' },
+      take: 300,
     });
 
     return leaves.map((l) => ({
@@ -620,17 +625,21 @@ export class TuitionService {
     dto: ApplyFacultyLeaveDto,
   ): Promise<FacultyLeaveItem> {
     assertDb(this.prisma);
-    if (dto.totalDays <= 0) {
-      throw new BadRequestException('Leave total days must be greater than zero.');
+    if (!(dto.totalDays > 0) || dto.totalDays > 365) {
+      throw new BadRequestException('Leave total days must be between 0 and 365.');
     }
+    const startDate = parseDate(dto.startDate, 'startDate');
+    const endDate = parseDate(dto.endDate, 'endDate');
+    if (endDate < startDate) throw new BadRequestException('endDate cannot be before startDate.');
+    if (dto.substituteFacultyId) await this.assertFacultyInInstitute(instituteId, dto.substituteFacultyId, 'substituteFacultyId');
 
     const leave = await this.prisma.facultyLeaveApplication.create({
       data: {
         instituteId,
         facultyId: facultyUserId,
         leaveType: dto.leaveType,
-        startDate: new Date(dto.startDate),
-        endDate: new Date(dto.endDate),
+        startDate,
+        endDate,
         totalDays: dto.totalDays,
         reason: dto.reason,
         attachmentUrl: dto.attachmentUrl,
@@ -683,6 +692,11 @@ export class TuitionService {
     if (!leave || leave.instituteId !== instituteId) {
       throw new NotFoundException(`Leave application ${leaveId} not found.`);
     }
+
+    if (leave.status !== 'PENDING') {
+      throw new BadRequestException(`This leave application is already ${leave.status.toLowerCase()}.`);
+    }
+    if (dto.substituteFacultyId) await this.assertFacultyInInstitute(instituteId, dto.substituteFacultyId, 'substituteFacultyId');
 
     // MANDATORY RULE: Faculty member cannot review or approve their own leave
     if (leave.facultyId === reviewer.id) {
@@ -744,17 +758,33 @@ export class TuitionService {
   // ==========================================================================
 
   async getTeachingDiaries(
-    instituteId: string,
+    user: AuthenticatedUser,
     batchId?: string,
     facultyId?: string,
   ): Promise<DailyTeachingDiaryEntry[]> {
     assertDb(this.prisma);
+    const instituteId = user.instituteId;
+    // Owners/admins see every entry. Faculty see their own entries (any status/audience) plus published
+    // batch-audience entries of colleagues for batches they teach; never private drafts of others.
+    let visibility: Record<string, unknown> = {};
+    if (!isManagement(user.role)) {
+      const mine = (await this.access.staffBatchIds(user)) ?? [];
+      visibility = {
+        OR: [
+          { facultyId: user.id },
+          { status: 'PUBLISHED', audience: 'BATCH', batchId: { in: mine } },
+        ],
+      };
+    }
+    if (batchId) await this.access.assertBatchAccess(user, batchId);
     const diaries = await this.prisma.dailyTeachingDiary.findMany({
       where: {
         instituteId,
+        ...visibility,
         ...(batchId ? { batchId } : {}),
         ...(facultyId ? { facultyId } : {}),
       },
+      take: 200,
       include: {
         batch: { select: { id: true, name: true, code: true } },
         faculty: { select: { id: true, fullName: true } },
@@ -852,28 +882,22 @@ export class TuitionService {
   }
 
   async createTeachingDiary(
-    instituteId: string,
-    facultyUserId: string,
+    user: AuthenticatedUser,
     dto: CreateTeachingDiaryDto,
   ): Promise<DailyTeachingDiaryEntry> {
     assertDb(this.prisma);
-
-    // Validate batch ownership if batchId provided
-    if (dto.batchId && this.prisma.batch?.findFirst) {
-      const batch = await this.prisma.batch.findFirst({
-        where: { id: dto.batchId, instituteId },
-      });
-      if (!batch) {
-        throw new NotFoundException(`Batch with ID ${dto.batchId} not found.`);
-      }
-    }
+    const instituteId = user.instituteId;
+    const facultyUserId = user.id;
+    // 404 for other tenants, 403 for batches the caller neither leads nor is assigned to.
+    await this.access.assertBatchAccess(user, dto.batchId);
+    const lessonDate = parseDate(dto.lessonDate, 'lessonDate');
 
     const diary = await this.prisma.dailyTeachingDiary.create({
       data: {
         instituteId,
         batchId: dto.batchId,
         facultyId: facultyUserId,
-        lessonDate: new Date(dto.lessonDate),
+        lessonDate,
         sessionTime: dto.sessionTime,
         subject: dto.subject,
         chapterTitle: dto.chapterTitle,
@@ -1001,14 +1025,18 @@ export class TuitionService {
   // ==========================================================================
 
   async getStudyMaterials(
-    instituteId: string,
+    user: AuthenticatedUser,
     batchId?: string,
   ): Promise<StudyMaterialItem[]> {
     assertDb(this.prisma);
+    const instituteId = user.instituteId;
+    const scope = await this.access.staffBatchIds(user);
+    if (batchId) await this.access.assertBatchAccess(user, batchId);
     const materials = await this.prisma.studyMaterial.findMany({
+      take: 200,
       where: {
         instituteId,
-        ...(batchId ? { batchId } : {}),
+        ...(batchId ? { batchId } : scope !== null ? { batchId: { in: scope } } : {}),
       },
       include: {
         batch: { select: { id: true, name: true } },
@@ -1045,25 +1073,17 @@ export class TuitionService {
     batchId?: string,
   ): Promise<StudyMaterialItem[]> {
     assertDb(this.prisma);
-    const enrollments = await this.prisma.enrollment.findMany({
-      where: {
-        studentId: user.id,
-        instituteId: user.instituteId,
-      },
-      select: { batchId: true },
-    });
-    const enrolledBatchIds = enrollments.map((e) => e.batchId);
+    const enrolledBatchIds = await this.access.studentBatchIds(user);
+    // A student only ever sees materials of batches they are actively enrolled in; none -> empty list.
+    if (enrolledBatchIds.length === 0 || (batchId && !enrolledBatchIds.includes(batchId))) return [];
 
     const materials = await this.prisma.studyMaterial.findMany({
+      take: 200,
       where: {
         instituteId: user.instituteId,
         isStudentVisible: true,
         status: 'PUBLISHED',
-        ...(batchId
-          ? { batchId }
-          : enrolledBatchIds.length > 0
-            ? { batchId: { in: enrolledBatchIds } }
-            : {}),
+        batchId: batchId ? batchId : { in: enrolledBatchIds },
       },
       include: {
         batch: { select: { id: true, name: true } },
@@ -1096,21 +1116,13 @@ export class TuitionService {
   }
 
   async createStudyMaterial(
-    instituteId: string,
-    facultyUserId: string,
+    user: AuthenticatedUser,
     dto: CreateStudyMaterialDto,
   ): Promise<StudyMaterialItem> {
     assertDb(this.prisma);
-
-    // Validate batch ownership if batchId provided
-    if (dto.batchId && this.prisma.batch?.findFirst) {
-      const batch = await this.prisma.batch.findFirst({
-        where: { id: dto.batchId, instituteId },
-      });
-      if (!batch) {
-        throw new NotFoundException(`Batch with ID ${dto.batchId} not found.`);
-      }
-    }
+    const instituteId = user.instituteId;
+    const facultyUserId = user.id;
+    await this.access.assertBatchAccess(user, dto.batchId);
 
     const created = await this.prisma.studyMaterial.create({
       data: {
@@ -1263,6 +1275,7 @@ export class TuitionService {
   async getFeeRecords(
     instituteId: string,
     batchId?: string,
+    limit?: unknown,
   ): Promise<StudentFeeItem[]> {
     assertDb(this.prisma);
     const fees = await this.prisma.studentFeeRecord.findMany({
@@ -1287,6 +1300,7 @@ export class TuitionService {
         },
       },
       orderBy: { dueDate: 'asc' },
+      take: clampLimit(limit, 200, 500),
     });
 
     return fees.map((f) => ({
@@ -1303,7 +1317,7 @@ export class TuitionService {
       balanceDue: Math.max(0, f.totalAmount - f.paidAmount),
       dueDate: f.dueDate.toISOString(),
       status: f.status as any,
-      academicYear: f.academicYear,
+      academicYear: f.academicYear || '',
       reminderCount: f._count.reminders,
       createdAt: f.createdAt.toISOString(),
     }));
@@ -1313,6 +1327,8 @@ export class TuitionService {
     assertDb(this.prisma);
     const fees = await this.prisma.studentFeeRecord.findMany({
       where: { instituteId },
+      select: { totalAmount: true, paidAmount: true, status: true, dueDate: true },
+      take: 10000,
     });
 
     let totalReceivable = 0;
@@ -1349,14 +1365,18 @@ export class TuitionService {
   ): Promise<StudentFeeItem> {
     assertDb(this.prisma);
 
-    // Validate batch ownership if batchId provided
-    if (dto.batchId && this.prisma.batch?.findFirst) {
-      const batch = await this.prisma.batch.findFirst({
-        where: { id: dto.batchId, instituteId },
-      });
-      if (!batch) {
-        throw new NotFoundException(`Batch with ID ${dto.batchId} not found.`);
-      }
+    if (dto.batchId) {
+      const batch = await this.prisma.batch.findFirst({ where: { id: dto.batchId, instituteId }, select: { id: true } });
+      if (!batch) throw new NotFoundException(`Batch with ID ${dto.batchId} not found.`);
+    }
+    // The student must be an active STUDENT of this institute (never a user of another tenant).
+    const studentMembership = await this.prisma.instituteMembership.findFirst({
+      where: { instituteId, userId: dto.studentId, role: 'STUDENT', status: 'ACTIVE' },
+      select: { id: true },
+    });
+    if (!studentMembership) throw new NotFoundException('Student not found in this institute.');
+    if (!(dto.totalAmount > 0) || (dto.paidAmount ?? 0) < 0 || (dto.paidAmount ?? 0) > dto.totalAmount) {
+      throw new BadRequestException('Fee amounts are invalid.');
     }
 
     const created = await this.prisma.studentFeeRecord.create({
@@ -1367,7 +1387,7 @@ export class TuitionService {
         feeTitle: dto.feeTitle,
         totalAmount: dto.totalAmount,
         paidAmount: dto.paidAmount || 0,
-        dueDate: new Date(dto.dueDate),
+        dueDate: parseDate(dto.dueDate, 'dueDate'),
         status: (dto.paidAmount || 0) >= dto.totalAmount ? 'PAID' : (dto.paidAmount || 0) > 0 ? 'PARTIAL' : 'PENDING',
         academicYear: dto.academicYear || '2026-2027',
       },
