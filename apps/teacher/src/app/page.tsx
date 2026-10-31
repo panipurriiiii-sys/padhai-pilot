@@ -19,7 +19,8 @@ import { FacultyManagementView } from '../components/FacultyManagementView';
 import { FacultySalaryView } from '../components/FacultySalaryView';
 import { FacultyLeaveView } from '../components/FacultyLeaveView';
 import { StudyMaterialView } from '../components/StudyMaterialView';
-import { StudentFeeAlertView } from '../components/StudentFeeAlertView';
+import { BatchFeesView } from '../components/BatchFeesView';
+import { StudentLeavesView } from '../components/StudentLeavesView';
 import { TuitionBrandingView } from '../components/TuitionBrandingView';
 import { LoadError } from '../components/LoadError';
 import { AuthModal } from '../components/AuthModal';
@@ -56,6 +57,7 @@ const TAB_RESOURCES: Partial<Record<NavTab, ResourceKey[]>> = {
   invitations: ['batches'],
   announcements: ['batches', 'announcements'],
   reports: ['reports'],
+  studentFees: ['batches'],
 };
 
 function TeacherApp() {
@@ -475,7 +477,11 @@ function TeacherApp() {
           )}
 
           {currentTab === 'studentFees' && (
-            <StudentFeeAlertView />
+            <BatchFeesView batches={batches} />
+          )}
+
+          {currentTab === 'studentLeaves' && (
+            <StudentLeavesView />
           )}
 
           {currentTab === 'tuitionBranding' && (
