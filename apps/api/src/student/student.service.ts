@@ -1,3 +1,4 @@
+import { inheritBatchFees } from '../finance/fee-core.js';
 import {
   Injectable,
   Inject,
@@ -242,6 +243,8 @@ export class StudentService {
                 },
                 update: { status: 'ACTIVE' },
               });
+              // New enrolments inherit the batch's active fee structures as PENDING records.
+              await inheritBatchFees(tx, inv.instituteId, inv.batchId, user.id);
             }
           }
 

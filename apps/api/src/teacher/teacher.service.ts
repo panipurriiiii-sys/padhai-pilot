@@ -12,6 +12,7 @@ import { RedisService } from '../redis/redis.service.js';
 import { AccessService } from '../common/access/access.service.js';
 import { assertDb, parseDate, toDateOnly } from '../common/db/db.js';
 import type { AuthenticatedUser } from '../common/types.js';
+import { DOCUMENT_EXTENSIONS, validateMediaUrl } from '../common/security/media-url.js';
 
 @Injectable()
 export class TeacherService {
@@ -566,11 +567,13 @@ export class TeacherService {
       subject: string;
       dueDate: string;
       maxMarks?: number;
+      attachmentUrl?: string;
     },
     user: AuthenticatedUser,
   ) {
     const batch = await this.access.assertBatchAccess(user, data.batchId);
     const dueDate = parseDate(data.dueDate, 'dueDate');
+    const attachmentUrl = validateMediaUrl(data.attachmentUrl, 'attachmentUrl', DOCUMENT_EXTENSIONS);
 
     const assignment = await this.db.assignment.create({
       data: {
@@ -583,6 +586,7 @@ export class TeacherService {
         dueDate,
         maxMarks: data.maxMarks || 100,
         status: 'PUBLISHED',
+        attachmentUrl,
       },
     });
 
@@ -593,6 +597,29 @@ export class TeacherService {
       batchName: batch.name,
       submissionCount: 0,
     };
+  }
+
+  /** Edit an assignment; `attachmentUrl: null | ''` removes the attachment. */
+  async updateAssignment(
+    assignmentId: string,
+    data: { title?: string; instructions?: string; subject?: string; dueDate?: string; maxMarks?: number; attachmentUrl?: string | null },
+    user: AuthenticatedUser,
+  ) {
+    const existing = await this.db.assignment.findFirst({ where: { id: assignmentId, instituteId: user.instituteId } });
+    if (!existing) throw new NotFoundException('Assignment not found.');
+    await this.access.assertBatchAccess(user, existing.batchId);
+    const patch: Record<string, unknown> = {};
+    if (data.title !== undefined) patch.title = data.title;
+    if (data.instructions !== undefined) patch.instructions = data.instructions;
+    if (data.subject !== undefined) patch.subject = data.subject;
+    if (data.maxMarks !== undefined) patch.maxMarks = data.maxMarks;
+    if (data.dueDate !== undefined) patch.dueDate = parseDate(data.dueDate, 'dueDate');
+    if (data.attachmentUrl !== undefined) {
+      patch.attachmentUrl = data.attachmentUrl ? validateMediaUrl(data.attachmentUrl, 'attachmentUrl', DOCUMENT_EXTENSIONS) : null;
+    }
+    const updated = await this.db.assignment.update({ where: { id: assignmentId }, data: patch });
+    await this.redis.invalidateTeacherDashboard(user.instituteId, user.id);
+    return updated;
   }
 
   async getSubmissions(assignmentId: string, user: AuthenticatedUser) {

@@ -127,10 +127,20 @@ export class TeacherController {
       subject: string;
       dueDate: string;
       maxMarks?: number;
+      attachmentUrl?: string;
     },
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.teacherService.createAssignment(body, user);
+  }
+
+  @Put('assignments/:assignmentId')
+  updateAssignment(
+    @Param('assignmentId') assignmentId: string,
+    @Body() body: { title?: string; instructions?: string; subject?: string; dueDate?: string; maxMarks?: number; attachmentUrl?: string | null },
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.teacherService.updateAssignment(assignmentId, body, user);
   }
 
   @Get('assignments/:assignmentId/submissions')
