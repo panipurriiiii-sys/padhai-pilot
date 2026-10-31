@@ -10,6 +10,8 @@ const pg = new EmbeddedPostgres({
   user: DB_USER,
   password: DB_PASS,
   persistent: true,
+  // Windows defaults to WIN1252, which cannot store e.g. the rupee sign: always UTF8.
+  initdbFlags: ['--encoding=UTF8', '--locale=C'],
   onLog: () => {},
   onError: (m) => { if (process.env.LOCAL_DB_VERBOSE) console.error(m); },
 });
