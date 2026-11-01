@@ -75,17 +75,17 @@ export const GetStartedScreen: React.FC<GetStartedScreenProps> = ({
     <View style={styles.root}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-      {/* 1. Pure Background Image Layer (Positioned behind content) */}
+      {/* 1. Fullscreen Wallpaper Background Layer */}
       <Image
         source={currentBgImage}
         style={styles.backgroundImage}
         resizeMode="cover"
       />
 
-      {/* 2. Dark Overlay to guarantee high contrast and readability */}
+      {/* 2. Soft Reading Tint (Ensures text pops directly over artwork without any boxed containers) */}
       <View style={styles.overlayTint} />
 
-      {/* 3. Foreground Safe Content Layer (Drawn cleanly over the background) */}
+      {/* 3. Foreground Safe Content Layer */}
       <View
         style={[
           styles.safeContainer,
@@ -118,23 +118,19 @@ export const GetStartedScreen: React.FC<GetStartedScreenProps> = ({
           </Pressable>
         </View>
 
-        {/* Center Content Card */}
-        <View style={styles.contentWrap}>
-          <View style={styles.infoCard}>
-            <View style={styles.badgeWrap}>
-              <Text style={styles.badgeText}>
-                {currentSlide.badge}
-              </Text>
-            </View>
+        {/* Center Content: Direct Typography, Zero Boxes */}
+        <View style={styles.textContainer}>
+          <Text style={styles.badgeText}>
+            {currentSlide.badge}
+          </Text>
 
-            <Text style={styles.titleText}>
-              {currentSlide.title}
-            </Text>
+          <Text style={styles.titleText}>
+            {currentSlide.title}
+          </Text>
 
-            <Text style={styles.descText}>
-              {currentSlide.description}
-            </Text>
-          </View>
+          <Text style={styles.descText}>
+            {currentSlide.description}
+          </Text>
         </View>
 
         {/* Bottom Actions Dock */}
@@ -201,7 +197,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: '100%',
     height: '100%',
-    backgroundColor: 'rgba(5, 6, 8, 0.48)',
+    backgroundColor: 'rgba(5, 6, 8, 0.42)',
   },
   safeContainer: {
     flex: 1,
@@ -220,10 +216,10 @@ const styles = StyleSheet.create({
   sessionBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 6,
+    paddingVertical: 5,
     paddingHorizontal: 12,
     borderRadius: 20,
-    backgroundColor: 'rgba(10, 13, 18, 0.75)',
+    backgroundColor: 'rgba(10, 13, 18, 0.65)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
@@ -241,7 +237,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   skipBtn: {
-    paddingVertical: 6,
+    paddingVertical: 5,
     paddingHorizontal: 12,
     borderRadius: 16,
     backgroundColor: 'rgba(10, 13, 18, 0.65)',
@@ -253,55 +249,42 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
   },
-  contentWrap: {
+  textContainer: {
     width: '100%',
     maxWidth: 440,
     alignItems: 'center',
-    paddingVertical: 8,
-  },
-  infoCard: {
-    width: '100%',
-    backgroundColor: 'rgba(10, 13, 18, 0.85)',
-    borderRadius: 22,
-    paddingVertical: 20,
-    paddingHorizontal: 22,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.18)',
-    alignItems: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  badgeWrap: {
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    backgroundColor: 'rgba(22, 119, 255, 0.25)',
-    borderWidth: 1,
-    borderColor: 'rgba(22, 119, 255, 0.5)',
-    marginBottom: 10,
+    paddingHorizontal: 20,
   },
   badgeText: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 11.5,
+    fontWeight: '800',
     color: '#60A5FA',
-    letterSpacing: 0.8,
+    letterSpacing: 1.2,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    textShadowColor: 'rgba(0, 0, 0, 0.9)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
   },
   titleText: {
-    fontSize: 22,
-    fontWeight: '700',
+    fontSize: 26,
+    fontWeight: '800',
     color: '#FFFFFF',
     textAlign: 'center',
     letterSpacing: -0.4,
     marginBottom: 8,
+    textShadowColor: 'rgba(0, 0, 0, 0.9)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 8,
   },
   descText: {
-    fontSize: 13,
+    fontSize: 13.5,
     lineHeight: 19,
-    color: 'rgba(255, 255, 255, 0.85)',
+    color: 'rgba(255, 255, 255, 0.92)',
     textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.9)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
   },
   bottomArea: {
     width: '100%',
