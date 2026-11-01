@@ -272,6 +272,12 @@ function StudentPortal() {
   const [isSubmittingSupport, setIsSubmittingSupport] = useState(false);
 
   // Auth States
+  const [showGetStarted, setShowGetStarted] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return !localStorage.getItem('padhai_student_onboarded');
+    }
+    return false;
+  });
   const [authMode, setAuthMode] = useState<'SIGN_IN' | 'REGISTER'>('SIGN_IN');
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');

@@ -26,6 +26,7 @@ import { SubscriptionView } from '../components/SubscriptionView';
 import { LoadError } from '../components/LoadError';
 import { AuthModal } from '../components/AuthModal';
 import { AuthWelcomeScreen } from '../components/AuthWelcomeScreen';
+import { GetStartedView } from '../components/GetStartedView';
 import { teacherApi, getAuthToken, clearAuthToken } from '../lib/api';
 import type {
   TeacherDashboardMetrics,
@@ -80,6 +81,12 @@ function TeacherApp() {
   const [isLoading, setIsLoading] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [sessionNotice, setSessionNotice] = useState<string | null>(null);
+  const [showGetStarted, setShowGetStarted] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return !localStorage.getItem('padhai_teacher_onboarded');
+    }
+    return false;
+  });
 
   const [loadErrors, setLoadErrors] = useState<Partial<Record<ResourceKey, string>>>({});
 
