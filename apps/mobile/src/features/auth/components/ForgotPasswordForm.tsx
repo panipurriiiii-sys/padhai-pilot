@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, Text, TextInput } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, StyleSheet, Text, TextInput, Pressable } from 'react-native';
 import { Button } from '../../../components/common/Button';
 import { useTheme } from '../../../theme/ThemeContext';
+import { MailIcon } from './AuthFieldIcons';
 
 interface ForgotPasswordFormProps {
   email: string;
@@ -22,6 +23,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
 }) => {
   const { colors, radii, typography, spacing } = useTheme();
   const [emailFocused, setEmailFocused] = useState(false);
+  const emailInputRef = useRef<TextInput>(null);
 
   return (
     <View style={styles.container}>
@@ -33,7 +35,8 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
         <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
           Email Address
         </Text>
-        <View
+        <Pressable
+          onPress={() => emailInputRef.current?.focus()}
           style={[
             styles.inputWrapper,
             {
@@ -41,9 +44,14 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
               borderColor: emailError ? colors.error : emailFocused ? colors.primary : colors.borderStrong,
               borderRadius: radii.lg,
             },
+            emailFocused && styles.focusedGlow,
           ]}
         >
+          <View style={styles.inputIconContainer}>
+            <MailIcon color={emailFocused ? colors.primary : colors.textMuted} size={16} />
+          </View>
           <TextInput
+            ref={emailInputRef}
             style={[styles.input, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}
             placeholder="name@example.com"
             placeholderTextColor={colors.textFaint}
@@ -52,9 +60,13 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
             onFocus={() => setEmailFocused(true)}
             onBlur={() => setEmailFocused(false)}
             autoCapitalize="none"
+            autoCorrect={false}
             keyboardType="email-address"
+            returnKeyType="done"
+            onSubmitEditing={onSubmit}
+            editable={!isLoading}
           />
-        </View>
+        </Pressable>
         {emailError ? (
           <Text style={[styles.errorHelper, { color: colors.error, fontFamily: typography.fonts.ui }]}>
             {emailError}
@@ -101,14 +113,29 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    height: 46,
+    borderWidth: 1.2,
+    paddingHorizontal: 12,
+    height: 48,
+  },
+  focusedGlow: {
+    shadowColor: '#1677FF',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  inputIconContainer: {
+    marginRight: 10,
+    width: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   input: {
     flex: 1,
-    fontSize: 13,
+    height: '100%',
+    fontSize: 14,
     paddingVertical: 0,
+    includeFontPadding: false,
   },
   errorHelper: {
     fontSize: 11,

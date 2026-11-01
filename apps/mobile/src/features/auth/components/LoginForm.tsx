@@ -1,5 +1,11 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, Text, TextInput, Pressable } from 'react-native';
+import React, { useState, useRef } from 'react';
+import {
+  View,
+  StyleSheet,
+  Text,
+  TextInput,
+  Pressable,
+} from 'react-native';
 import { useTheme } from '../../../theme/ThemeContext';
 import { MailIcon, LockIcon } from './AuthFieldIcons';
 
@@ -31,6 +37,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   const [emailFocused, setEmailFocused] = useState(false);
   const [pwdFocused, setPwdFocused] = useState(false);
 
+  const emailInputRef = useRef<TextInput>(null);
+  const pwdInputRef = useRef<TextInput>(null);
+
   const emailBorder = emailError
     ? colors.error
     : emailFocused
@@ -50,7 +59,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
           Email Address
         </Text>
-        <View
+        <Pressable
+          onPress={() => emailInputRef.current?.focus()}
           style={[
             styles.inputWrapper,
             {
@@ -65,7 +75,14 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             <MailIcon color={emailFocused ? colors.primary : colors.textMuted} size={16} />
           </View>
           <TextInput
-            style={[styles.input, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}
+            ref={emailInputRef}
+            style={[
+              styles.input,
+              {
+                color: colors.textPrimary,
+                fontFamily: typography.fonts.ui,
+              },
+            ]}
             placeholder="name@example.com"
             placeholderTextColor={colors.textFaint}
             value={email}
@@ -73,10 +90,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             onFocus={() => setEmailFocused(true)}
             onBlur={() => setEmailFocused(false)}
             autoCapitalize="none"
+            autoCorrect={false}
             keyboardType="email-address"
             autoComplete="email"
+            textContentType="emailAddress"
+            returnKeyType="next"
+            onSubmitEditing={() => pwdInputRef.current?.focus()}
+            editable={!isLoading}
           />
-        </View>
+        </Pressable>
         {emailError ? (
           <Text style={[styles.errorHelper, { color: colors.error, fontFamily: typography.fonts.ui }]}>
             {emailError}
@@ -96,7 +118,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             </Text>
           </Pressable>
         </View>
-        <View
+        <Pressable
+          onPress={() => pwdInputRef.current?.focus()}
           style={[
             styles.inputWrapper,
             {
@@ -111,7 +134,14 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             <LockIcon color={pwdFocused ? colors.primary : colors.textMuted} size={16} />
           </View>
           <TextInput
-            style={[styles.input, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}
+            ref={pwdInputRef}
+            style={[
+              styles.input,
+              {
+                color: colors.textPrimary,
+                fontFamily: typography.fonts.ui,
+              },
+            ]}
             placeholder="••••••••"
             placeholderTextColor={colors.textFaint}
             value={password}
@@ -120,6 +150,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             onBlur={() => setPwdFocused(false)}
             secureTextEntry={!showPassword}
             autoCapitalize="none"
+            autoCorrect={false}
+            textContentType="password"
+            returnKeyType="done"
+            onSubmitEditing={onSubmit}
+            editable={!isLoading}
           />
           <Pressable
             onPress={() => setShowPassword(!showPassword)}
@@ -130,7 +165,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               {showPassword ? 'HIDE' : 'SHOW'}
             </Text>
           </Pressable>
-        </View>
+        </Pressable>
         {passwordError ? (
           <Text style={[styles.errorHelper, { color: colors.error, fontFamily: typography.fonts.ui }]}>
             {passwordError}
@@ -205,8 +240,10 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
+    height: '100%',
     fontSize: 14,
     paddingVertical: 0,
+    includeFontPadding: false,
   },
   eyeBtn: {
     paddingLeft: 8,

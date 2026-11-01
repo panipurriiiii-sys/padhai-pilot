@@ -1,5 +1,11 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, Text, TextInput, Pressable } from 'react-native';
+import React, { useState, useRef } from 'react';
+import {
+  View,
+  StyleSheet,
+  Text,
+  TextInput,
+  Pressable,
+} from 'react-native';
 import { useTheme } from '../../../theme/ThemeContext';
 import { AuthRole } from './RoleSelector';
 import { UserIcon, MailIcon, LockIcon, TagIcon, BookIcon } from './AuthFieldIcons';
@@ -53,6 +59,12 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
+  const nameInputRef = useRef<TextInput>(null);
+  const emailInputRef = useRef<TextInput>(null);
+  const pwdInputRef = useRef<TextInput>(null);
+  const phoneInputRef = useRef<TextInput>(null);
+  const extraInputRef = useRef<TextInput>(null);
+
   return (
     <View style={styles.container}>
       {/* Full Name */}
@@ -60,7 +72,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
         <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
           Full Name
         </Text>
-        <View
+        <Pressable
+          onPress={() => nameInputRef.current?.focus()}
           style={[
             styles.inputWrapper,
             {
@@ -75,6 +88,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             <UserIcon color={focusedField === 'name' ? colors.primary : colors.textMuted} size={16} />
           </View>
           <TextInput
+            ref={nameInputRef}
             style={[styles.input, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}
             placeholder={activeRole === 'STUDENT' ? 'e.g. Alok Verma' : 'e.g. Dr. Rajesh Gupta'}
             placeholderTextColor={colors.textFaint}
@@ -83,8 +97,12 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             onFocus={() => setFocusedField('name')}
             onBlur={() => setFocusedField(null)}
             autoCapitalize="words"
+            autoCorrect={false}
+            returnKeyType="next"
+            onSubmitEditing={() => emailInputRef.current?.focus()}
+            editable={!isLoading}
           />
-        </View>
+        </Pressable>
         {nameError ? (
           <Text style={[styles.errorHelper, { color: colors.error, fontFamily: typography.fonts.ui }]}>
             {nameError}
@@ -97,7 +115,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
         <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
           Email Address
         </Text>
-        <View
+        <Pressable
+          onPress={() => emailInputRef.current?.focus()}
           style={[
             styles.inputWrapper,
             {
@@ -112,6 +131,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             <MailIcon color={focusedField === 'email' ? colors.primary : colors.textMuted} size={16} />
           </View>
           <TextInput
+            ref={emailInputRef}
             style={[styles.input, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}
             placeholder="name@example.com"
             placeholderTextColor={colors.textFaint}
@@ -120,9 +140,13 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             onFocus={() => setFocusedField('email')}
             onBlur={() => setFocusedField(null)}
             autoCapitalize="none"
+            autoCorrect={false}
             keyboardType="email-address"
+            returnKeyType="next"
+            onSubmitEditing={() => pwdInputRef.current?.focus()}
+            editable={!isLoading}
           />
-        </View>
+        </Pressable>
         {emailError ? (
           <Text style={[styles.errorHelper, { color: colors.error, fontFamily: typography.fonts.ui }]}>
             {emailError}
@@ -133,39 +157,45 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
       {/* Password */}
       <View style={styles.fieldGroup}>
         <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
-          Password (min 6 characters)
+          Password
         </Text>
-        <View
+        <Pressable
+          onPress={() => pwdInputRef.current?.focus()}
           style={[
             styles.inputWrapper,
             {
               backgroundColor: colors.surfaceSubtle,
-              borderColor: passwordError ? colors.error : focusedField === 'password' ? colors.primary : colors.borderStrong,
+              borderColor: passwordError ? colors.error : focusedField === 'pwd' ? colors.primary : colors.borderStrong,
               borderRadius: radii.lg,
             },
-            focusedField === 'password' && styles.focusedGlow,
+            focusedField === 'pwd' && styles.focusedGlow,
           ]}
         >
           <View style={styles.inputIconContainer}>
-            <LockIcon color={focusedField === 'password' ? colors.primary : colors.textMuted} size={16} />
+            <LockIcon color={focusedField === 'pwd' ? colors.primary : colors.textMuted} size={16} />
           </View>
           <TextInput
+            ref={pwdInputRef}
             style={[styles.input, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}
-            placeholder="••••••••"
+            placeholder="At least 8 characters"
             placeholderTextColor={colors.textFaint}
             value={password}
             onChangeText={setPassword}
-            onFocus={() => setFocusedField('password')}
+            onFocus={() => setFocusedField('pwd')}
             onBlur={() => setFocusedField(null)}
             secureTextEntry={!showPassword}
             autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="next"
+            onSubmitEditing={() => phoneInputRef.current?.focus()}
+            editable={!isLoading}
           />
           <Pressable onPress={() => setShowPassword(!showPassword)} hitSlop={12} style={styles.eyeBtn}>
             <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: '700' }}>
               {showPassword ? 'HIDE' : 'SHOW'}
             </Text>
           </Pressable>
-        </View>
+        </Pressable>
         {passwordError ? (
           <Text style={[styles.errorHelper, { color: colors.error, fontFamily: typography.fonts.ui }]}>
             {passwordError}
@@ -173,13 +203,48 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
         ) : null}
       </View>
 
-      {/* Role-specific Fields */}
+      {/* Phone Number (Optional) */}
+      <View style={styles.fieldGroup}>
+        <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
+          Phone Number <Text style={{ fontWeight: '400', color: colors.textMuted }}>(Optional)</Text>
+        </Text>
+        <Pressable
+          onPress={() => phoneInputRef.current?.focus()}
+          style={[
+            styles.inputWrapper,
+            {
+              backgroundColor: colors.surfaceSubtle,
+              borderColor: focusedField === 'phone' ? colors.primary : colors.borderStrong,
+              borderRadius: radii.lg,
+            },
+            focusedField === 'phone' && styles.focusedGlow,
+          ]}
+        >
+          <TextInput
+            ref={phoneInputRef}
+            style={[styles.input, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}
+            placeholder="+91 98765 43210"
+            placeholderTextColor={colors.textFaint}
+            value={phone}
+            onChangeText={setPhone}
+            onFocus={() => setFocusedField('phone')}
+            onBlur={() => setFocusedField(null)}
+            keyboardType="phone-pad"
+            returnKeyType="next"
+            onSubmitEditing={() => extraInputRef.current?.focus()}
+            editable={!isLoading}
+          />
+        </Pressable>
+      </View>
+
+      {/* Role specific field: Batch Code or Subject */}
       {activeRole === 'STUDENT' ? (
         <View style={styles.fieldGroup}>
           <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
-            Batch Enrollment Code
+            Batch Invitation Code <Text style={{ fontWeight: '400', color: colors.textMuted }}>(Optional)</Text>
           </Text>
-          <View
+          <Pressable
+            onPress={() => extraInputRef.current?.focus()}
             style={[
               styles.inputWrapper,
               {
@@ -194,46 +259,68 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               <TagIcon color={focusedField === 'code' ? colors.primary : colors.textMuted} size={16} />
             </View>
             <TextInput
+              ref={extraInputRef}
               style={[styles.input, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}
-              placeholder="e.g. BATCH-2026-X"
+              placeholder="e.g. CLASS10-MATH-2026"
               placeholderTextColor={colors.textFaint}
               value={invitationCode}
               onChangeText={setInvitationCode}
               onFocus={() => setFocusedField('code')}
               onBlur={() => setFocusedField(null)}
               autoCapitalize="characters"
+              autoCorrect={false}
+              returnKeyType="done"
+              onSubmitEditing={onSubmit}
+              editable={!isLoading}
             />
-          </View>
+          </Pressable>
+          {codeError ? (
+            <Text style={[styles.errorHelper, { color: colors.error, fontFamily: typography.fonts.ui }]}>
+              {codeError}
+            </Text>
+          ) : null}
         </View>
       ) : (
         <View style={styles.fieldGroup}>
           <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
-            Teaching Subject
+            Primary Teaching Subject
           </Text>
-          <View
+          <Pressable
+            onPress={() => extraInputRef.current?.focus()}
             style={[
               styles.inputWrapper,
               {
                 backgroundColor: colors.surfaceSubtle,
-                borderColor: subjectError ? colors.error : focusedField === 'subject' ? colors.primary : colors.borderStrong,
+                borderColor: subjectError ? colors.error : focusedField === 'sub' ? colors.primary : colors.borderStrong,
                 borderRadius: radii.lg,
               },
-              focusedField === 'subject' && styles.focusedGlow,
+              focusedField === 'sub' && styles.focusedGlow,
             ]}
           >
             <View style={styles.inputIconContainer}>
-              <BookIcon color={focusedField === 'subject' ? colors.primary : colors.textMuted} size={16} />
+              <BookIcon color={focusedField === 'sub' ? colors.primary : colors.textMuted} size={16} />
             </View>
             <TextInput
+              ref={extraInputRef}
               style={[styles.input, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}
-              placeholder="e.g. Mathematics / Physics"
+              placeholder="e.g. Mathematics, Physics, Chemistry"
               placeholderTextColor={colors.textFaint}
               value={subject}
               onChangeText={setSubject}
-              onFocus={() => setFocusedField('subject')}
+              onFocus={() => setFocusedField('sub')}
               onBlur={() => setFocusedField(null)}
+              autoCapitalize="words"
+              autoCorrect={false}
+              returnKeyType="done"
+              onSubmitEditing={onSubmit}
+              editable={!isLoading}
             />
-          </View>
+          </Pressable>
+          {subjectError ? (
+            <Text style={[styles.errorHelper, { color: colors.error, fontFamily: typography.fonts.ui }]}>
+              {subjectError}
+            </Text>
+          ) : null}
         </View>
       )}
 
@@ -252,7 +339,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
         ]}
       >
         <Text style={[styles.submitText, { fontFamily: typography.fonts.ui }]}>
-          {isLoading ? 'Creating Account...' : `Create ${activeRole === 'STUDENT' ? 'Student' : 'Faculty'} Account`}
+          {isLoading ? 'Creating Account...' : 'Complete Registration'}
         </Text>
         {!isLoading && <Text style={styles.submitArrow}>→</Text>}
       </Pressable>
@@ -294,8 +381,10 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
+    height: '100%',
     fontSize: 14,
     paddingVertical: 0,
+    includeFontPadding: false,
   },
   eyeBtn: {
     paddingLeft: 8,
@@ -311,7 +400,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
+    marginTop: 10,
     shadowColor: '#1677FF',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
