@@ -1,8 +1,10 @@
-import React, { useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { useAuthStore } from '../store/useAuthStore';
 import { useNavigationStore } from '../store/useNavigationStore';
 import { LoginScreen } from '../features/auth/screens/LoginScreen';
+import { PermissionOnboardingScreen } from '../features/permissions/PermissionOnboardingScreen';
+import { permissionManager } from '../features/permissions/permissionManager';
 
 // Teacher Screens
 import { TeacherDashboardScreen } from '../features/teacher/TeacherDashboardScreen';
@@ -30,7 +32,30 @@ export const RootNavigator: React.FC = () => {
   const { isAuthenticated, session } = useAuthStore();
   const { currentTab, setTab } = useNavigationStore();
 
+  const [hasCheckedPermissions, setHasCheckedPermissions] = useState(false);
+  const [needsPermissionOnboarding, setNeedsPermissionOnboarding] = useState(false);
+
   const isTeacher = isStaffRole(session?.user?.role);
+  const userId = session?.user?.id;
+
+  // Check role-based permission onboarding directly after login
+  useEffect(() => {
+    let active = true;
+    if (isAuthenticated && userId) {
+      permissionManager.hasCompletedOnboarding(userId).then((completed) => {
+        if (active) {
+          setNeedsPermissionOnboarding(!completed);
+          setHasCheckedPermissions(true);
+        }
+      });
+    } else {
+      setHasCheckedPermissions(true);
+      setNeedsPermissionOnboarding(false);
+    }
+    return () => {
+      active = false;
+    };
+  }, [isAuthenticated, userId]);
 
   // Automatically ensure initial tab aligns with user role
   useEffect(() => {
@@ -60,6 +85,17 @@ export const RootNavigator: React.FC = () => {
 
   if (!isAuthenticated) {
     return <LoginScreen />;
+  }
+
+  // Once logged in, show dedicated role-specific permission screens if onboarding hasn't been completed yet
+  if (needsPermissionOnboarding && userId) {
+    return (
+      <PermissionOnboardingScreen
+        userId={userId}
+        role={session?.user?.role}
+        onFinished={() => setNeedsPermissionOnboarding(false)}
+      />
+    );
   }
 
   const renderActiveScreen = () => {
