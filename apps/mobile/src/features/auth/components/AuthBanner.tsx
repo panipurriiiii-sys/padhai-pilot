@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { View, StyleSheet, Animated } from 'react-native';
+import { StyleSheet, Animated } from 'react-native';
 import { Caption } from '../../../components/common/Typography';
 import { useTheme } from '../../../theme/ThemeContext';
 
@@ -9,7 +9,7 @@ interface AuthBannerProps {
 }
 
 export const AuthBanner: React.FC<AuthBannerProps> = ({ type, message }) => {
-  const { colors, radii, spacing, isDark } = useTheme();
+  const { colors, radii, spacing } = useTheme();
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const translateYAnim = useRef(new Animated.Value(-6)).current;
 
@@ -36,10 +36,9 @@ export const AuthBanner: React.FC<AuthBannerProps> = ({ type, message }) => {
   if (!message) return null;
 
   const isError = type === 'error';
-  const bg = isError
-    ? isDark ? '#3B151A' : '#FEF2F2'
-    : isDark ? '#143823' : '#F0FDF4';
-  const border = isError ? colors.error : colors.success;
+  // Use exact global status tokens from shared theme: stickyPink vs stickyMint
+  const bg = isError ? colors.errorSubtle : colors.successSubtle;
+  const border = isError ? colors.stickyPinkBorder : colors.stickyMintBorder;
   const textColor = isError ? colors.error : colors.success;
 
   return (

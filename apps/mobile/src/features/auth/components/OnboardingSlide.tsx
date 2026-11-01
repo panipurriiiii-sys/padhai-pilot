@@ -74,15 +74,15 @@ export const OnboardingSlide: React.FC<OnboardingSlideProps> = ({ slide, isActiv
           style={[
             styles.badge,
             {
-              backgroundColor: isDark ? colors.primarySubtle : '#EFF6FF',
-              borderColor: isDark ? colors.primarySubtle : '#BFDBFE',
+              backgroundColor: colors.stickyBlueBg,
+              borderColor: colors.stickyBlueBorder,
               borderRadius: radii.full,
               paddingHorizontal: spacing.sm,
               paddingVertical: 4,
             },
           ]}
         >
-          <Caption style={{ color: colors.primary, fontWeight: '700', letterSpacing: 0.6 }}>
+          <Caption style={{ color: colors.stickyBlueText, fontWeight: '700', letterSpacing: 0.6 }}>
             {slide.badge}
           </Caption>
         </View>
