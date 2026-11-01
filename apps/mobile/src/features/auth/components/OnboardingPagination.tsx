@@ -13,7 +13,7 @@ export const OnboardingPagination: React.FC<OnboardingPaginationProps> = ({
   activeIndex,
   onSelectIndex,
 }) => {
-  const { colors, radii } = useTheme();
+  const { radii } = useTheme();
 
   return (
     <View style={styles.container} accessibilityRole="tablist">
@@ -27,11 +27,11 @@ export const OnboardingPagination: React.FC<OnboardingPaginationProps> = ({
               styles.dot,
               {
                 borderRadius: radii.full,
-                width: isActive ? 24 : 8,
-                backgroundColor: isActive ? colors.primary : colors.borderStrong,
+                width: isActive ? 28 : 8,
+                backgroundColor: isActive ? '#FFFFFF' : 'rgba(255, 255, 255, 0.45)',
               },
             ]}
-            hitSlop={8}
+            hitSlop={10}
             accessibilityRole="tab"
             accessibilityState={{ selected: isActive }}
             accessibilityLabel={`Slide ${index + 1}`}
@@ -47,11 +47,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
+    paddingVertical: 10,
+    zIndex: 30,
   },
   dot: {
     height: 8,
     marginHorizontal: 4,
   },
 });
-

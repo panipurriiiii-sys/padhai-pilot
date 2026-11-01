@@ -1,6 +1,14 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Image, StatusBar, Text, Pressable } from 'react-native';
-import { Button } from '../../../components/common/Button';
+import {
+  View,
+  StyleSheet,
+  Image,
+  StatusBar,
+  Text,
+  Pressable,
+  TouchableOpacity,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../../theme/ThemeContext';
 import { OnboardingSlide, OnboardingSlideData } from '../components/OnboardingSlide';
 import { OnboardingPagination } from '../components/OnboardingPagination';
@@ -39,7 +47,8 @@ export const GetStartedScreen: React.FC<GetStartedScreenProps> = ({
   onFinish,
   onLoginPress,
 }) => {
-  const { spacing, typography } = useTheme();
+  const { typography } = useTheme();
+  const insets = useSafeAreaInsets();
   const [activeIndex, setActiveIndex] = useState(0);
 
   const handleNext = () => {
@@ -52,22 +61,34 @@ export const GetStartedScreen: React.FC<GetStartedScreenProps> = ({
 
   const activeSlide = ONBOARDING_SLIDES[activeIndex];
   const currentBgImage = OnboardingImages[activeIndex] || OnboardingImages[0];
+  const isLast = activeIndex === ONBOARDING_SLIDES.length - 1;
 
   return (
     <View style={styles.root}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-      {/* Fullscreen background image with absolute positioning (modern React Native pattern) */}
+      {/* 1. Fullscreen Background Image */}
       <Image
         source={currentBgImage}
         style={StyleSheet.absoluteFillObject}
         resizeMode="cover"
       />
 
-      {/* Soft gradient/vignette overlay for crisp readability */}
-      <View style={styles.scrimOverlay}>
+      {/* 2. Top-to-Bottom Contrast Scrim */}
+      <View style={styles.scrimOverlay} />
+
+      {/* 3. Safe Foreground Content */}
+      <View
+        style={[
+          styles.safeContainer,
+          {
+            paddingTop: Math.max(insets.top, 24),
+            paddingBottom: Math.max(insets.bottom, 20),
+          },
+        ]}
+      >
         {/* Top Session Pill */}
-        <View style={[styles.topBar, { paddingHorizontal: spacing.lg }]}>
+        <View style={styles.topBar}>
           <View style={styles.sessionBadge}>
             <Text style={[styles.sessionText, { fontFamily: typography.fonts.ui }]}>
               Session 2026–27
@@ -75,38 +96,45 @@ export const GetStartedScreen: React.FC<GetStartedScreenProps> = ({
           </View>
         </View>
 
-        {/* Clean Typography (No bulky box/card behind text) */}
+        {/* Center Text Presentation */}
         <View style={styles.slideContainer}>
           <OnboardingSlide slide={activeSlide} isActive />
         </View>
 
-        {/* Bottom Pagination & Clean Primary Button */}
-        <View style={[styles.bottomContainer, { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl }]}>
+        {/* Bottom Interactive Dock (Prominent & High-Contrast) */}
+        <View style={styles.bottomDock}>
           <OnboardingPagination
             total={ONBOARDING_SLIDES.length}
             activeIndex={activeIndex}
             onSelectIndex={setActiveIndex}
           />
 
-          <View style={[styles.actionRow, { marginTop: spacing.md }]}>
-            <Button
-              title={activeIndex === ONBOARDING_SLIDES.length - 1 ? 'Get Started' : 'Next'}
-              variant="primary"
-              size="lg"
-              onPress={handleNext}
-              style={styles.actionBtn}
-            />
+          {/* Primary High-Contrast Action Button */}
+          <TouchableOpacity
+            activeOpacity={0.88}
+            onPress={handleNext}
+            style={styles.primaryBtn}
+            accessibilityRole="button"
+            accessibilityLabel={isLast ? 'Get Started' : 'Next slide'}
+          >
+            <Text style={[styles.primaryBtnText, { fontFamily: typography.fonts.ui }]}>
+              {isLast ? 'Get Started' : 'Next'}
+            </Text>
+            <Text style={styles.arrowIcon}>→</Text>
+          </TouchableOpacity>
 
-            <Pressable
-              onPress={onLoginPress}
-              hitSlop={12}
-              style={styles.loginLinkWrap}
-            >
-              <Text style={[styles.loginLinkText, { fontFamily: typography.fonts.ui }]}>
-                Already have an account? <Text style={styles.loginLinkBold}>Sign In</Text>
-              </Text>
-            </Pressable>
-          </View>
+          {/* Secondary Sign In Link */}
+          <Pressable
+            onPress={onLoginPress}
+            hitSlop={14}
+            style={styles.loginLinkWrap}
+            accessibilityRole="button"
+            accessibilityLabel="Sign in to existing account"
+          >
+            <Text style={[styles.loginLinkText, { fontFamily: typography.fonts.ui }]}>
+              Already have an account? <Text style={styles.loginLinkBold}>Sign In</Text>
+            </Text>
+          </Pressable>
         </View>
       </View>
     </View>
@@ -120,22 +148,26 @@ const styles = StyleSheet.create({
   },
   scrimOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.32)',
+    backgroundColor: 'rgba(0, 0, 0, 0.42)', // increased opacity for text & button pop
+  },
+  safeContainer: {
+    flex: 1,
     justifyContent: 'space-between',
-    paddingTop: 48,
+    zIndex: 20,
   },
   topBar: {
     width: '100%',
     flexDirection: 'row',
     justifyContent: 'flex-end',
+    paddingHorizontal: 20,
   },
   sessionBadge: {
     paddingVertical: 5,
     paddingHorizontal: 12,
     borderRadius: 14,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
+    borderColor: 'rgba(255, 255, 255, 0.35)',
   },
   sessionText: {
     fontSize: 11,
@@ -145,34 +177,58 @@ const styles = StyleSheet.create({
   },
   slideContainer: {
     flex: 1,
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingBottom: 24,
+    paddingHorizontal: 20,
   },
-  bottomContainer: {
+  bottomDock: {
     width: '100%',
-  },
-  actionRow: {
-    width: '100%',
+    paddingHorizontal: 24,
+    paddingBottom: 16,
     alignItems: 'center',
   },
-  actionBtn: {
+  primaryBtn: {
     width: '100%',
+    height: 52,
+    backgroundColor: '#1677FF', // Teacher Portal Brand Electric Blue
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 18,
+    shadowColor: '#1677FF',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.55,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  primaryBtnText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  arrowIcon: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '800',
+    marginLeft: 8,
   },
   loginLinkWrap: {
-    paddingVertical: 12,
+    paddingVertical: 14,
     marginTop: 4,
   },
   loginLinkText: {
     color: '#FFFFFF',
     fontSize: 13,
     textAlign: 'center',
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowColor: 'rgba(0, 0, 0, 0.6)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
   },
   loginLinkBold: {
     fontWeight: '800',
     textDecorationLine: 'underline',
+    color: '#FFFFFF',
   },
 });
