@@ -1,8 +1,6 @@
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { Input } from '../../../components/common/Input';
+import React, { useState } from 'react';
+import { View, StyleSheet, Text, TextInput, Pressable } from 'react-native';
 import { Button } from '../../../components/common/Button';
-import { Caption } from '../../../components/common/Typography';
 import { useTheme } from '../../../theme/ThemeContext';
 import { AuthRole } from './RoleSelector';
 
@@ -41,89 +39,166 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
   onSubmit,
   isLoading,
 }) => {
-  const { colors, spacing } = useTheme();
+  const { colors, radii, typography } = useTheme();
+  const [showPassword, setShowPassword] = useState(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
 
   return (
     <View style={styles.container}>
-      <Input
-        label="Full Name"
-        placeholder="e.g. Dr. Ramesh Sharma"
-        value={fullName}
-        onChangeText={setFullName}
-        autoCapitalize="words"
-      />
-
-      <Input
-        label="Email Address"
-        placeholder="e.g. ramesh@tuition.edu"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        autoComplete="email"
-      />
-
-      <Input
-        label="Password (min 6 characters)"
-        placeholder="Choose a strong password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        autoCapitalize="none"
-      />
-
-      <Input
-        label="Contact Phone (Optional)"
-        placeholder="e.g. +91 98765 43210"
-        value={phone}
-        onChangeText={setPhone}
-        keyboardType="phone-pad"
-      />
-
-      {activeRole === 'STUDENT' ? (
-        <View>
-          <Input
-            label="Institute / Batch Enrollment Code"
-            placeholder="e.g. BATCH-2026-X"
-            value={invitationCode}
-            onChangeText={setInvitationCode}
-            autoCapitalize="characters"
+      {/* Full Name */}
+      <View style={styles.fieldGroup}>
+        <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
+          FULL NAME
+        </Text>
+        <View
+          style={[
+            styles.inputWrapper,
+            {
+              backgroundColor: colors.surface,
+              borderColor: focusedField === 'name' ? colors.primary : colors.borderStrong,
+              borderRadius: radii.md,
+            },
+          ]}
+        >
+          <TextInput
+            style={[styles.input, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}
+            placeholder={activeRole === 'STUDENT' ? 'Rohan Verma' : 'Dr. Ramesh Sharma'}
+            placeholderTextColor={colors.textFaint}
+            value={fullName}
+            onChangeText={setFullName}
+            onFocus={() => setFocusedField('name')}
+            onBlur={() => setFocusedField(null)}
+            autoCapitalize="words"
           />
-          <Caption
-            style={{
-              color: colors.textMuted,
-              marginTop: -spacing.xs,
-              marginBottom: spacing.md,
-            }}
+        </View>
+      </View>
+
+      {/* Email */}
+      <View style={styles.fieldGroup}>
+        <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
+          EMAIL ADDRESS
+        </Text>
+        <View
+          style={[
+            styles.inputWrapper,
+            {
+              backgroundColor: colors.surface,
+              borderColor: focusedField === 'email' ? colors.primary : colors.borderStrong,
+              borderRadius: radii.md,
+            },
+          ]}
+        >
+          <TextInput
+            style={[styles.input, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}
+            placeholder="rohan@tuition.edu"
+            placeholderTextColor={colors.textFaint}
+            value={email}
+            onChangeText={setEmail}
+            onFocus={() => setFocusedField('email')}
+            onBlur={() => setFocusedField(null)}
+            autoCapitalize="none"
+            keyboardType="email-address"
+          />
+        </View>
+      </View>
+
+      {/* Password */}
+      <View style={styles.fieldGroup}>
+        <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
+          PASSWORD (MIN 6 CHARACTERS)
+        </Text>
+        <View
+          style={[
+            styles.inputWrapper,
+            {
+              backgroundColor: colors.surface,
+              borderColor: focusedField === 'password' ? colors.primary : colors.borderStrong,
+              borderRadius: radii.md,
+            },
+          ]}
+        >
+          <TextInput
+            style={[styles.input, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}
+            placeholder="••••••••••••"
+            placeholderTextColor={colors.textFaint}
+            value={password}
+            onChangeText={setPassword}
+            onFocus={() => setFocusedField('password')}
+            onBlur={() => setFocusedField(null)}
+            secureTextEntry={!showPassword}
+            autoCapitalize="none"
+          />
+          <Pressable onPress={() => setShowPassword(!showPassword)} hitSlop={8} style={styles.eyeBtn}>
+            <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: '700' }}>
+              {showPassword ? 'HIDE' : 'SHOW'}
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+
+      {/* Role specific inputs */}
+      {activeRole === 'STUDENT' ? (
+        <View style={styles.fieldGroup}>
+          <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
+            ENROLLMENT CODE (OPTIONAL)
+          </Text>
+          <View
+            style={[
+              styles.inputWrapper,
+              {
+                backgroundColor: colors.surface,
+                borderColor: focusedField === 'code' ? colors.primary : colors.borderStrong,
+                borderRadius: radii.md,
+              },
+            ]}
           >
-            Enter the 6-character or custom enrollment code provided by your teacher.
-          </Caption>
+            <TextInput
+              style={[styles.input, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}
+              placeholder="e.g. BATCH-X"
+              placeholderTextColor={colors.textFaint}
+              value={invitationCode}
+              onChangeText={setInvitationCode}
+              onFocus={() => setFocusedField('code')}
+              onBlur={() => setFocusedField(null)}
+              autoCapitalize="characters"
+            />
+          </View>
         </View>
       ) : (
-        <View>
-          <Input
-            label="Teaching Subject / Specialization"
-            placeholder="e.g. Advanced Physics / Mathematics"
-            value={subject}
-            onChangeText={setSubject}
-          />
-          <Input
-            label="Faculty Invitation Code"
-            placeholder="Optional invite code if joining an institute"
-            value={invitationCode}
-            onChangeText={setInvitationCode}
-            autoCapitalize="characters"
-          />
+        <View style={styles.fieldGroup}>
+          <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
+            TEACHING SUBJECT
+          </Text>
+          <View
+            style={[
+              styles.inputWrapper,
+              {
+                backgroundColor: colors.surface,
+                borderColor: focusedField === 'subject' ? colors.primary : colors.borderStrong,
+                borderRadius: radii.md,
+              },
+            ]}
+          >
+            <TextInput
+              style={[styles.input, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}
+              placeholder="e.g. Mathematics / Physics"
+              placeholderTextColor={colors.textFaint}
+              value={subject}
+              onChangeText={setSubject}
+              onFocus={() => setFocusedField('subject')}
+              onBlur={() => setFocusedField(null)}
+            />
+          </View>
         </View>
       )}
 
       <Button
-        title={`Register as ${activeRole === 'STUDENT' ? 'Student' : 'Faculty'}`}
+        title={`Create ${activeRole === 'STUDENT' ? 'Student' : 'Faculty'} Account →`}
         variant="primary"
         size="lg"
         onPress={onSubmit}
         loading={isLoading}
-        style={{ marginTop: spacing.xs }}
+        style={styles.submitBtn}
       />
     </View>
   );
@@ -133,5 +208,31 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
   },
+  fieldGroup: {
+    marginBottom: 14,
+  },
+  fieldLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.2,
+    paddingHorizontal: 14,
+    height: 48,
+  },
+  input: {
+    flex: 1,
+    fontSize: 14,
+    paddingVertical: 0,
+  },
+  eyeBtn: {
+    paddingLeft: 8,
+  },
+  submitBtn: {
+    marginTop: 8,
+  },
 });
-

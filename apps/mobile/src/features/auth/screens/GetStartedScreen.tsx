@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Text } from 'react-native';
 import { ScreenContainer } from '../../../components/common/ScreenContainer';
 import { Button } from '../../../components/common/Button';
 import { useTheme } from '../../../theme/ThemeContext';
 import { OnboardingSlide, OnboardingSlideData } from '../components/OnboardingSlide';
 import { OnboardingPagination } from '../components/OnboardingPagination';
+import { LuxuryHeader } from '../components/LuxuryHeader';
 
 const ONBOARDING_SLIDES: OnboardingSlideData[] = [
   {
@@ -56,22 +57,12 @@ export const GetStartedScreen: React.FC<GetStartedScreenProps> = ({
     }
   };
 
-  const handleSkip = () => {
-    onFinish();
-  };
-
   const activeSlide = ONBOARDING_SLIDES[activeIndex];
 
   return (
     <ScreenContainer style={styles.container}>
-      <View style={[styles.topBar, { paddingHorizontal: spacing.lg }]}>
-        <Button
-          title="Skip"
-          variant="ghost"
-          size="sm"
-          onPress={handleSkip}
-          style={styles.skipButton}
-        />
+      <View style={{ paddingHorizontal: spacing.lg }}>
+        <LuxuryHeader />
       </View>
 
       <View style={styles.sliderContainer}>
@@ -87,7 +78,7 @@ export const GetStartedScreen: React.FC<GetStartedScreenProps> = ({
 
         <View style={[styles.actionRow, { marginTop: spacing.md }]}>
           <Button
-            title={activeIndex === ONBOARDING_SLIDES.length - 1 ? 'Get Started' : 'Next'}
+            title={activeIndex === ONBOARDING_SLIDES.length - 1 ? 'Get Started →' : 'Continue →'}
             variant="primary"
             size="lg"
             onPress={handleNext}
@@ -111,14 +102,6 @@ const styles = StyleSheet.create({
   container: {
     justifyContent: 'space-between',
   },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    paddingTop: 8,
-  },
-  skipButton: {
-    alignSelf: 'flex-end',
-  },
   sliderContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -134,4 +117,3 @@ const styles = StyleSheet.create({
     width: '100%',
   },
 });
-

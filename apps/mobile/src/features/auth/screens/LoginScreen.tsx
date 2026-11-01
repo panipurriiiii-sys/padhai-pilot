@@ -2,37 +2,36 @@ import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
+  Text,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
 } from 'react-native';
 import { ScreenContainer } from '../../../components/common/ScreenContainer';
-import { Card } from '../../../components/common/Card';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { useNavigationStore } from '../../../store/useNavigationStore';
 import { useTheme } from '../../../theme/ThemeContext';
 
-import { AuthHeader } from '../components/AuthHeader';
-import { RoleSelector, AuthRole } from '../components/RoleSelector';
+import { LuxuryHeader } from '../components/LuxuryHeader';
+import { LuxuryCard } from '../components/LuxuryCard';
+import { SegmentedToggle } from '../components/SegmentedToggle';
 import { AuthBanner } from '../components/AuthBanner';
 import { LoginForm } from '../components/LoginForm';
 import { RegisterForm } from '../components/RegisterForm';
 import { ForgotPasswordForm } from '../components/ForgotPasswordForm';
-import { DemoCredentialsBox } from '../components/DemoCredentialsBox';
 import { AuthFooterToggle } from '../components/AuthFooterToggle';
 import { GetStartedScreen } from './GetStartedScreen';
+import { AuthRole } from '../components/RoleSelector';
 
 type AuthViewMode = 'ONBOARDING' | 'SIGN_IN' | 'REGISTER' | 'FORGOT_PASSWORD';
 
 export const LoginScreen: React.FC = () => {
-  const { spacing } = useTheme();
+  const { spacing, colors, typography } = useTheme();
   const {
     login,
     registerStudent,
     registerTeacher,
     forgotPassword,
-    loginDemo,
-    loginDemoTeacher,
     isLoading,
     error,
     clearError,
@@ -148,26 +147,6 @@ export const LoginScreen: React.FC = () => {
     } catch {}
   };
 
-  const handleDemoStudent = async () => {
-    setFormError(null);
-    setSuccessMsg(null);
-    clearError();
-    try {
-      await loginDemo();
-      setTab('student_dashboard');
-    } catch {}
-  };
-
-  const handleDemoTeacher = async () => {
-    setFormError(null);
-    setSuccessMsg(null);
-    clearError();
-    try {
-      await loginDemoTeacher();
-      setTab('teacher_dashboard');
-    } catch {}
-  };
-
   const displayedError = formError || error;
 
   return (
@@ -177,52 +156,78 @@ export const LoginScreen: React.FC = () => {
         style={styles.keyboardView}
       >
         <ScrollView
-          contentContainerStyle={[styles.scrollContent, { padding: spacing.lg }]}
+          contentContainerStyle={[styles.scrollContent, { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {viewMode === 'FORGOT_PASSWORD' ? (
-            <AuthHeader
-              title="Reset Password"
-              subtitle="Recover access to your academic account"
-              showBack
-              onBack={() => {
-                setFormError(null);
-                setSuccessMsg(null);
+          {/* Top Brand & Session Header */}
+          <LuxuryHeader
+            showBack={viewMode !== 'SIGN_IN'}
+            onBack={() => {
+              setFormError(null);
+              setSuccessMsg(null);
+              if (viewMode === 'FORGOT_PASSWORD') {
                 setViewMode('SIGN_IN');
-              }}
-            />
-          ) : viewMode === 'REGISTER' ? (
-            <AuthHeader
-              title="Create Account"
-              subtitle="Join as a Student or Faculty member"
-              showBack
-              onBack={() => setViewMode('ONBOARDING')}
-            />
-          ) : (
-            <AuthHeader
-              title="Welcome Back"
-              subtitle="Sign in to your tuition dashboard"
-              showBack
-              onBack={() => setViewMode('ONBOARDING')}
-            />
-          )}
+              } else {
+                setViewMode('ONBOARDING');
+              }
+            }}
+          />
 
-          {viewMode !== 'FORGOT_PASSWORD' && (
-            <RoleSelector
-              activeRole={activeRole}
-              onSelectRole={(r) => {
-                setActiveRole(r);
-                clearError();
-                setFormError(null);
-              }}
-            />
-          )}
+          {/* Luxury Floating Paper Card */}
+          <LuxuryCard>
+            {/* Card Title & Subtitle */}
+            <View style={styles.titleSection}>
+              <Text style={[styles.mainTitle, { color: colors.textPrimary, fontFamily: typography.fonts.display }]}>
+                {viewMode === 'SIGN_IN' && 'Sign In'}
+                {viewMode === 'REGISTER' && 'Create Account'}
+                {viewMode === 'FORGOT_PASSWORD' && 'Reset Password'}
+              </Text>
+              <Text style={[styles.mainSubtitle, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
+                {viewMode === 'SIGN_IN' && 'Access your academic records, batches, or attendance.'}
+                {viewMode === 'REGISTER' && 'Join as a student or register your teaching specialization.'}
+                {viewMode === 'FORGOT_PASSWORD' && 'Enter your email to verify and reset your credentials.'}
+              </Text>
+            </View>
 
-          <AuthBanner type="error" message={displayedError} />
-          <AuthBanner type="success" message={successMsg} />
+            {/* Auth Mode Toggle (Sign In vs Register) */}
+            {(viewMode === 'SIGN_IN' || viewMode === 'REGISTER') && (
+              <SegmentedToggle
+                options={[
+                  { key: 'SIGN_IN', label: 'Sign In' },
+                  { key: 'REGISTER', label: 'Create Account' },
+                ]}
+                activeKey={viewMode}
+                onSelect={(k) => {
+                  setFormError(null);
+                  setSuccessMsg(null);
+                  clearError();
+                  setViewMode(k);
+                }}
+              />
+            )}
 
-          <Card variant="default" style={[styles.card, { padding: spacing.lg }]}>
+            {/* Role Toggle for Register */}
+            {viewMode === 'REGISTER' && (
+              <SegmentedToggle
+                options={[
+                  { key: 'STUDENT', label: 'Student' },
+                  { key: 'TEACHER', label: 'Faculty / Teacher' },
+                ]}
+                activeKey={activeRole}
+                onSelect={(r) => {
+                  setActiveRole(r);
+                  clearError();
+                  setFormError(null);
+                }}
+              />
+            )}
+
+            {/* Notification Banners */}
+            <AuthBanner type="error" message={displayedError} />
+            <AuthBanner type="success" message={successMsg} />
+
+            {/* Active View Form */}
             {viewMode === 'SIGN_IN' && (
               <LoginForm
                 email={email}
@@ -274,8 +279,9 @@ export const LoginScreen: React.FC = () => {
                 isLoading={isLoading}
               />
             )}
-          </Card>
+          </LuxuryCard>
 
+          {/* Bottom Footer switch link */}
           {viewMode !== 'FORGOT_PASSWORD' && (
             <AuthFooterToggle
               mode={viewMode === 'SIGN_IN' ? 'SIGN_IN' : 'REGISTER'}
@@ -285,15 +291,6 @@ export const LoginScreen: React.FC = () => {
                 clearError();
                 setViewMode(viewMode === 'SIGN_IN' ? 'REGISTER' : 'SIGN_IN');
               }}
-            />
-          )}
-
-          {viewMode === 'SIGN_IN' && (
-            <DemoCredentialsBox
-              activeRole={activeRole}
-              onDemoStudent={handleDemoStudent}
-              onDemoTeacher={handleDemoTeacher}
-              isLoading={isLoading}
             />
           )}
         </ScrollView>
@@ -310,7 +307,20 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
   },
-  card: {
-    width: '100%',
+  titleSection: {
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  mainTitle: {
+    fontSize: 26,
+    fontWeight: '700',
+    letterSpacing: -0.4,
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  mainSubtitle: {
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
   },
 });

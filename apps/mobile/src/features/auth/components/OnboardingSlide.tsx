@@ -1,8 +1,8 @@
 import React, { useRef, useEffect } from 'react';
-import { View, StyleSheet, Animated } from 'react-native';
+import { View, StyleSheet, Text, Animated, Dimensions } from 'react-native';
 import { Illustration } from '@padhai-pilot/assets/native';
-import { Title, Body, Caption } from '../../../components/common/Typography';
 import { useTheme } from '../../../theme/ThemeContext';
+import { paperShadow } from '../../../theme/shadows';
 
 export interface OnboardingSlideData {
   id: string;
@@ -23,87 +23,110 @@ interface OnboardingSlideProps {
 }
 
 export const OnboardingSlide: React.FC<OnboardingSlideProps> = ({ slide, isActive }) => {
-  const { colors, spacing, radii, isDark } = useTheme();
+  const { colors, radii, typography, isDark } = useTheme();
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.95)).current;
+  const floatAnim = useRef(new Animated.Value(10)).current;
 
   useEffect(() => {
     if (isActive) {
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 350,
+          duration: 300,
           useNativeDriver: true,
         }),
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          friction: 8,
+        Animated.spring(floatAnim, {
+          toValue: 0,
+          friction: 7,
           tension: 40,
           useNativeDriver: true,
         }),
       ]).start();
     } else {
       fadeAnim.setValue(0);
-      scaleAnim.setValue(0.95);
+      floatAnim.setValue(10);
     }
   }, [isActive]);
 
   return (
     <View style={styles.container}>
+      {/* Visual Canvas Card */}
       <Animated.View
         style={[
-          styles.artworkBox,
+          styles.artworkCard,
           {
-            backgroundColor: isDark ? colors.surfaceElevated : colors.surfaceSubtle,
+            backgroundColor: colors.surface,
             borderColor: colors.border,
             borderRadius: radii.xl,
             opacity: fadeAnim,
-            transform: [{ scale: scaleAnim }],
+            transform: [{ translateY: floatAnim }],
           },
+          paperShadow(isDark, 'lift'),
         ]}
       >
-        <Illustration
-          name={slide.illustrationName}
-          size={160}
-          animate="draw"
-        />
+        {!isDark && (
+          <View
+            style={[
+              styles.tapeStrip,
+              {
+                borderColor: colors.border,
+              },
+            ]}
+          />
+        )}
+        <View style={styles.illustrationWrap}>
+          <Illustration name={slide.illustrationName} size={150} animate="draw" />
+        </View>
       </Animated.View>
 
-      <View style={[styles.content, { marginTop: spacing.lg }]}>
+      {/* Slide Text Content */}
+      <View style={styles.textContainer}>
         <View
           style={[
-            styles.badge,
+            styles.badgeWrap,
             {
               backgroundColor: colors.stickyBlueBg,
               borderColor: colors.stickyBlueBorder,
               borderRadius: radii.full,
-              paddingHorizontal: spacing.sm,
-              paddingVertical: 4,
             },
           ]}
         >
-          <Caption style={{ color: colors.stickyBlueText, fontWeight: '700', letterSpacing: 0.6 }}>
+          <Text
+            style={[
+              styles.badgeText,
+              {
+                color: colors.stickyBlueText,
+                fontFamily: typography.fonts.ui,
+              },
+            ]}
+          >
             {slide.badge}
-          </Caption>
+          </Text>
         </View>
 
-        <Title
+        <Text
           style={[
             styles.title,
-            { color: colors.textPrimary, marginTop: spacing.sm, marginBottom: spacing.xs },
+            {
+              color: colors.textPrimary,
+              fontFamily: typography.fonts.display,
+            },
           ]}
         >
           {slide.title}
-        </Title>
+        </Text>
 
-        <Body
+        <Text
           style={[
             styles.description,
-            { color: colors.textSecondary, lineHeight: 22 },
+            {
+              color: colors.textSecondary,
+              fontFamily: typography.fonts.ui,
+            },
           ]}
         >
           {slide.description}
-        </Body>
+        </Text>
       </View>
     </View>
   );
@@ -113,31 +136,58 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
     alignItems: 'center',
-    paddingHorizontal: 8,
+    paddingHorizontal: 16,
   },
-  artworkBox: {
-    width: 220,
-    height: 180,
+  artworkCard: {
+    width: 260,
+    height: 190,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    overflow: 'hidden',
+    position: 'relative',
+    marginTop: 8,
   },
-  content: {
+  tapeStrip: {
+    position: 'absolute',
+    top: -9,
+    width: 70,
+    height: 18,
+    backgroundColor: 'rgba(238, 233, 226, 0.75)',
+    borderRadius: 2,
+    borderWidth: 1,
+    transform: [{ rotate: '-1.5deg' }],
+  },
+  illustrationWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  textContainer: {
     alignItems: 'center',
     width: '100%',
+    marginTop: 24,
   },
-  badge: {
+  badgeWrap: {
+    paddingVertical: 5,
+    paddingHorizontal: 12,
     borderWidth: 1,
-    alignSelf: 'center',
+    marginBottom: 12,
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.6,
   },
   title: {
-    fontSize: 24,
+    fontSize: 26,
+    fontWeight: '700',
     textAlign: 'center',
+    letterSpacing: -0.4,
+    marginBottom: 8,
   },
   description: {
     fontSize: 14,
+    lineHeight: 22,
     textAlign: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 8,
   },
 });
