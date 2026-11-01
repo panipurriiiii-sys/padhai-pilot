@@ -287,6 +287,17 @@ export const studentApi = {
   },
 
   /** Verifies the stored token with the server; returns null (and clears it) if it is no longer valid. */
+  async getCurrentUser(): Promise<{ authenticated: boolean; user: UserSession }> {
+    const res = await request<{ authenticated: boolean; user: UserSession }>('/auth/me');
+    if (res?.authenticated && res?.user) {
+      cachedSession = res.user;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('padhaipilot_student_session', JSON.stringify(res.user));
+      }
+    }
+    return res;
+  },
+
   async verifySession(): Promise<UserSession | null> {
     if (!getAuthToken()) return null;
     const res = await request<{ authenticated: boolean; user: UserSession }>('/auth/me');
