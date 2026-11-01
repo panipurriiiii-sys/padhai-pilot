@@ -1,35 +1,15 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Svg, { Defs, Path, Pattern, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { useTheme } from '../../theme/ThemeContext';
+import { paperShadow } from '../../theme/shadows';
 import { Card } from './Card';
 import { Icon, IconName } from './Icon';
 
-/** `.ak-desk-surface`: warm desk with two glow blobs and a 40px drafting grid. Plain canvas in dark mode. */
+/** Clean, tranquil canvas. No dirty yellow blobs or graph grid. */
 export const DeskBackground: React.FC = () => {
-  const { colors, isDark } = useTheme();
-  if (isDark) return <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: colors.background }]} />;
+  const { colors } = useTheme();
   return (
-    <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: colors.background }]}>
-      <Svg width="100%" height="100%">
-        <Defs>
-          <RadialGradient id="blobA" cx="15%" cy="0%" rx="60%" ry="50%" fx="15%" fy="0%">
-            <Stop offset="0" stopColor="#F4E6CA" stopOpacity="0.7" />
-            <Stop offset="1" stopColor="#F4E6CA" stopOpacity="0" />
-          </RadialGradient>
-          <RadialGradient id="blobB" cx="90%" cy="10%" rx="50%" ry="40%" fx="90%" fy="10%">
-            <Stop offset="0" stopColor="#FEDEC4" stopOpacity="0.45" />
-            <Stop offset="1" stopColor="#FEDEC4" stopOpacity="0" />
-          </RadialGradient>
-          <Pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-            <Path d="M40 0H0V40" fill="none" stroke="#D0CDCA" strokeOpacity="0.25" strokeWidth="1" />
-          </Pattern>
-        </Defs>
-        <Rect width="100%" height="100%" fill="url(#blobA)" />
-        <Rect width="100%" height="100%" fill="url(#blobB)" />
-        <Rect width="100%" height="100%" fill="url(#grid)" />
-      </Svg>
-    </View>
+    <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: colors.background }]} />
   );
 };
 
@@ -37,13 +17,13 @@ export type Tone = 'blue' | 'amber' | 'teal' | 'emerald' | 'rose';
 
 const TONES: Record<Tone, { bg: string; border: string; fg: string }> = {
   blue: { bg: '#EFF6FF', border: '#DBEAFE', fg: '#1677FF' },
-  amber: { bg: '#FFFBEB', border: '#FDE68A', fg: '#B45309' },
-  teal: { bg: '#F0FDFA', border: '#CCFBF1', fg: '#0F766E' },
-  emerald: { bg: '#ECFDF5', border: '#D1FAE5', fg: '#047857' },
-  rose: { bg: '#FFF1F2', border: '#FECDD3', fg: '#BE123C' },
+  amber: { bg: '#FFFBEB', border: '#FEF3C7', fg: '#D97706' },
+  teal: { bg: '#F0FDFA', border: '#CCFBF1', fg: '#0D9488' },
+  emerald: { bg: '#ECFDF5', border: '#D1FAE5', fg: '#059669' },
+  rose: { bg: '#FFF1F2', border: '#FFE4E6', fg: '#E11D48' },
 };
 
-/** Rounded icon tile used in KPI cards and menu rows (32px, tinted, bordered). */
+/** Rounded icon tile used in KPI cards and menu rows. */
 export const IconChip: React.FC<{ icon: IconName; tone?: Tone; size?: number }> = ({ icon, tone = 'blue', size = 32 }) => {
   const { isDark } = useTheme();
   const t = TONES[tone];
@@ -52,7 +32,7 @@ export const IconChip: React.FC<{ icon: IconName; tone?: Tone; size?: number }> 
       style={{
         width: size,
         height: size,
-        borderRadius: 12,
+        borderRadius: Math.round(size * 0.35),
         borderWidth: 1,
         alignItems: 'center',
         justifyContent: 'center',
@@ -61,6 +41,63 @@ export const IconChip: React.FC<{ icon: IconName; tone?: Tone; size?: number }> 
       }}
     >
       <Icon name={icon} size={Math.round(size / 2)} color={t.fg} />
+    </View>
+  );
+};
+
+export interface QuickActionItem {
+  icon: IconName;
+  label: string;
+  tone?: Tone;
+  onPress: () => void;
+}
+
+/** Luxury 4-item thumb action bar inspired by Apple / Linear */
+export const QuickActionsBar: React.FC<{ items: QuickActionItem[] }> = ({ items }) => {
+  const { colors, typography, isDark } = useTheme();
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        backgroundColor: colors.surface,
+        borderRadius: 16,
+        paddingVertical: 12,
+        paddingHorizontal: 6,
+        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: colors.borderSubtle,
+        ...paperShadow(isDark),
+      }}
+    >
+      {items.map((item, idx) => (
+        <Pressable
+          key={idx}
+          onPress={item.onPress}
+          accessibilityRole="button"
+          accessibilityLabel={item.label}
+          style={({ pressed }) => ({
+            flex: 1,
+            alignItems: 'center',
+            opacity: pressed ? 0.7 : 1,
+            transform: [{ scale: pressed ? 0.96 : 1 }],
+          })}
+        >
+          <IconChip icon={item.icon} tone={item.tone ?? 'blue'} size={38} />
+          <Text
+            numberOfLines={1}
+            style={{
+              marginTop: 6,
+              fontFamily: typography.fonts.ui,
+              fontSize: 11,
+              fontWeight: '600',
+              color: colors.textSecondary,
+              textAlign: 'center',
+            }}
+          >
+            {item.label}
+          </Text>
+        </Pressable>
+      ))}
     </View>
   );
 };
@@ -74,29 +111,41 @@ interface KpiCardProps {
   onPress?: () => void;
 }
 
-/** `.kpi-card`: uppercase label + icon chip, big Inter number, small caption. */
+/** Luxury KPI metric card with clean typography and icon chip. */
 export const KpiCard: React.FC<KpiCardProps> = ({ label, value, caption, icon, tone = 'blue', onPress }) => {
   const { colors, typography } = useTheme();
   return (
-    <Card onPress={onPress} style={{ flexGrow: 1, flexBasis: '45%', padding: 16 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, gap: 8 }}>
+    <Card onPress={onPress} style={{ flexGrow: 1, flexBasis: '45%', padding: 14 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, gap: 6 }}>
         <Text
-          numberOfLines={2}
-          style={{ flex: 1, fontFamily: typography.fonts.ui, fontSize: 10.5, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase', color: colors.textMuted }}
+          numberOfLines={1}
+          style={{
+            flex: 1,
+            fontFamily: typography.fonts.ui,
+            fontSize: 10.5,
+            fontWeight: '700',
+            letterSpacing: 0.6,
+            textTransform: 'uppercase',
+            color: colors.textMuted,
+          }}
         >
           {label}
         </Text>
-        <IconChip icon={icon} tone={tone} />
+        <IconChip icon={icon} tone={tone} size={28} />
       </View>
-      <Text style={{ fontFamily: typography.fonts.data, fontSize: 28, fontWeight: '800', color: colors.textPrimary }}>{value}</Text>
+      <Text style={{ fontFamily: typography.fonts.data, fontSize: 24, fontWeight: '800', color: colors.textPrimary, letterSpacing: -0.5 }}>
+        {value}
+      </Text>
       {caption ? (
-        <Text style={{ fontFamily: typography.fonts.ui, fontSize: 11, fontWeight: '500', color: colors.textMuted, marginTop: 2 }}>{caption}</Text>
+        <Text numberOfLines={1} style={{ fontFamily: typography.fonts.ui, fontSize: 11, fontWeight: '500', color: colors.textMuted, marginTop: 4 }}>
+          {caption}
+        </Text>
       ) : null}
     </Card>
   );
 };
 
-/** Section heading: blue icon + bold Raleway title, optional right-hand text link ("Full Timetable →"). */
+/** Section heading: icon + bold title, optional right-hand text link. */
 export const SectionHeader: React.FC<{ title: string; icon?: IconName; action?: string; onAction?: () => void }> = ({
   title,
   icon,
@@ -105,29 +154,35 @@ export const SectionHeader: React.FC<{ title: string; icon?: IconName; action?: 
 }) => {
   const { colors, typography } = useTheme();
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 24, marginBottom: 12 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 22, marginBottom: 12 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-        {icon ? <Icon name={icon} size={16} color={colors.primary} /> : null}
-        <Text style={{ fontFamily: typography.fonts.ui, fontSize: 16, fontWeight: '700', color: colors.textPrimary }}>{title}</Text>
+        {icon ? (
+          <View style={{ width: 24, height: 24, borderRadius: 6, backgroundColor: colors.primarySubtle, alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name={icon} size={13} color={colors.primary} />
+          </View>
+        ) : null}
+        <Text style={{ fontFamily: typography.fonts.ui, fontSize: 15, fontWeight: '700', letterSpacing: -0.2, color: colors.textPrimary }}>
+          {title}
+        </Text>
       </View>
       {action ? (
         <Pressable onPress={onAction} hitSlop={10} accessibilityRole="link" style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
           <Text style={{ fontFamily: typography.fonts.ui, fontSize: 12, fontWeight: '700', color: colors.primary }}>{action}</Text>
-          <Icon name="arrow-right" size={14} color={colors.primary} />
+          <Icon name="arrow-right" size={13} color={colors.primary} />
         </Pressable>
       ) : null}
     </View>
   );
 };
 
-/** `.recessed-surface` time block: electric Inter start time over a muted "to …". */
+/** Recessed time block */
 export const TimeBlock: React.FC<{ start: string; end?: string }> = ({ start, end }) => {
   const { colors, typography } = useTheme();
   return (
     <View
       style={{
         backgroundColor: colors.surfaceElevated,
-        borderColor: colors.border,
+        borderColor: colors.borderSubtle,
         borderWidth: 1,
         borderRadius: 12,
         paddingHorizontal: 12,
@@ -150,7 +205,7 @@ const STAMPS: Record<StampKind, { bg: string; border: string; fg: string; label:
   E: { bg: '#E1EDFF', border: '#3B82F6', fg: '#0A3D78', label: 'Excused' },
 };
 
-/** Attendance rubber stamp (.stamp-p/a/l/e-active): pressed-in coloured when active, quiet outline otherwise. */
+/** Attendance rubber stamp */
 export const Stamp: React.FC<{ kind: StampKind; active: boolean; onPress: () => void }> = ({ kind, active, onPress }) => {
   const { colors, typography } = useTheme();
   const s = STAMPS[kind];
@@ -178,13 +233,16 @@ export const Stamp: React.FC<{ kind: StampKind; active: boolean; onPress: () => 
   );
 };
 
-/** Empty state exactly like the portal: a centred muted paper card. */
-export const EmptyPaper: React.FC<{ title?: string; message: string }> = ({ title, message }) => {
+/** Empty state: clean, modern centered message with icon. */
+export const EmptyPaper: React.FC<{ title?: string; message: string; icon?: IconName }> = ({ title, message, icon = 'inbox' }) => {
   const { colors, typography } = useTheme();
   return (
-    <Card style={{ alignItems: 'center', paddingVertical: 28 }}>
+    <Card style={{ alignItems: 'center', paddingVertical: 28, paddingHorizontal: 20 }}>
+      <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surfaceElevated, alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
+        <Icon name={icon} size={20} color={colors.textMuted} />
+      </View>
       {title ? <Text style={{ fontFamily: typography.fonts.ui, fontSize: 14, fontWeight: '700', color: colors.textPrimary, marginBottom: 4 }}>{title}</Text> : null}
-      <Text style={{ fontFamily: typography.fonts.ui, fontSize: 12, color: colors.textMuted, textAlign: 'center' }}>{message}</Text>
+      <Text style={{ fontFamily: typography.fonts.ui, fontSize: 12, color: colors.textMuted, textAlign: 'center', lineHeight: 18 }}>{message}</Text>
     </Card>
   );
 };

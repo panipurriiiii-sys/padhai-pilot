@@ -63,7 +63,7 @@ export const TeacherAttendanceScreen: React.FC = () => {
         >
           {(r) => (
             <>
-              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 6 }}>
+              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 8 }}>
                 <Button title="All present" variant="subtle" size="sm" onPress={() => setAll('PRESENT')} />
                 <Button title="All absent" variant="secondary" size="sm" onPress={() => setAll('ABSENT')} />
               </View>
@@ -72,13 +72,21 @@ export const TeacherAttendanceScreen: React.FC = () => {
               {r.students.map((s) => {
                 const status = marks[s.id] ?? 'PRESENT';
                 return (
-                  <Card key={s.id} style={{ marginBottom: 10, padding: 14 }}>
-                    <Text style={{ fontFamily: typography.fonts.ui, fontSize: 14, fontWeight: '700', color: colors.textPrimary }}>{s.fullName}</Text>
-                    <Text style={{ fontFamily: typography.fonts.data, fontSize: 11, color: colors.textMuted, marginBottom: 10 }}>{s.rollNumber}</Text>
-                    <View style={{ flexDirection: 'row', gap: 8 }}>
-                      {KINDS.map(([kind, value]) => (
-                        <Stamp key={kind} kind={kind} active={status === value} onPress={() => setMarks((m) => ({ ...m, [s.id]: value }))} />
-                      ))}
+                  <Card key={s.id} style={{ marginBottom: 8, padding: 12 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <View style={{ flex: 1, marginRight: 8 }}>
+                        <Text numberOfLines={1} style={{ fontFamily: typography.fonts.ui, fontSize: 14, fontWeight: '700', color: colors.textPrimary }}>
+                          {s.fullName}
+                        </Text>
+                        <Text style={{ fontFamily: typography.fonts.data, fontSize: 11, color: colors.textMuted, marginTop: 2 }}>
+                          {s.rollNumber ? `Roll #${s.rollNumber}` : 'Student'}
+                        </Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', gap: 6 }}>
+                        {KINDS.map(([kind, value]) => (
+                          <Stamp key={kind} kind={kind} active={status === value} onPress={() => setMarks((m) => ({ ...m, [s.id]: value }))} />
+                        ))}
+                      </View>
                     </View>
                   </Card>
                 );
@@ -89,7 +97,7 @@ export const TeacherAttendanceScreen: React.FC = () => {
                 loading={save.isPending}
                 disabled={!validDate || Object.keys(marks).length === 0}
                 onPress={onSave}
-                style={{ marginTop: 6 }}
+                style={{ marginTop: 12 }}
               />
             </>
           )}

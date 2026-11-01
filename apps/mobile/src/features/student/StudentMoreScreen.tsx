@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Alert, View, StyleSheet } from 'react-native';
+import { Alert, View, Text, StyleSheet } from 'react-native';
 import { Screen, SectionTitle } from '../../components/common/Screen';
 import { QueryBoundary } from '../../components/common/QueryBoundary';
 import { Card } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
+import { Icon, IconName } from '../../components/common/Icon';
+import { IconChip, Tone } from '../../components/common/Paper';
 import { Body, Caption, Subtitle } from '../../components/common/Typography';
 import { FeesScreen } from './FeesScreen';
 import { StudentLeaveApply } from '../leave/StudentLeavePanels';
@@ -40,16 +42,16 @@ type View_ =
   | 'leave'
   | 'profile';
 
-const MENU: Array<{ key: Exclude<View_, 'menu'>; label: string; hint: string }> = [
-  { key: 'timetable', label: 'Weekly Timetable', hint: 'Weekly lecture schedule & room slots' },
-  { key: 'fees', label: 'Fees & Receipts', hint: 'Dues breakdown and paid receipt PDFs' },
-  { key: 'leave', label: 'Apply for Leave', hint: 'Request leave from faculty & track approval' },
-  { key: 'announcements', label: 'Noticeboard', hint: 'Institute & batch notices' },
-  { key: 'planner', label: 'Study Planner', hint: 'Your personal daily task list' },
-  { key: 'doubts', label: 'Ask a Teacher (Doubts)', hint: 'Ask questions & read faculty replies' },
-  { key: 'documents', label: 'Documents & Certificates', hint: 'ID cards, report cards & receipts' },
-  { key: 'notifications', label: 'Notifications', hint: 'Results, dues and attendance alerts' },
-  { key: 'profile', label: 'Profile & Batch Code', hint: 'Account, join a batch, sign out' },
+const MENU: Array<{ key: Exclude<View_, 'menu'>; label: string; hint: string; icon: IconName; tone: Tone }> = [
+  { key: 'timetable', label: 'Weekly Timetable', hint: 'Weekly lecture schedule & room slots', icon: 'clock', tone: 'blue' },
+  { key: 'fees', label: 'Fees & Receipts', hint: 'Dues breakdown and paid receipt PDFs', icon: 'receipt', tone: 'emerald' },
+  { key: 'leave', label: 'Apply for Leave', hint: 'Request leave from faculty & track approval', icon: 'calendar-check', tone: 'amber' },
+  { key: 'announcements', label: 'Noticeboard', hint: 'Institute & batch notices', icon: 'megaphone', tone: 'rose' },
+  { key: 'planner', label: 'Study Planner', hint: 'Your personal daily task list', icon: 'file-check-2', tone: 'teal' },
+  { key: 'doubts', label: 'Ask a Teacher (Doubts)', hint: 'Ask questions & read faculty replies', icon: 'help-circle', tone: 'blue' },
+  { key: 'documents', label: 'Documents & Certificates', hint: 'ID cards, report cards & receipts', icon: 'folder', tone: 'teal' },
+  { key: 'notifications', label: 'Notifications', hint: 'Results, dues and attendance alerts', icon: 'bell', tone: 'amber' },
+  { key: 'profile', label: 'Profile & Batch Code', hint: 'Account, join a batch, sign out', icon: 'user', tone: 'blue' },
 ];
 
 const Timetable: React.FC = () => {
@@ -280,23 +282,45 @@ export const StudentMoreScreen: React.FC = () => {
     );
   }
 
+  const { colors, typography } = useTheme();
+
   return (
-    <Screen eyebrow="MORE" title={current?.label ?? 'More Options'} subtitle={current?.hint ?? 'Student portal utilities'}>
+    <Screen eyebrow="STUDENT HUB" title={current?.label ?? 'Student Services'} subtitle={current?.hint ?? 'Academic utilities & personal records'}>
       {view === 'menu' ? (
         <>
           {/* Quick link to Fees */}
-          <Card style={{ marginBottom: spacing.sm, borderWidth: 1.5, borderColor: '#1677FF' }} onPress={() => setView('fees')}>
-            <View style={styles.row}>
-              <Subtitle style={{ color: '#1677FF' }}>Fees & Receipts Ledger →</Subtitle>
-              <Badge label="Finance" variant="info" />
+          <Card style={{ marginBottom: 10, padding: 14 }} onPress={() => setView('fees')}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <IconChip icon="receipt" tone="emerald" size={38} />
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                  <Text style={{ fontFamily: typography.fonts.ui, fontSize: 14, fontWeight: '700', color: colors.textPrimary }}>
+                    Fees & Receipts Ledger
+                  </Text>
+                  <Badge label="Finance" variant="info" />
+                </View>
+                <Text style={{ fontFamily: typography.fonts.ui, fontSize: 12, color: colors.textMuted, marginTop: 2 }}>
+                  Term dues, fee balances & receipt PDFs
+                </Text>
+              </View>
+              <Icon name="arrow-right" size={14} color={colors.textFaint} />
             </View>
-            <Caption>View term dues, fee balances and download payment receipt PDFs</Caption>
           </Card>
 
           {MENU.map((m) => (
-            <Card key={m.key} style={{ marginBottom: spacing.sm }} onPress={() => setView(m.key)}>
-              <Subtitle>{m.label}</Subtitle>
-              <Caption>{m.hint}</Caption>
+            <Card key={m.key} style={{ marginBottom: 10, padding: 14 }} onPress={() => setView(m.key)}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <IconChip icon={m.icon} tone={m.tone} size={38} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontFamily: typography.fonts.ui, fontSize: 14, fontWeight: '700', color: colors.textPrimary }}>
+                    {m.label}
+                  </Text>
+                  <Text style={{ fontFamily: typography.fonts.ui, fontSize: 12, color: colors.textMuted, marginTop: 2 }}>
+                    {m.hint}
+                  </Text>
+                </View>
+                <Icon name="arrow-right" size={14} color={colors.textFaint} />
+              </View>
             </Card>
           ))}
         </>

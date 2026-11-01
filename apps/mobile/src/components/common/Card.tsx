@@ -7,17 +7,27 @@ export interface CardProps {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
   onPress?: () => void;
-  /** flat = .paper-card, elevated = recessed surface, outlined = border only, selected = .paper-card-selected */
+  /** flat = clean card, elevated = recessed surface, outlined = border only, selected = active card */
   variant?: 'flat' | 'elevated' | 'outlined' | 'selected';
 }
 
-/** The Teacher Portal's `.paper-card`: white sheet, warm 1px border, 16px radius, soft warm shadow. */
+/** Clean luxury surface card with soft ambient shadow and refined micro-border. */
 export const Card: React.FC<CardProps> = ({ children, style, onPress, variant = 'flat' }) => {
   const { colors, spacing, radii, isDark } = useTheme();
 
   const base: ViewStyle = {
-    backgroundColor: variant === 'elevated' ? colors.surfaceElevated : variant === 'selected' ? colors.primarySubtle : colors.surface,
-    borderColor: variant === 'selected' ? colors.primary : colors.border,
+    backgroundColor:
+      variant === 'elevated'
+        ? colors.surfaceElevated
+        : variant === 'selected'
+        ? colors.primarySubtle
+        : colors.surface,
+    borderColor:
+      variant === 'selected'
+        ? colors.primary
+        : variant === 'outlined'
+        ? colors.border
+        : colors.borderSubtle,
     borderWidth: variant === 'selected' ? 1.5 : 1,
     borderRadius: variant === 'elevated' ? radii.md : radii.lg,
     padding: spacing.lg,
@@ -29,7 +39,11 @@ export const Card: React.FC<CardProps> = ({ children, style, onPress, variant = 
       <Pressable
         accessibilityRole="button"
         onPress={onPress}
-        style={({ pressed }) => [base, pressed && { transform: [{ scale: 0.985 }], borderColor: colors.borderStrong }, style]}
+        style={({ pressed }) => [
+          base,
+          pressed && { transform: [{ scale: 0.985 }], opacity: 0.92, borderColor: colors.borderStrong },
+          style,
+        ]}
       >
         {children}
       </Pressable>

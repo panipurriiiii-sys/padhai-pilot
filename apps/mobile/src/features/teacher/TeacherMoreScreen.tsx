@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, View, StyleSheet } from 'react-native';
+import { Alert, View, Text, StyleSheet } from 'react-native';
 import { Screen, SectionTitle } from '../../components/common/Screen';
 import { QueryBoundary } from '../../components/common/QueryBoundary';
 import { BatchPicker } from '../../components/common/BatchPicker';
@@ -7,6 +7,8 @@ import { Card } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
+import { Icon, IconName } from '../../components/common/Icon';
+import { IconChip, Tone } from '../../components/common/Paper';
 import { Body, Caption, Subtitle } from '../../components/common/Typography';
 import {
   useApplyLeave,
@@ -44,16 +46,16 @@ type View_ =
   | 'salary'
   | 'profile';
 
-const MENU: Array<{ key: View_; label: string; hint: string }> = [
-  { key: 'homework', label: 'Homework & Grading', hint: 'Create assignments, grade student submissions' },
-  { key: 'tests', label: 'Tests & Quizzes', hint: 'Classroom tests, durations & release results' },
-  { key: 'lessonPlans', label: 'Curriculum & Lesson Plans', hint: 'Weekly chapter syllabus & completion' },
-  { key: 'announcements', label: 'Noticeboard', hint: 'Broadcast announcements to your batches' },
-  { key: 'timetable', label: 'Weekly Timetable', hint: 'Schedule slots, room allocations & days' },
-  { key: 'studentLeave', label: 'Student Leave Requests', hint: 'Approve or reject student leave' },
-  { key: 'leave', label: 'My Leave', hint: 'Apply for leave & track approval' },
-  { key: 'salary', label: 'Salary Slips', hint: 'Monthly salary statements & breakdown' },
-  { key: 'profile', label: 'Account & Sign Out', hint: 'Faculty profile and session details' },
+const MENU: Array<{ key: View_; label: string; hint: string; icon: IconName; tone: Tone }> = [
+  { key: 'homework', label: 'Homework & Grading', hint: 'Create assignments, grade student submissions', icon: 'file-check-2', tone: 'blue' },
+  { key: 'tests', label: 'Tests & Quizzes', hint: 'Classroom tests, durations & release results', icon: 'award', tone: 'amber' },
+  { key: 'lessonPlans', label: 'Curriculum & Lesson Plans', hint: 'Weekly chapter syllabus & completion', icon: 'book-open', tone: 'teal' },
+  { key: 'announcements', label: 'Noticeboard', hint: 'Broadcast announcements to your batches', icon: 'megaphone', tone: 'rose' },
+  { key: 'timetable', label: 'Weekly Timetable', hint: 'Schedule slots, room allocations & days', icon: 'clock', tone: 'blue' },
+  { key: 'studentLeave', label: 'Student Leave Requests', hint: 'Approve or reject student leave', icon: 'users', tone: 'amber' },
+  { key: 'leave', label: 'My Leave', hint: 'Apply for leave & track approval', icon: 'calendar-check', tone: 'teal' },
+  { key: 'salary', label: 'Salary Slips', hint: 'Monthly salary statements & breakdown', icon: 'receipt', tone: 'emerald' },
+  { key: 'profile', label: 'Account & Sign Out', hint: 'Faculty profile and session details', icon: 'user', tone: 'blue' },
 ];
 
 const Grading: React.FC<{ assignmentId: string }> = ({ assignmentId }) => {
@@ -485,38 +487,68 @@ const Salary: React.FC = () => {
 };
 
 export const TeacherMoreScreen: React.FC = () => {
-  const { spacing } = useTheme();
+  const { spacing, colors, typography } = useTheme();
   const { session, logout } = useAuthStore();
   const { setTab } = useNavigationStore();
   const [view, setView] = useState<View_>('menu');
   const current = MENU.find((m) => m.key === view);
 
   return (
-    <Screen eyebrow="MORE" title={current?.label ?? 'More Options'} subtitle={current?.hint ?? 'Faculty tools & management'}>
+    <Screen eyebrow="OPERATIONS" title={current?.label ?? 'Faculty Hub'} subtitle={current?.hint ?? 'Academic administration & management'}>
       {view === 'menu' ? (
         <>
           {/* Quick link to Batches & Students */}
-          <Card style={{ marginBottom: spacing.sm, borderWidth: 1.5, borderColor: '#1677FF' }} onPress={() => setTab('teacher_classes')}>
-            <View style={styles.between}>
-              <Subtitle style={{ color: '#1677FF' }}>Batches & Students Roster →</Subtitle>
-              <Badge label="Core" variant="info" />
+          <Card style={{ marginBottom: 10, padding: 14 }} onPress={() => setTab('teacher_classes')}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <IconChip icon="users" tone="blue" size={38} />
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                  <Text style={{ fontFamily: typography.fonts.ui, fontSize: 14, fontWeight: '700', color: colors.textPrimary }}>
+                    Batches & Students Roster
+                  </Text>
+                  <Badge label="Core" variant="info" />
+                </View>
+                <Text style={{ fontFamily: typography.fonts.ui, fontSize: 12, color: colors.textMuted, marginTop: 2 }}>
+                  Roster, invitation codes & fee status
+                </Text>
+              </View>
+              <Icon name="arrow-right" size={14} color={colors.textFaint} />
             </View>
-            <Caption>View batches, student roster, generate invitation codes & fee status</Caption>
           </Card>
 
           {/* Quick link to Bulk Marks */}
-          <Card style={{ marginBottom: spacing.sm, borderWidth: 1, borderColor: '#10B981' }} onPress={() => setTab('teacher_marks')}>
-            <View style={styles.between}>
-              <Subtitle style={{ color: '#10B981' }}>Bulk Marks Entry →</Subtitle>
-              <Badge label="Grading" variant="success" />
+          <Card style={{ marginBottom: 12, padding: 14 }} onPress={() => setTab('teacher_marks')}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <IconChip icon="file-spreadsheet" tone="emerald" size={38} />
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                  <Text style={{ fontFamily: typography.fonts.ui, fontSize: 14, fontWeight: '700', color: colors.textPrimary }}>
+                    Bulk Marks Entry
+                  </Text>
+                  <Badge label="Grading" variant="success" />
+                </View>
+                <Text style={{ fontFamily: typography.fonts.ui, fontSize: 12, color: colors.textMuted, marginTop: 2 }}>
+                  Score assessments & publish results
+                </Text>
+              </View>
+              <Icon name="arrow-right" size={14} color={colors.textFaint} />
             </View>
-            <Caption>Score assessments and publish results to students</Caption>
           </Card>
 
           {MENU.map((m) => (
-            <Card key={m.key} style={{ marginBottom: spacing.sm }} onPress={() => setView(m.key)}>
-              <Subtitle>{m.label}</Subtitle>
-              <Caption>{m.hint}</Caption>
+            <Card key={m.key} style={{ marginBottom: 10, padding: 14 }} onPress={() => setView(m.key)}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <IconChip icon={m.icon} tone={m.tone} size={38} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontFamily: typography.fonts.ui, fontSize: 14, fontWeight: '700', color: colors.textPrimary }}>
+                    {m.label}
+                  </Text>
+                  <Text style={{ fontFamily: typography.fonts.ui, fontSize: 12, color: colors.textMuted, marginTop: 2 }}>
+                    {m.hint}
+                  </Text>
+                </View>
+                <Icon name="arrow-right" size={14} color={colors.textFaint} />
+              </View>
             </Card>
           ))}
         </>
