@@ -40,6 +40,7 @@ export interface BatchSummary {
     teacherName?: string;
     studentCount: number;
     scheduleSummary?: string;
+    schedule?: string | null;
     room?: string;
     createdAt: string;
 }

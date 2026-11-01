@@ -83,6 +83,7 @@ export interface CreateFacultyDto {
     assignedSubjects: string[];
     delegatedPermissions?: DelegatedPermission[];
     batchIds?: string[];
+    initialPassword?: string;
 }
 export interface UpdateFacultyDto {
     fullName?: string;
@@ -95,6 +96,7 @@ export interface UpdateFacultyDto {
     assignedSubjects?: string[];
     delegatedPermissions?: DelegatedPermission[];
     batchIds?: string[];
+    initialPassword?: string;
 }
 export interface SalaryStatementItem {
     id: string;

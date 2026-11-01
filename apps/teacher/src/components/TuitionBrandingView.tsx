@@ -332,9 +332,18 @@ export function TuitionBrandingView() {
                     </p>
                   </div>
 
-                  <div className="w-8 h-8 rounded-lg bg-[var(--brand-electric)] flex items-center justify-center text-white font-['Playfair_Display'] font-bold text-xs shrink-0 shadow-sm">
-                    P
-                  </div>
+                  {formData.logoUrl ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={formData.logoUrl}
+                      alt={formData.name || 'Tuition logo'}
+                      className="w-12 h-12 rounded-xl object-contain border border-[var(--border-paper)] bg-white p-1 shrink-0 shadow-sm"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-xl bg-[var(--brand-electric)] flex items-center justify-center text-white font-['Playfair_Display'] font-bold text-sm shrink-0 shadow-sm">
+                      {(formData.name || 'P').charAt(0).toUpperCase()}
+                    </div>
+                  )}
                 </div>
 
                 {/* Mock Body */}

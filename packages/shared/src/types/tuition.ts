@@ -100,6 +100,7 @@ export interface CreateFacultyDto {
   assignedSubjects: string[];
   delegatedPermissions?: DelegatedPermission[];
   batchIds?: string[];
+  initialPassword?: string;
 }
 
 export interface UpdateFacultyDto {
@@ -113,6 +114,7 @@ export interface UpdateFacultyDto {
   assignedSubjects?: string[];
   delegatedPermissions?: DelegatedPermission[];
   batchIds?: string[];
+  initialPassword?: string;
 }
 
 // ----------------------------------------------------------------------------

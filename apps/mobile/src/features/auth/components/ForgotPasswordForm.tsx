@@ -1,7 +1,13 @@
 import React, { useState, useRef } from 'react';
-import { View, StyleSheet, Text, TextInput, Pressable } from 'react-native';
-import { Button } from '../../../components/common/Button';
+import {
+  View,
+  StyleSheet,
+  Text,
+  TextInput,
+  Pressable,
+} from 'react-native';
 import { useTheme } from '../../../theme/ThemeContext';
+import { Button } from '../../../components/common/Button';
 import { MailIcon } from './AuthFieldIcons';
 
 interface ForgotPasswordFormProps {
@@ -11,7 +17,6 @@ interface ForgotPasswordFormProps {
   onSubmit: () => void;
   onBackToLogin: () => void;
   isLoading: boolean;
-  onFocusField?: (field: 'email') => void;
 }
 
 export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
@@ -21,13 +26,12 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
   onSubmit,
   onBackToLogin,
   isLoading,
-  onFocusField,
 }) => {
   const { colors, typography, spacing, isDark } = useTheme();
   const [emailFocused, setEmailFocused] = useState(false);
   const emailInputRef = useRef<TextInput>(null);
 
-  const fieldBg = isDark ? colors.surfaceSubtle : '#FFFFFF';
+  const fieldBg = isDark ? colors.surfaceSubtle : '#F8FAFC';
 
   return (
     <View style={styles.container}>
@@ -39,35 +43,28 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
         <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
           Email Address
         </Text>
-        <View
+        <Pressable
+          onPress={() => emailInputRef.current?.focus()}
           style={[
             styles.inputWrapper,
             {
               backgroundColor: fieldBg,
               borderColor: emailError ? colors.error : emailFocused ? colors.primary : colors.borderSubtle,
-              borderRadius: 14,
             },
             emailFocused && styles.focusedGlow,
           ]}
         >
-          <Pressable
-            onPress={() => emailInputRef.current?.focus()}
-            hitSlop={8}
-            style={styles.inputIconContainer}
-          >
+          <View style={styles.inputIconContainer}>
             <MailIcon color={emailFocused ? colors.primary : colors.textMuted} size={16} />
-          </Pressable>
+          </View>
           <TextInput
             ref={emailInputRef}
-            style={[styles.input, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}
+            style={[styles.input, { color: colors.textPrimary }]}
             placeholder="name@example.com"
             placeholderTextColor={colors.textFaint}
             value={email}
             onChangeText={setEmail}
-            onFocus={() => {
-              setEmailFocused(true);
-              onFocusField?.('email');
-            }}
+            onFocus={() => setEmailFocused(true)}
             onBlur={() => setEmailFocused(false)}
             autoCapitalize="none"
             autoCorrect={false}
@@ -76,7 +73,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
             onSubmitEditing={onSubmit}
             editable={!isLoading}
           />
-        </View>
+        </Pressable>
         {emailError ? (
           <Text style={[styles.errorHelper, { color: colors.error, fontFamily: typography.fonts.ui }]}>
             {emailError}
@@ -97,7 +94,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
         variant="ghost"
         size="md"
         onPress={onBackToLogin}
-        style={{ marginTop: spacing.sm }}
+        style={{ marginTop: spacing.xs }}
       />
     </View>
   );
@@ -114,7 +111,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   fieldGroup: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   fieldLabel: {
     fontSize: 12,
@@ -125,8 +122,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    paddingHorizontal: 14,
-    height: 50,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    height: 48,
   },
   focusedGlow: {
     shadowColor: '#1677FF',
@@ -136,18 +134,16 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   inputIconContainer: {
-    marginRight: 10,
+    marginRight: 8,
     width: 20,
-    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },
   input: {
     flex: 1,
-    height: '100%',
-    fontSize: 14,
-    paddingVertical: 0,
-    includeFontPadding: false,
+    height: 48,
+    fontSize: 15,
+    paddingVertical: 4,
   },
   errorHelper: {
     fontSize: 11,

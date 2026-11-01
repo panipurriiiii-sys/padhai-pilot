@@ -10,6 +10,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service.js';
 import { assertDb, clampLimit, parseDate } from '../common/db/db.js';
 import { AccessService } from '../common/access/access.service.js';
+import { hashPassword, passwordPolicyError } from '../common/security/password.js';
 import { isManagement } from '../common/security/roles.js';
 import { LOGO_EXTENSIONS, validateMediaUrl } from '../common/security/media-url.js';
 import type { AuthenticatedUser } from '../common/types.js';
@@ -213,16 +214,44 @@ export class TuitionService {
     // never creates a user or a credential, and never links an arbitrary existing account. It can only
     // update the profile of someone who already holds a TEACHER/FACULTY membership in this institute.
     const email = dto.email.toLowerCase().trim();
-    const user = await this.prisma.user.findUnique({ where: { email }, select: { id: true } });
-    const membership = user
+    let user = await this.prisma.user.findUnique({ where: { email } });
+    let membership = user
       ? await this.prisma.instituteMembership.findUnique({
           where: { instituteId_userId: { instituteId, userId: user.id } },
           select: { role: true, status: true },
         })
       : null;
-    if (!user || !membership || !['FACULTY', 'TEACHER'].includes(membership.role)) {
+
+    if (dto.initialPassword && dto.initialPassword.trim()) {
+      const policyErr = passwordPolicyError(dto.initialPassword);
+      if (policyErr) throw new BadRequestException(policyErr);
+      const passwordHash = await hashPassword(dto.initialPassword);
+
+      if (!user) {
+        user = await this.prisma.user.create({
+          data: {
+            email,
+            passwordHash,
+            fullName: dto.fullName || 'Faculty Member',
+            role: 'FACULTY',
+            phone: dto.phone || null,
+          },
+        });
+      } else {
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: { passwordHash, role: 'FACULTY' },
+        });
+      }
+
+      membership = await this.prisma.instituteMembership.upsert({
+        where: { instituteId_userId: { instituteId, userId: user.id } },
+        update: { role: 'FACULTY', status: 'ACTIVE' },
+        create: { instituteId, userId: user.id, role: 'FACULTY', status: 'ACTIVE' },
+      });
+    } else if (!user || !membership || !['FACULTY', 'TEACHER'].includes(membership.role)) {
       throw new BadRequestException(
-        'Faculty must join through an invitation. Use POST /faculty-invitations to invite this person.',
+        'Faculty must join through an invitation or have an initial password set. Use POST /faculty-invitations to invite this person.',
       );
     }
 

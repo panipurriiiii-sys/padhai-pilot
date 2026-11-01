@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { paperShadow } from '../../theme/shadows';
@@ -6,12 +6,14 @@ import { Card } from './Card';
 import { Icon, IconName } from './Icon';
 
 /** Clean, tranquil canvas. No dirty yellow blobs or graph grid. */
-export const DeskBackground: React.FC = () => {
+export const DeskBackground: React.FC = memo(() => {
   const { colors } = useTheme();
   return (
     <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: colors.background }]} />
   );
-};
+});
+
+DeskBackground.displayName = 'DeskBackground';
 
 export type Tone = 'blue' | 'amber' | 'teal' | 'emerald' | 'rose';
 
@@ -24,7 +26,7 @@ const TONES: Record<Tone, { bg: string; border: string; fg: string }> = {
 };
 
 /** Rounded icon tile used in KPI cards and menu rows. */
-export const IconChip: React.FC<{ icon: IconName; tone?: Tone; size?: number }> = ({ icon, tone = 'blue', size = 32 }) => {
+export const IconChip: React.FC<{ icon: IconName; tone?: Tone; size?: number }> = memo(({ icon, tone = 'blue', size = 32 }) => {
   const { isDark } = useTheme();
   const t = TONES[tone];
   return (
@@ -43,7 +45,9 @@ export const IconChip: React.FC<{ icon: IconName; tone?: Tone; size?: number }> 
       <Icon name={icon} size={Math.round(size / 2)} color={t.fg} />
     </View>
   );
-};
+});
+
+IconChip.displayName = 'IconChip';
 
 export interface QuickActionItem {
   icon: IconName;
@@ -53,7 +57,7 @@ export interface QuickActionItem {
 }
 
 /** Luxury 4-item thumb action bar inspired by Apple / Linear */
-export const QuickActionsBar: React.FC<{ items: QuickActionItem[] }> = ({ items }) => {
+export const QuickActionsBar: React.FC<{ items: QuickActionItem[] }> = memo(({ items }) => {
   const { colors, typography, isDark } = useTheme();
   return (
     <View
@@ -100,7 +104,9 @@ export const QuickActionsBar: React.FC<{ items: QuickActionItem[] }> = ({ items 
       ))}
     </View>
   );
-};
+});
+
+QuickActionsBar.displayName = 'QuickActionsBar';
 
 interface KpiCardProps {
   label: string;
@@ -112,7 +118,7 @@ interface KpiCardProps {
 }
 
 /** Luxury KPI metric card with clean typography and icon chip. */
-export const KpiCard: React.FC<KpiCardProps> = ({ label, value, caption, icon, tone = 'blue', onPress }) => {
+export const KpiCard: React.FC<KpiCardProps> = memo(({ label, value, caption, icon, tone = 'blue', onPress }) => {
   const { colors, typography } = useTheme();
   return (
     <Card onPress={onPress} style={{ flexGrow: 1, flexBasis: '45%', padding: 14 }}>
@@ -143,10 +149,12 @@ export const KpiCard: React.FC<KpiCardProps> = ({ label, value, caption, icon, t
       ) : null}
     </Card>
   );
-};
+});
+
+KpiCard.displayName = 'KpiCard';
 
 /** Section heading: icon + bold title, optional right-hand text link. */
-export const SectionHeader: React.FC<{ title: string; icon?: IconName; action?: string; onAction?: () => void }> = ({
+export const SectionHeader: React.FC<{ title: string; icon?: IconName; action?: string; onAction?: () => void }> = memo(({
   title,
   icon,
   action,
@@ -173,10 +181,12 @@ export const SectionHeader: React.FC<{ title: string; icon?: IconName; action?: 
       ) : null}
     </View>
   );
-};
+});
+
+SectionHeader.displayName = 'SectionHeader';
 
 /** Recessed time block */
-export const TimeBlock: React.FC<{ start: string; end?: string }> = ({ start, end }) => {
+export const TimeBlock: React.FC<{ start: string; end?: string }> = memo(({ start, end }) => {
   const { colors, typography } = useTheme();
   return (
     <View
@@ -195,7 +205,9 @@ export const TimeBlock: React.FC<{ start: string; end?: string }> = ({ start, en
       {end ? <Text style={{ fontFamily: typography.fonts.data, fontSize: 10, color: colors.textMuted }}>{`to ${end}`}</Text> : null}
     </View>
   );
-};
+});
+
+TimeBlock.displayName = 'TimeBlock';
 
 export type StampKind = 'P' | 'A' | 'L' | 'E';
 const STAMPS: Record<StampKind, { bg: string; border: string; fg: string; label: string }> = {
@@ -206,7 +218,7 @@ const STAMPS: Record<StampKind, { bg: string; border: string; fg: string; label:
 };
 
 /** Attendance rubber stamp */
-export const Stamp: React.FC<{ kind: StampKind; active: boolean; onPress: () => void }> = ({ kind, active, onPress }) => {
+export const Stamp: React.FC<{ kind: StampKind; active: boolean; onPress: () => void }> = memo(({ kind, active, onPress }) => {
   const { colors, typography } = useTheme();
   const s = STAMPS[kind];
   return (
@@ -231,10 +243,12 @@ export const Stamp: React.FC<{ kind: StampKind; active: boolean; onPress: () => 
       <Text style={{ fontFamily: typography.fonts.ui, fontSize: 13, fontWeight: active ? '800' : '600', color: active ? s.fg : colors.textMuted }}>{kind}</Text>
     </Pressable>
   );
-};
+});
+
+Stamp.displayName = 'Stamp';
 
 /** Empty state: clean, modern centered message with icon. */
-export const EmptyPaper: React.FC<{ title?: string; message: string; icon?: IconName }> = ({ title, message, icon = 'inbox' }) => {
+export const EmptyPaper: React.FC<{ title?: string; message: string; icon?: IconName }> = memo(({ title, message, icon = 'inbox' }) => {
   const { colors, typography } = useTheme();
   return (
     <Card style={{ alignItems: 'center', paddingVertical: 28, paddingHorizontal: 20 }}>
@@ -245,4 +259,6 @@ export const EmptyPaper: React.FC<{ title?: string; message: string; icon?: Icon
       <Text style={{ fontFamily: typography.fonts.ui, fontSize: 12, color: colors.textMuted, textAlign: 'center', lineHeight: 18 }}>{message}</Text>
     </Card>
   );
-};
+});
+
+EmptyPaper.displayName = 'EmptyPaper';

@@ -70,6 +70,10 @@ describe('teacher service calls the real server routes', () => {
     ['diaries', () => teacherService.getDiaries(), 'GET', '/tuition/diaries'],
     ['leaves', () => teacherService.getLeaves(), 'GET', '/tuition/leaves'],
     ['salaries', () => teacherService.getSalaries(), 'GET', '/tuition/salaries'],
+    ['create batch', () => teacherService.createBatch({ name: 'Batch A', subject: 'Math' }), 'POST', '/teacher/batches'],
+    ['reports', () => teacherService.getReports(), 'GET', '/teacher/reports'],
+    ['queries', () => teacherService.getQueries(), 'GET', '/teacher/queries'],
+    ['reply query', () => teacherService.replyToQuery('q1', 'Answer'), 'POST', '/teacher/queries/q1/reply'],
   ];
 
   it.each(cases)('%s', async (_name, call, method, path) => {
