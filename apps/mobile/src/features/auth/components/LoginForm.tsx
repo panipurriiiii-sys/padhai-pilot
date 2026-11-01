@@ -59,8 +59,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
           Email Address
         </Text>
-        <Pressable
-          onPress={() => emailInputRef.current?.focus()}
+        <View
           style={[
             styles.inputWrapper,
             {
@@ -71,9 +70,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             emailFocused && styles.focusedGlow,
           ]}
         >
-          <View style={styles.inputIconContainer}>
+          <Pressable
+            onPress={() => emailInputRef.current?.focus()}
+            hitSlop={8}
+            style={styles.inputIconContainer}
+          >
             <MailIcon color={emailFocused ? colors.primary : colors.textMuted} size={16} />
-          </View>
+          </Pressable>
           <TextInput
             ref={emailInputRef}
             style={[
@@ -98,7 +101,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             onSubmitEditing={() => pwdInputRef.current?.focus()}
             editable={!isLoading}
           />
-        </Pressable>
+        </View>
         {emailError ? (
           <Text style={[styles.errorHelper, { color: colors.error, fontFamily: typography.fonts.ui }]}>
             {emailError}
@@ -118,8 +121,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             </Text>
           </Pressable>
         </View>
-        <Pressable
-          onPress={() => pwdInputRef.current?.focus()}
+        <View
           style={[
             styles.inputWrapper,
             {
@@ -130,9 +132,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             pwdFocused && styles.focusedGlow,
           ]}
         >
-          <View style={styles.inputIconContainer}>
+          <Pressable
+            onPress={() => pwdInputRef.current?.focus()}
+            hitSlop={8}
+            style={styles.inputIconContainer}
+          >
             <LockIcon color={pwdFocused ? colors.primary : colors.textMuted} size={16} />
-          </View>
+          </Pressable>
           <TextInput
             ref={pwdInputRef}
             style={[
@@ -152,20 +158,30 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             autoCapitalize="none"
             autoCorrect={false}
             textContentType="password"
+            autoComplete="password"
             returnKeyType="done"
             onSubmitEditing={onSubmit}
             editable={!isLoading}
           />
           <Pressable
-            onPress={() => setShowPassword(!showPassword)}
-            hitSlop={12}
+            onPress={() => setShowPassword((prev) => !prev)}
+            hitSlop={10}
             style={styles.eyeBtn}
+            accessibilityRole="button"
+            accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
           >
-            <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: '700' }}>
+            <Text
+              style={{
+                color: colors.textMuted,
+                fontFamily: typography.fonts.ui,
+                fontSize: 11,
+                fontWeight: '600',
+              }}
+            >
               {showPassword ? 'HIDE' : 'SHOW'}
             </Text>
           </Pressable>
-        </Pressable>
+        </View>
         {passwordError ? (
           <Text style={[styles.errorHelper, { color: colors.error, fontFamily: typography.fonts.ui }]}>
             {passwordError}
@@ -182,13 +198,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           {
             backgroundColor: colors.primary,
             borderRadius: radii.lg,
-            opacity: pressed || isLoading ? 0.9 : 1,
+            opacity: isLoading ? 0.7 : pressed ? 0.92 : 1,
             transform: [{ scale: pressed ? 0.985 : 1 }],
           },
         ]}
+        accessibilityRole="button"
+        accessibilityLabel="Sign in"
       >
         <Text style={[styles.submitText, { fontFamily: typography.fonts.ui }]}>
-          {isLoading ? 'Signing In...' : 'Sign In'}
+          {isLoading ? 'Signing in...' : 'Sign In'}
         </Text>
         {!isLoading && <Text style={styles.submitArrow}>→</Text>}
       </Pressable>
@@ -234,7 +252,8 @@ const styles = StyleSheet.create({
   },
   inputIconContainer: {
     marginRight: 10,
-    width: 18,
+    width: 20,
+    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -6,8 +6,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  TouchableWithoutFeedback,
-  Keyboard,
 } from 'react-native';
 import { ScreenContainer } from '../../../components/common/ScreenContainer';
 import { useAuthStore } from '../../../store/useAuthStore';
@@ -104,8 +102,8 @@ export const LoginScreen: React.FC = () => {
     if (hasError) return;
 
     try {
-      await login(cleanEmail, password);
-      setTab('DASHBOARD');
+      await login({ email: cleanEmail, password });
+      setTab('student_dashboard'); // RootNavigator auto-adjusts based on teacher vs student role
     } catch (err: any) {
       setBannerError(err?.message || 'Invalid email or password. Please try again.');
     }
@@ -158,7 +156,7 @@ export const LoginScreen: React.FC = () => {
           subject: subject.trim() || 'General',
         });
       }
-      setTab('DASHBOARD');
+      setTab('student_dashboard');
     } catch (err: any) {
       setBannerError(err?.message || 'Registration failed. Please check your details.');
     }
@@ -191,154 +189,146 @@ export const LoginScreen: React.FC = () => {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboardView}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 0}
       >
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="on-drag"
-            showsVerticalScrollIndicator={false}
-            bounces={false}
-          >
-            <View
-              style={[
-                styles.innerContent,
-                { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl + 40 },
-              ]}
-            >
-              {/* Top Header */}
-              <LuxuryHeader
-                showBack={viewMode !== 'SIGN_IN'}
-                onBack={() => {
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl + 40 },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
+          {/* Top Header */}
+          <LuxuryHeader
+            showBack={viewMode !== 'SIGN_IN'}
+            onBack={() => {
+              clearValidation();
+              if (viewMode === 'FORGOT_PASSWORD') {
+                setViewMode('SIGN_IN');
+              } else {
+                setViewMode('ONBOARDING');
+              }
+            }}
+          />
+
+          {/* Centered Auth Card */}
+          <LuxuryCard>
+            {/* Card Title & Subtitle */}
+            <View style={styles.titleSection}>
+              <Text style={[styles.mainTitle, { color: colors.textPrimary, fontFamily: typography.fonts.display }]}>
+                {viewMode === 'SIGN_IN' && 'Sign in to your account'}
+                {viewMode === 'REGISTER' && 'Create your account'}
+                {viewMode === 'FORGOT_PASSWORD' && 'Reset your password'}
+              </Text>
+              <Text style={[styles.mainSubtitle, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
+                {viewMode === 'SIGN_IN' && 'Enter your details to access your portal.'}
+                {viewMode === 'REGISTER' && 'Sign up to manage batches, attendance, and tests.'}
+                {viewMode === 'FORGOT_PASSWORD' && 'Enter your email to receive a password reset code.'}
+              </Text>
+            </View>
+
+            {/* Segmented Switcher for Login / Register */}
+            {(viewMode === 'SIGN_IN' || viewMode === 'REGISTER') && (
+              <SegmentedToggle
+                options={[
+                  { key: 'SIGN_IN', label: 'Sign In' },
+                  { key: 'REGISTER', label: 'Create Account' },
+                ]}
+                activeKey={viewMode}
+                onSelect={(k) => {
                   clearValidation();
-                  if (viewMode === 'FORGOT_PASSWORD') {
-                    setViewMode('SIGN_IN');
-                  } else {
-                    setViewMode('ONBOARDING');
-                  }
+                  setViewMode(k);
                 }}
               />
+            )}
 
-              {/* Centered Auth Card */}
-              <LuxuryCard>
-                {/* Card Title & Subtitle */}
-                <View style={styles.titleSection}>
-                  <Text style={[styles.mainTitle, { color: colors.textPrimary, fontFamily: typography.fonts.display }]}>
-                    {viewMode === 'SIGN_IN' && 'Sign in to your account'}
-                    {viewMode === 'REGISTER' && 'Create your account'}
-                    {viewMode === 'FORGOT_PASSWORD' && 'Reset your password'}
-                  </Text>
-                  <Text style={[styles.mainSubtitle, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
-                    {viewMode === 'SIGN_IN' && 'Enter your details to access your portal.'}
-                    {viewMode === 'REGISTER' && 'Sign up to manage batches, attendance, and tests.'}
-                    {viewMode === 'FORGOT_PASSWORD' && 'Enter your email to receive a password reset code.'}
-                  </Text>
-                </View>
+            {/* Role Switcher in Register Mode */}
+            {viewMode === 'REGISTER' && (
+              <SegmentedToggle
+                options={[
+                  { key: 'STUDENT', label: 'Student' },
+                  { key: 'TEACHER', label: 'Teacher / Faculty' },
+                ]}
+                activeKey={activeRole}
+                onSelect={(r) => {
+                  clearValidation();
+                  setActiveRole(r);
+                }}
+              />
+            )}
 
-                {/* Segmented Switcher for Login / Register */}
-                {(viewMode === 'SIGN_IN' || viewMode === 'REGISTER') && (
-                  <SegmentedToggle
-                    options={[
-                      { key: 'SIGN_IN', label: 'Sign In' },
-                      { key: 'REGISTER', label: 'Create Account' },
-                    ]}
-                    activeKey={viewMode}
-                    onSelect={(k) => {
-                      clearValidation();
-                      setViewMode(k);
-                    }}
-                  />
-                )}
+            {/* Status Alerts */}
+            <AuthBanner type="error" message={displayedBanner} onDismiss={() => setBannerError(null)} />
+            <AuthBanner type="success" message={successMsg} onDismiss={() => setSuccessMsg(null)} />
 
-                {/* Role Switcher in Register Mode */}
-                {viewMode === 'REGISTER' && (
-                  <SegmentedToggle
-                    options={[
-                      { key: 'STUDENT', label: 'Student' },
-                      { key: 'TEACHER', label: 'Teacher / Faculty' },
-                    ]}
-                    activeKey={activeRole}
-                    onSelect={(r) => {
-                      clearValidation();
-                      setActiveRole(r);
-                    }}
-                  />
-                )}
+            {/* Form Views */}
+            {viewMode === 'SIGN_IN' && (
+              <LoginForm
+                email={email}
+                setEmail={setEmail}
+                emailError={emailError}
+                password={password}
+                setPassword={setPassword}
+                passwordError={passwordError}
+                onSubmit={handleSignIn}
+                onForgotPassword={() => {
+                  clearValidation();
+                  setViewMode('FORGOT_PASSWORD');
+                }}
+                isLoading={isLoading}
+              />
+            )}
 
-                {/* Status Alerts */}
-                <AuthBanner type="error" message={displayedBanner} onDismiss={() => setBannerError(null)} />
-                <AuthBanner type="success" message={successMsg} onDismiss={() => setSuccessMsg(null)} />
+            {viewMode === 'REGISTER' && (
+              <RegisterForm
+                activeRole={activeRole}
+                fullName={fullName}
+                setFullName={setFullName}
+                nameError={nameError}
+                email={email}
+                setEmail={setEmail}
+                emailError={emailError}
+                password={password}
+                setPassword={setPassword}
+                passwordError={passwordError}
+                phone={phone}
+                setPhone={setPhone}
+                invitationCode={invitationCode}
+                setInvitationCode={setInvitationCode}
+                subject={subject}
+                setSubject={setSubject}
+                onSubmit={handleRegister}
+                isLoading={isLoading}
+              />
+            )}
 
-                {/* Form Views */}
-                {viewMode === 'SIGN_IN' && (
-                  <LoginForm
-                    email={email}
-                    setEmail={setEmail}
-                    emailError={emailError}
-                    password={password}
-                    setPassword={setPassword}
-                    passwordError={passwordError}
-                    onSubmit={handleSignIn}
-                    onForgotPassword={() => {
-                      clearValidation();
-                      setViewMode('FORGOT_PASSWORD');
-                    }}
-                    isLoading={isLoading}
-                  />
-                )}
+            {viewMode === 'FORGOT_PASSWORD' && (
+              <ForgotPasswordForm
+                email={email}
+                setEmail={setEmail}
+                emailError={emailError}
+                onSubmit={handleForgotPassword}
+                onBackToLogin={() => {
+                  clearValidation();
+                  setViewMode('SIGN_IN');
+                }}
+                isLoading={isLoading}
+              />
+            )}
+          </LuxuryCard>
 
-                {viewMode === 'REGISTER' && (
-                  <RegisterForm
-                    activeRole={activeRole}
-                    fullName={fullName}
-                    setFullName={setFullName}
-                    nameError={nameError}
-                    email={email}
-                    setEmail={setEmail}
-                    emailError={emailError}
-                    password={password}
-                    setPassword={setPassword}
-                    passwordError={passwordError}
-                    phone={phone}
-                    setPhone={setPhone}
-                    invitationCode={invitationCode}
-                    setInvitationCode={setInvitationCode}
-                    subject={subject}
-                    setSubject={setSubject}
-                    onSubmit={handleRegister}
-                    isLoading={isLoading}
-                  />
-                )}
-
-                {viewMode === 'FORGOT_PASSWORD' && (
-                  <ForgotPasswordForm
-                    email={email}
-                    setEmail={setEmail}
-                    emailError={emailError}
-                    onSubmit={handleForgotPassword}
-                    onBackToLogin={() => {
-                      clearValidation();
-                      setViewMode('SIGN_IN');
-                    }}
-                    isLoading={isLoading}
-                  />
-                )}
-              </LuxuryCard>
-
-              {/* Bottom Footer switch link */}
-              {viewMode !== 'FORGOT_PASSWORD' && (
-                <AuthFooterToggle
-                  mode={viewMode === 'SIGN_IN' ? 'SIGN_IN' : 'REGISTER'}
-                  onToggle={() => {
-                    clearValidation();
-                    setViewMode(viewMode === 'SIGN_IN' ? 'REGISTER' : 'SIGN_IN');
-                  }}
-                />
-              )}
-            </View>
-          </ScrollView>
-        </TouchableWithoutFeedback>
+          {/* Bottom Footer switch link */}
+          {viewMode !== 'FORGOT_PASSWORD' && (
+            <AuthFooterToggle
+              mode={viewMode === 'SIGN_IN' ? 'SIGN_IN' : 'REGISTER'}
+              onToggle={() => {
+                clearValidation();
+                setViewMode(viewMode === 'SIGN_IN' ? 'REGISTER' : 'SIGN_IN');
+              }}
+            />
+          )}
+        </ScrollView>
       </KeyboardAvoidingView>
     </ScreenContainer>
   );
@@ -350,11 +340,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-  },
-  innerContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingVertical: 16,
+    paddingTop: 8,
   },
   titleSection: {
     marginBottom: 20,

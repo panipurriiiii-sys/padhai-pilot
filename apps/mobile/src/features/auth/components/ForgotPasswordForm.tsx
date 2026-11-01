@@ -35,8 +35,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
         <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
           Email Address
         </Text>
-        <Pressable
-          onPress={() => emailInputRef.current?.focus()}
+        <View
           style={[
             styles.inputWrapper,
             {
@@ -47,9 +46,13 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
             emailFocused && styles.focusedGlow,
           ]}
         >
-          <View style={styles.inputIconContainer}>
+          <Pressable
+            onPress={() => emailInputRef.current?.focus()}
+            hitSlop={8}
+            style={styles.inputIconContainer}
+          >
             <MailIcon color={emailFocused ? colors.primary : colors.textMuted} size={16} />
-          </View>
+          </Pressable>
           <TextInput
             ref={emailInputRef}
             style={[styles.input, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}
@@ -66,7 +69,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
             onSubmitEditing={onSubmit}
             editable={!isLoading}
           />
-        </Pressable>
+        </View>
         {emailError ? (
           <Text style={[styles.errorHelper, { color: colors.error, fontFamily: typography.fonts.ui }]}>
             {emailError}
@@ -98,12 +101,13 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   guideText: {
-    fontSize: 12,
+    fontSize: 13,
     lineHeight: 18,
     marginBottom: 16,
+    textAlign: 'center',
   },
   fieldGroup: {
-    marginBottom: 18,
+    marginBottom: 16,
   },
   fieldLabel: {
     fontSize: 12,
@@ -126,7 +130,8 @@ const styles = StyleSheet.create({
   },
   inputIconContainer: {
     marginRight: 10,
-    width: 18,
+    width: 20,
+    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },
