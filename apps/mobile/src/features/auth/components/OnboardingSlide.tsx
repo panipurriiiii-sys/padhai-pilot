@@ -1,12 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import { View, StyleSheet, Text, Animated } from 'react-native';
 import { useTheme } from '../../../theme/ThemeContext';
-import { paperShadow } from '../../../theme/shadows';
-import { AnimeStudySceneArt, AnimeClassroomArt, AnimeMilestoneArt } from './LuxuryAuthArt';
 
 export interface OnboardingSlideData {
   id: string;
-  artType: 'study' | 'classroom' | 'milestone';
   badge: string;
   title: string;
   subtitle: string;
@@ -19,16 +16,16 @@ interface OnboardingSlideProps {
 }
 
 export const OnboardingSlide: React.FC<OnboardingSlideProps> = ({ slide, isActive }) => {
-  const { colors, radii, typography, isDark } = useTheme();
+  const { radii, typography } = useTheme();
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const floatAnim = useRef(new Animated.Value(8)).current;
+  const floatAnim = useRef(new Animated.Value(10)).current;
 
   useEffect(() => {
     if (isActive) {
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 280,
+          duration: 300,
           useNativeDriver: true,
         }),
         Animated.spring(floatAnim, {
@@ -40,92 +37,34 @@ export const OnboardingSlide: React.FC<OnboardingSlideProps> = ({ slide, isActiv
       ]).start();
     } else {
       fadeAnim.setValue(0);
-      floatAnim.setValue(8);
+      floatAnim.setValue(10);
     }
   }, [isActive]);
 
-  const renderArt = () => {
-    switch (slide.artType) {
-      case 'classroom':
-        return <AnimeClassroomArt size={230} />;
-      case 'milestone':
-        return <AnimeMilestoneArt size={230} />;
-      case 'study':
-      default:
-        return <AnimeStudySceneArt size={230} />;
-    }
-  };
-
   return (
-    <View style={styles.container}>
-      {/* Floating Anime Scene Card */}
-      <Animated.View
-        style={[
-          styles.artworkCard,
-          {
-            backgroundColor: colors.surface,
-            borderColor: colors.border,
-            borderRadius: radii.xl,
-            opacity: fadeAnim,
-            transform: [{ translateY: floatAnim }],
-          },
-          paperShadow(isDark, 'lift'),
-        ]}
-      >
-        {!isDark && <View style={[styles.tapeStrip, { borderColor: colors.border }]} />}
-        <View style={styles.illustrationWrap}>{renderArt()}</View>
-      </Animated.View>
-
-      {/* Slide Text */}
-      <View style={styles.textContainer}>
-        <View
-          style={[
-            styles.badgeWrap,
-            {
-              backgroundColor: colors.stickyBlueBg,
-              borderColor: colors.stickyBlueBorder,
-              borderRadius: radii.full,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.badgeText,
-              {
-                color: colors.stickyBlueText,
-                fontFamily: typography.fonts.ui,
-              },
-            ]}
-          >
-            {slide.badge}
-          </Text>
-        </View>
-
-        <Text
-          style={[
-            styles.title,
-            {
-              color: colors.textPrimary,
-              fontFamily: typography.fonts.display,
-            },
-          ]}
-        >
-          {slide.title}
-        </Text>
-
-        <Text
-          style={[
-            styles.description,
-            {
-              color: colors.textSecondary,
-              fontFamily: typography.fonts.ui,
-            },
-          ]}
-        >
-          {slide.description}
+    <Animated.View
+      style={[
+        styles.container,
+        {
+          opacity: fadeAnim,
+          transform: [{ translateY: floatAnim }],
+        },
+      ]}
+    >
+      <View style={[styles.badgeWrap, { borderRadius: radii.full }]}>
+        <Text style={[styles.badgeText, { fontFamily: typography.fonts.ui }]}>
+          {slide.badge}
         </Text>
       </View>
-    </View>
+
+      <Text style={[styles.title, { fontFamily: typography.fonts.display }]}>
+        {slide.title}
+      </Text>
+
+      <Text style={[styles.description, { fontFamily: typography.fonts.ui }]}>
+        {slide.description}
+      </Text>
+    </Animated.View>
   );
 };
 
@@ -133,58 +72,41 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
     alignItems: 'center',
-    paddingHorizontal: 16,
-  },
-  artworkCard: {
-    width: 270,
-    height: 195,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    position: 'relative',
-    marginTop: 6,
-  },
-  tapeStrip: {
-    position: 'absolute',
-    top: -9,
-    width: 72,
-    height: 18,
-    backgroundColor: 'rgba(238, 233, 226, 0.75)',
-    borderRadius: 2,
-    borderWidth: 1,
-    transform: [{ rotate: '-1.5deg' }],
-  },
-  illustrationWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  textContainer: {
-    alignItems: 'center',
-    width: '100%',
-    marginTop: 22,
+    paddingHorizontal: 24,
   },
   badgeWrap: {
     paddingVertical: 5,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
     borderWidth: 1,
-    marginBottom: 10,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+    marginBottom: 12,
   },
   badgeText: {
     fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.6,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 1,
   },
   title: {
-    fontSize: 25,
-    fontWeight: '700',
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#FFFFFF',
     textAlign: 'center',
-    letterSpacing: -0.4,
-    marginBottom: 8,
+    letterSpacing: -0.5,
+    marginBottom: 10,
+    textShadowColor: 'rgba(0, 0, 0, 0.45)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 6,
   },
   description: {
-    fontSize: 14,
+    fontSize: 15,
     lineHeight: 22,
+    color: '#FFFFFF',
     textAlign: 'center',
-    paddingHorizontal: 8,
+    opacity: 0.95,
+    textShadowColor: 'rgba(0, 0, 0, 0.4)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
 });

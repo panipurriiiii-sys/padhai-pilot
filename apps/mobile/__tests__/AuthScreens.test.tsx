@@ -20,7 +20,7 @@ describe('Auth & Onboarding Screens', () => {
     insets: { top: 44, left: 0, right: 0, bottom: 34 },
   };
 
-  it('renders GetStartedScreen with anime illustrations correctly', () => {
+  it('renders GetStartedScreen with clean text correctly', () => {
     let tree: ReactTestRenderer.ReactTestRenderer | undefined;
     ReactTestRenderer.act(() => {
       tree = ReactTestRenderer.create(
@@ -34,8 +34,8 @@ describe('Auth & Onboarding Screens', () => {
     });
     expect(tree).toBeDefined();
     const str = JSON.stringify(tree?.toJSON());
-    expect(str).toContain('STUDY ZONE');
-    expect(str).toContain('Focus & Master Your Goals');
+    expect(str).toContain('LEARN & GROW');
+    expect(str).toContain('Your Study Space');
   });
 
   it('renders LoginScreen root into onboarding by default', () => {
@@ -52,6 +52,6 @@ describe('Auth & Onboarding Screens', () => {
     });
     expect(tree).toBeDefined();
     const str = JSON.stringify(tree?.toJSON());
-    expect(str).toContain('STUDY ZONE');
+    expect(str).toContain('LEARN & GROW');
   });
 });
