@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider } from './src/theme/ThemeContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
@@ -7,6 +8,7 @@ import { ApiError, apiClient } from './src/services/api/client';
 import { useAuthStore } from './src/store/useAuthStore';
 import { notificationService } from './src/services/notification';
 import { prefetchAppData } from './src/services/api/prefetch';
+import { asyncStoragePersister } from './src/services/storage/queryPersister';
 
 function App() {
   const [queryClient] = useState(
@@ -17,9 +19,12 @@ function App() {
             // Retry transient failures only (network / 5xx); a 4xx will not fix itself.
             retry: (count: number, error: unknown) =>
               count < 2 && (!(error instanceof ApiError) || error.statusCode === 0 || error.statusCode >= 500),
-            staleTime: 1000 * 60 * 5, // 5 minutes cache retention for fast UI response
-            gcTime: 1000 * 60 * 30, // 30 minutes in-memory garbage collection
+            // Like Instagram: show instantly from disk cache, re-fetch only after 5 mins of inactivity
+            staleTime: 1000 * 60 * 5,
+            // Keep in storage and memory for 24 hours so user can browse offline anytime
+            gcTime: 1000 * 60 * 60 * 24,
             refetchOnWindowFocus: false,
+            refetchOnReconnect: 'always',
           },
         },
       }),
@@ -50,11 +55,18 @@ function App() {
 
   return (
     <SafeAreaProvider>
-      <QueryClientProvider client={queryClient}>
+      <PersistQueryClientProvider
+        client={queryClient}
+        persistOptions={{
+          persister: asyncStoragePersister,
+          maxAge: 1000 * 60 * 60 * 24, // 24 hours disk persistence
+          buster: 'v1.0.0',
+        }}
+      >
         <ThemeProvider>
           <RootNavigator />
         </ThemeProvider>
-      </QueryClientProvider>
+      </PersistQueryClientProvider>
     </SafeAreaProvider>
   );
 }
