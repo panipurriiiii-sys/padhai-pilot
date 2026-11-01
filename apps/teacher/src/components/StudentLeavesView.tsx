@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { CalendarOff } from 'lucide-react';
+import { CalendarOff, CheckCircle2 } from 'lucide-react';
 import type { StudentLeaveItem } from '@padhai-pilot/shared';
 import { teacherApi } from '../lib/api';
 import { LoadError } from './LoadError';
@@ -53,15 +53,60 @@ export function StudentLeavesView() {
     }
   };
 
+  const approveAll = async () => {
+    const pending = items.filter((l) => l.status === 'PENDING');
+    if (pending.length === 0) return;
+    if (!window.confirm(`Approve all ${pending.length} pending student leave requests?`)) return;
+    setBusy('ALL');
+    try {
+      await Promise.all(
+        pending.map((l) =>
+          teacherApi.reviewStudentLeave(l.id, { status: 'APPROVED', remarks: 'Bulk approved' }),
+        ),
+      );
+      await load();
+      setNotice({ text: `Approved all ${pending.length} leave requests successfully.` });
+    } catch (e) {
+      setNotice({ text: e instanceof Error ? e.message : 'Could not approve all requests.', error: true });
+    } finally {
+      setBusy(null);
+      setTimeout(() => setNotice(null), 4000);
+    }
+  };
+
+  const pendingCount = items.filter((l) => l.status === 'PENDING').length;
+
   return (
     <div className="space-y-6">
-      <div className="pb-4 border-b border-[var(--border-paper)]">
-        <h1 className="font-['Playfair_Display'] text-2xl font-bold text-[var(--ink-primary)] flex items-center gap-2">
-          <CalendarOff className="w-5 h-5 text-[var(--brand-electric)]" /> Student Leave Requests
-        </h1>
-        <p className="font-['Raleway'] text-xs text-[var(--ink-muted)] mt-1">Approve or reject leave applications from the students in your batches.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border-paper)]">
+        <div>
+          <h1 className="font-['Playfair_Display'] text-2xl font-bold text-[var(--ink-primary)] flex items-center gap-2">
+            <CalendarOff className="w-5 h-5 text-[var(--brand-electric)]" /> Student Leave Requests
+          </h1>
+          <p className="font-['Raleway'] text-xs text-[var(--ink-muted)] mt-1">
+            Approve or reject leave applications from the students in your batches.
+          </p>
+        </div>
+
+        {pendingCount > 0 && (
+          <button
+            type="button"
+            disabled={busy !== null}
+            onClick={approveAll}
+            className="btn-primary text-xs font-bold px-4 py-2.5 flex items-center gap-2 shadow-sm shrink-0"
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            {busy === 'ALL' ? 'Approving All...' : `Approve All (${pendingCount})`}
+          </button>
+        )}
       </div>
-      {notice && <div role="status" className={`p-3 rounded-lg border text-xs ${notice.error ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800'}`}>{notice.text}</div>}
+
+      {notice && (
+        <div role="status" className={`p-3 rounded-lg border text-xs ${notice.error ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800'}`}>
+          {notice.text}
+        </div>
+      )}
+
       {loadError ? (
         <LoadError message={loadError} onRetry={load} />
       ) : isLoading ? (
@@ -73,8 +118,12 @@ export function StudentLeavesView() {
           {items.map((l) => (
             <li key={l.id} className="paper-card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="min-w-0">
-                <div className="font-['Raleway'] font-bold text-sm text-[var(--ink-primary)]">{l.studentName} <span className="font-normal text-[var(--ink-muted)]">{l.batchName ? `- ${l.batchName}` : ''}</span></div>
-                <div className="text-xs text-[var(--ink-secondary)]">{new Date(l.startDate).toLocaleDateString()} to {new Date(l.endDate).toLocaleDateString()} ({l.totalDays} day{l.totalDays === 1 ? '' : 's'})</div>
+                <div className="font-['Raleway'] font-bold text-sm text-[var(--ink-primary)]">
+                  {l.studentName} <span className="font-normal text-[var(--ink-muted)]">{l.batchName ? `- ${l.batchName}` : ''}</span>
+                </div>
+                <div className="text-xs text-[var(--ink-secondary)]">
+                  {new Date(l.startDate).toLocaleDateString()} to {new Date(l.endDate).toLocaleDateString()} ({l.totalDays} day{l.totalDays === 1 ? '' : 's'})
+                </div>
                 <p className="text-xs text-[var(--ink-muted)] mt-1">{l.reason}</p>
                 {l.reviewerRemarks && <p className="text-xs text-[var(--ink-muted)] mt-1">Remarks: {l.reviewerRemarks}</p>}
               </div>
@@ -82,8 +131,8 @@ export function StudentLeavesView() {
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${STYLE[l.status]}`}>{l.status}</span>
                 {l.status === 'PENDING' && (
                   <>
-                    <button type="button" disabled={busy === l.id} className="btn-primary text-xs px-3 py-1.5" onClick={() => review(l, 'APPROVED')}>Approve</button>
-                    <button type="button" disabled={busy === l.id} className="text-xs px-3 py-1.5 rounded-lg border border-rose-200 text-rose-700 hover:bg-rose-50" onClick={() => review(l, 'REJECTED')}>Reject</button>
+                    <button type="button" disabled={busy !== null} className="btn-primary text-xs px-3 py-1.5" onClick={() => review(l, 'APPROVED')}>Approve</button>
+                    <button type="button" disabled={busy !== null} className="text-xs px-3 py-1.5 rounded-lg border border-rose-200 text-rose-700 hover:bg-rose-50" onClick={() => review(l, 'REJECTED')}>Reject</button>
                   </>
                 )}
               </div>

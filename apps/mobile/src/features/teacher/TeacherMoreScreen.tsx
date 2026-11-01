@@ -32,6 +32,8 @@ import type { TimetableConflictError, WeekDay } from '@padhai-pilot/shared';
 import { StudentLeaveReview } from '../leave/StudentLeavePanels';
 import { TeacherQueriesPanel } from './TeacherQueriesPanel';
 import { TeacherReportsPanel } from './TeacherReportsPanel';
+import { openPdf } from '../../lib/pdf';
+import { documentPaths } from '../../services/api/financeService';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useNavigationStore } from '../../store/useNavigationStore';
 import { useTheme } from '../../theme/ThemeContext';

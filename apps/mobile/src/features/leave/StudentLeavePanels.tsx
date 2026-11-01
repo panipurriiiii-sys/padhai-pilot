@@ -78,6 +78,8 @@ export const StudentLeaveReview: React.FC = () => {
   const q = useLeavesForReview();
   const review = useReviewLeave();
   const [remarks, setRemarks] = useState<Record<string, string>>({});
+  const [isBulkApproving, setIsBulkApproving] = useState(false);
+
   const decide = (l: StudentLeaveItem, status: 'APPROVED' | 'REJECTED') => {
     const r = (remarks[l.id] ?? '').trim();
     if (status === 'REJECTED' && !r) {
@@ -86,23 +88,71 @@ export const StudentLeaveReview: React.FC = () => {
     }
     review.mutate({ id: l.id, data: { status, remarks: r || undefined } }, { onError: (e) => Alert.alert('Could not save decision', errorMessage(e)) });
   };
+
+  const approveAll = (items: StudentLeaveItem[]) => {
+    const pending = items.filter((l) => l.status === 'PENDING');
+    if (pending.length === 0) return;
+    Alert.alert(
+      'Approve All Requests?',
+      `Are you sure you want to approve all ${pending.length} pending leave requests?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: `Approve All (${pending.length})`,
+          onPress: async () => {
+            setIsBulkApproving(true);
+            try {
+              await Promise.all(
+                pending.map((l) =>
+                  review.mutateAsync({ id: l.id, data: { status: 'APPROVED', remarks: 'Bulk approved' } }),
+                ),
+              );
+              Alert.alert('Approved', `All ${pending.length} leave requests approved successfully.`);
+            } catch (e) {
+              Alert.alert('Error', errorMessage(e));
+            } finally {
+              setIsBulkApproving(false);
+            }
+          },
+        },
+      ],
+    );
+  };
+
   return (
     <QueryBoundary query={q} isEmpty={(l) => l.length === 0} emptyTitle="No student leave" emptyDescription="Requests from your batches appear here.">
-      {(items) =>
-        items.map((l) => (
-          <LeaveCard key={l.id} l={l}>
-            {l.status === 'PENDING' ? (
-              <View style={{ marginTop: 8 }}>
-                <Input label="Remarks" value={remarks[l.id] ?? ''} onChangeText={(t) => setRemarks((m) => ({ ...m, [l.id]: t }))} />
-                <View style={styles.row}>
-                  <Button title="Approve" size="sm" loading={review.isPending} onPress={() => decide(l, 'APPROVED')} />
-                  <Button title="Reject" size="sm" variant="outline" onPress={() => decide(l, 'REJECTED')} />
-                </View>
+      {(items) => {
+        const pending = items.filter((l) => l.status === 'PENDING');
+        return (
+          <>
+            {pending.length > 0 && (
+              <View style={{ marginBottom: 12 }}>
+                <Button
+                  title={isBulkApproving ? 'Approving All...' : `Approve All Pending (${pending.length})`}
+                  variant="primary"
+                  size="md"
+                  loading={isBulkApproving}
+                  onPress={() => approveAll(items)}
+                />
               </View>
-            ) : null}
-          </LeaveCard>
-        ))
-      }
+            )}
+
+            {items.map((l) => (
+              <LeaveCard key={l.id} l={l}>
+                {l.status === 'PENDING' ? (
+                  <View style={{ marginTop: 8 }}>
+                    <Input label="Remarks" value={remarks[l.id] ?? ''} onChangeText={(t) => setRemarks((m) => ({ ...m, [l.id]: t }))} />
+                    <View style={styles.row}>
+                      <Button title="Approve" size="sm" loading={review.isPending} onPress={() => decide(l, 'APPROVED')} />
+                      <Button title="Reject" size="sm" variant="outline" onPress={() => decide(l, 'REJECTED')} />
+                    </View>
+                  </View>
+                ) : null}
+              </LeaveCard>
+            ))}
+          </>
+        );
+      }}
     </QueryBoundary>
   );
 };

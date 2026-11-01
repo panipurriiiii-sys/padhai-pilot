@@ -21,6 +21,8 @@ import { errorMessage, formatDate } from '../../lib/format';
 import type { EnrollmentCode, TeacherBatch } from '../../services/api/teacherService';
 
 import { TeacherFeesPanel } from './TeacherFeesPanel';
+import { openPdf } from '../../lib/pdf';
+import { documentPaths } from '../../services/api/financeService';
 
 type Tab = 'students' | 'codes' | 'fees' | 'batch';
 const CODE_VARIANT = { ACTIVE: 'success', EXPIRED: 'neutral', REVOKED: 'error', EXHAUSTED: 'warning' } as const;
