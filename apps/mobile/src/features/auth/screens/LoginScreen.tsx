@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,6 +6,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Keyboard,
 } from 'react-native';
 import { ScreenContainer } from '../../../components/common/ScreenContainer';
 import { useAuthStore } from '../../../store/useAuthStore';
@@ -13,7 +14,6 @@ import { useNavigationStore } from '../../../store/useNavigationStore';
 import { useTheme } from '../../../theme/ThemeContext';
 
 import { LuxuryHeader } from '../components/LuxuryHeader';
-import { LuxuryCard } from '../components/LuxuryCard';
 import { SegmentedToggle } from '../components/SegmentedToggle';
 import { AuthBanner } from '../components/AuthBanner';
 import { LoginForm } from '../components/LoginForm';
@@ -38,6 +38,9 @@ export const LoginScreen: React.FC = () => {
   } = useAuthStore();
   const { setTab } = useNavigationStore();
 
+  const scrollViewRef = useRef<ScrollView>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
   const [viewMode, setViewMode] = useState<AuthViewMode>('ONBOARDING');
   const [activeRole, setActiveRole] = useState<AuthRole>('STUDENT');
 
@@ -55,6 +58,35 @@ export const LoginScreen: React.FC = () => {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [bannerError, setBannerError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // Dynamic keyboard height listener to guarantee inputs never get hidden
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => {
+        setKeyboardHeight(e.endCoordinates.height);
+      }
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => {
+        setKeyboardHeight(0);
+      }
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  const handleFieldFocus = (yOffset: number) => {
+    setTimeout(() => {
+      scrollViewRef.current?.scrollTo({
+        y: yOffset,
+        animated: true,
+      });
+    }, 120);
+  };
 
   const clearValidation = () => {
     setNameError(null);
@@ -191,9 +223,13 @@ export const LoginScreen: React.FC = () => {
         style={styles.keyboardView}
       >
         <ScrollView
+          ref={scrollViewRef}
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl + 40 },
+            {
+              paddingHorizontal: spacing.lg,
+              paddingBottom: keyboardHeight > 0 ? keyboardHeight + 120 : 60,
+            },
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
@@ -212,19 +248,19 @@ export const LoginScreen: React.FC = () => {
             }}
           />
 
-          {/* Centered Auth Card */}
-          <LuxuryCard>
-            {/* Card Title & Subtitle */}
+          {/* Clean Open Form Flow (Not Boxy, No Heavy Enclosing Cards) */}
+          <View style={styles.formContainer}>
+            {/* Title Section */}
             <View style={styles.titleSection}>
               <Text style={[styles.mainTitle, { color: colors.textPrimary, fontFamily: typography.fonts.display }]}>
-                {viewMode === 'SIGN_IN' && 'Sign in to your account'}
+                {viewMode === 'SIGN_IN' && 'Welcome back'}
                 {viewMode === 'REGISTER' && 'Create your account'}
-                {viewMode === 'FORGOT_PASSWORD' && 'Reset your password'}
+                {viewMode === 'FORGOT_PASSWORD' && 'Reset password'}
               </Text>
               <Text style={[styles.mainSubtitle, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
-                {viewMode === 'SIGN_IN' && 'Enter your details to access your portal.'}
-                {viewMode === 'REGISTER' && 'Sign up to manage batches, attendance, and tests.'}
-                {viewMode === 'FORGOT_PASSWORD' && 'Enter your email to receive a password reset code.'}
+                {viewMode === 'SIGN_IN' && 'Enter your credentials to access your academic portal.'}
+                {viewMode === 'REGISTER' && 'Join your batch to access attendance, tests, and homework.'}
+                {viewMode === 'FORGOT_PASSWORD' && 'Enter your registered email to receive a reset code.'}
               </Text>
             </View>
 
@@ -277,6 +313,10 @@ export const LoginScreen: React.FC = () => {
                   setViewMode('FORGOT_PASSWORD');
                 }}
                 isLoading={isLoading}
+                onFocusField={(field) => {
+                  if (field === 'email') handleFieldFocus(40);
+                  if (field === 'password') handleFieldFocus(120);
+                }}
               />
             )}
 
@@ -300,6 +340,13 @@ export const LoginScreen: React.FC = () => {
                 setSubject={setSubject}
                 onSubmit={handleRegister}
                 isLoading={isLoading}
+                onFocusField={(field) => {
+                  if (field === 'name') handleFieldFocus(60);
+                  if (field === 'email') handleFieldFocus(140);
+                  if (field === 'pwd') handleFieldFocus(220);
+                  if (field === 'phone') handleFieldFocus(300);
+                  if (field === 'extra') handleFieldFocus(380);
+                }}
               />
             )}
 
@@ -314,9 +361,10 @@ export const LoginScreen: React.FC = () => {
                   setViewMode('SIGN_IN');
                 }}
                 isLoading={isLoading}
+                onFocusField={() => handleFieldFocus(60)}
               />
             )}
-          </LuxuryCard>
+          </View>
 
           {/* Bottom Footer switch link */}
           {viewMode !== 'FORGOT_PASSWORD' && (
@@ -340,22 +388,27 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingTop: 8,
+    paddingTop: 10,
+  },
+  formContainer: {
+    width: '100%',
+    paddingVertical: 8,
   },
   titleSection: {
-    marginBottom: 20,
-    alignItems: 'center',
+    marginBottom: 24,
+    alignItems: 'flex-start',
   },
   mainTitle: {
-    fontSize: 22,
+    fontSize: 26,
+    lineHeight: 32,
     fontWeight: '700',
-    letterSpacing: -0.3,
-    marginBottom: 4,
-    textAlign: 'center',
+    letterSpacing: -0.5,
+    marginBottom: 6,
+    textAlign: 'left',
   },
   mainSubtitle: {
-    fontSize: 12,
-    lineHeight: 16,
-    textAlign: 'center',
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'left',
   },
 });

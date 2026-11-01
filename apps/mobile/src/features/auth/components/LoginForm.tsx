@@ -19,6 +19,7 @@ interface LoginFormProps {
   onSubmit: () => void;
   onForgotPassword: () => void;
   isLoading: boolean;
+  onFocusField?: (field: 'email' | 'password') => void;
 }
 
 export const LoginForm: React.FC<LoginFormProps> = ({
@@ -31,8 +32,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   onSubmit,
   onForgotPassword,
   isLoading,
+  onFocusField,
 }) => {
-  const { colors, radii, typography } = useTheme();
+  const { colors, radii, typography, isDark } = useTheme();
   const [showPassword, setShowPassword] = useState(false);
   const [emailFocused, setEmailFocused] = useState(false);
   const [pwdFocused, setPwdFocused] = useState(false);
@@ -44,13 +46,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     ? colors.error
     : emailFocused
     ? colors.primary
-    : colors.borderStrong;
+    : colors.borderSubtle;
 
   const pwdBorder = passwordError
     ? colors.error
     : pwdFocused
     ? colors.primary
-    : colors.borderStrong;
+    : colors.borderSubtle;
 
   return (
     <View style={styles.container}>
@@ -63,9 +65,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           style={[
             styles.inputWrapper,
             {
-              backgroundColor: colors.surfaceSubtle,
+              backgroundColor: isDark ? colors.surfaceSubtle : '#FFFFFF',
               borderColor: emailBorder,
-              borderRadius: radii.lg,
+              borderRadius: 14,
             },
             emailFocused && styles.focusedGlow,
           ]}
@@ -90,7 +92,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             placeholderTextColor={colors.textFaint}
             value={email}
             onChangeText={setEmail}
-            onFocus={() => setEmailFocused(true)}
+            onFocus={() => {
+              setEmailFocused(true);
+              onFocusField?.('email');
+            }}
             onBlur={() => setEmailFocused(false)}
             autoCapitalize="none"
             autoCorrect={false}
@@ -125,9 +130,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           style={[
             styles.inputWrapper,
             {
-              backgroundColor: colors.surfaceSubtle,
+              backgroundColor: isDark ? colors.surfaceSubtle : '#FFFFFF',
               borderColor: pwdBorder,
-              borderRadius: radii.lg,
+              borderRadius: 14,
             },
             pwdFocused && styles.focusedGlow,
           ]}
@@ -152,7 +157,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             placeholderTextColor={colors.textFaint}
             value={password}
             onChangeText={setPassword}
-            onFocus={() => setPwdFocused(true)}
+            onFocus={() => {
+              setPwdFocused(true);
+              onFocusField?.('password');
+            }}
             onBlur={() => setPwdFocused(false)}
             secureTextEntry={!showPassword}
             autoCapitalize="none"
@@ -197,7 +205,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           styles.submitBtn,
           {
             backgroundColor: colors.primary,
-            borderRadius: radii.lg,
+            borderRadius: 14,
             opacity: isLoading ? 0.7 : pressed ? 0.92 : 1,
             transform: [{ scale: pressed ? 0.985 : 1 }],
           },
@@ -239,15 +247,15 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1.2,
-    paddingHorizontal: 12,
-    height: 48,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    height: 50,
   },
   focusedGlow: {
     shadowColor: '#1677FF',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
+    shadowOpacity: 0.16,
+    shadowRadius: 5,
     elevation: 2,
   },
   inputIconContainer: {
@@ -274,20 +282,20 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   submitBtn: {
-    height: 48,
+    height: 50,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
+    marginTop: 10,
     shadowColor: '#1677FF',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 4,
+    shadowOpacity: 0.28,
+    shadowRadius: 8,
+    elevation: 3,
   },
   submitText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
     letterSpacing: 0.3,
   },

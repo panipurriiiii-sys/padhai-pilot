@@ -11,6 +11,7 @@ interface ForgotPasswordFormProps {
   onSubmit: () => void;
   onBackToLogin: () => void;
   isLoading: boolean;
+  onFocusField?: (field: 'email') => void;
 }
 
 export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
@@ -20,10 +21,13 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
   onSubmit,
   onBackToLogin,
   isLoading,
+  onFocusField,
 }) => {
-  const { colors, radii, typography, spacing } = useTheme();
+  const { colors, typography, spacing, isDark } = useTheme();
   const [emailFocused, setEmailFocused] = useState(false);
   const emailInputRef = useRef<TextInput>(null);
+
+  const fieldBg = isDark ? colors.surfaceSubtle : '#FFFFFF';
 
   return (
     <View style={styles.container}>
@@ -39,9 +43,9 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
           style={[
             styles.inputWrapper,
             {
-              backgroundColor: colors.surfaceSubtle,
-              borderColor: emailError ? colors.error : emailFocused ? colors.primary : colors.borderStrong,
-              borderRadius: radii.lg,
+              backgroundColor: fieldBg,
+              borderColor: emailError ? colors.error : emailFocused ? colors.primary : colors.borderSubtle,
+              borderRadius: 14,
             },
             emailFocused && styles.focusedGlow,
           ]}
@@ -60,7 +64,10 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
             placeholderTextColor={colors.textFaint}
             value={email}
             onChangeText={setEmail}
-            onFocus={() => setEmailFocused(true)}
+            onFocus={() => {
+              setEmailFocused(true);
+              onFocusField?.('email');
+            }}
             onBlur={() => setEmailFocused(false)}
             autoCapitalize="none"
             autoCorrect={false}
@@ -117,15 +124,15 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1.2,
-    paddingHorizontal: 12,
-    height: 48,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    height: 50,
   },
   focusedGlow: {
     shadowColor: '#1677FF',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
+    shadowOpacity: 0.16,
+    shadowRadius: 5,
     elevation: 2,
   },
   inputIconContainer: {
