@@ -1,7 +1,13 @@
 import React, { useState, useRef } from 'react';
-import { View, StyleSheet, Text, TextInput, Pressable } from 'react-native';
-import { Button } from '../../../components/common/Button';
+import {
+  View,
+  StyleSheet,
+  Text,
+  TextInput,
+  Pressable,
+} from 'react-native';
 import { useTheme } from '../../../theme/ThemeContext';
+import { Button } from '../../../components/common/Button';
 import { MailIcon } from './AuthFieldIcons';
 
 interface ForgotPasswordFormProps {
@@ -37,7 +43,8 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
         <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
           Email Address
         </Text>
-        <View
+        <Pressable
+          onPress={() => emailInputRef.current?.focus()}
           style={[
             styles.inputWrapper,
             {
@@ -47,16 +54,12 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
             emailFocused && styles.focusedGlow,
           ]}
         >
-          <Pressable
-            onPress={() => emailInputRef.current?.focus()}
-            hitSlop={8}
-            style={styles.inputIconContainer}
-          >
+          <View style={styles.inputIconContainer}>
             <MailIcon color={emailFocused ? colors.primary : colors.textMuted} size={16} />
-          </Pressable>
+          </View>
           <TextInput
             ref={emailInputRef}
-            style={[styles.input, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}
+            style={[styles.input, { color: colors.textPrimary }]}
             placeholder="name@example.com"
             placeholderTextColor={colors.textFaint}
             value={email}
@@ -70,7 +73,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
             onSubmitEditing={onSubmit}
             editable={!isLoading}
           />
-        </View>
+        </Pressable>
         {emailError ? (
           <Text style={[styles.errorHelper, { color: colors.error, fontFamily: typography.fonts.ui }]}>
             {emailError}
@@ -91,7 +94,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
         variant="ghost"
         size="md"
         onPress={onBackToLogin}
-        style={{ marginTop: spacing.sm }}
+        style={{ marginTop: spacing.xs }}
       />
     </View>
   );
@@ -108,7 +111,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   fieldGroup: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   fieldLabel: {
     fontSize: 12,
@@ -120,7 +123,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderRadius: 14,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     height: 48,
   },
   focusedGlow: {
@@ -131,18 +134,16 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   inputIconContainer: {
-    marginRight: 10,
+    marginRight: 8,
     width: 20,
-    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },
   input: {
     flex: 1,
-    height: '100%',
-    fontSize: 14,
-    paddingVertical: 0,
-    includeFontPadding: false,
+    height: 48,
+    fontSize: 15,
+    paddingVertical: 4,
   },
   errorHelper: {
     fontSize: 11,

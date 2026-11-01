@@ -61,7 +61,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
           Email Address
         </Text>
-        <View
+        <Pressable
+          onPress={() => emailInputRef.current?.focus()}
           style={[
             styles.inputWrapper,
             {
@@ -71,20 +72,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             emailFocused && styles.focusedGlow,
           ]}
         >
-          <Pressable
-            onPress={() => emailInputRef.current?.focus()}
-            hitSlop={8}
-            style={styles.inputIconContainer}
-          >
+          <View style={styles.inputIconContainer}>
             <MailIcon color={emailFocused ? colors.primary : colors.textMuted} size={16} />
-          </Pressable>
+          </View>
           <TextInput
             ref={emailInputRef}
             style={[
               styles.input,
               {
                 color: colors.textPrimary,
-                fontFamily: typography.fonts.ui,
               },
             ]}
             placeholder="name@example.com"
@@ -102,7 +98,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             onSubmitEditing={() => pwdInputRef.current?.focus()}
             editable={!isLoading}
           />
-        </View>
+        </Pressable>
         {emailError ? (
           <Text style={[styles.errorHelper, { color: colors.error, fontFamily: typography.fonts.ui }]}>
             {emailError}
@@ -122,7 +118,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             </Text>
           </Pressable>
         </View>
-        <View
+        <Pressable
+          onPress={() => pwdInputRef.current?.focus()}
           style={[
             styles.inputWrapper,
             {
@@ -132,20 +129,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             pwdFocused && styles.focusedGlow,
           ]}
         >
-          <Pressable
-            onPress={() => pwdInputRef.current?.focus()}
-            hitSlop={8}
-            style={styles.inputIconContainer}
-          >
+          <View style={styles.inputIconContainer}>
             <LockIcon color={pwdFocused ? colors.primary : colors.textMuted} size={16} />
-          </Pressable>
+          </View>
           <TextInput
             ref={pwdInputRef}
             style={[
               styles.input,
               {
                 color: colors.textPrimary,
-                fontFamily: typography.fonts.ui,
               },
             ]}
             placeholder="••••••••"
@@ -158,30 +150,22 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             autoCapitalize="none"
             autoCorrect={false}
             textContentType="password"
-            autoComplete="password"
             returnKeyType="done"
             onSubmitEditing={onSubmit}
             editable={!isLoading}
           />
           <Pressable
-            onPress={() => setShowPassword((prev) => !prev)}
-            hitSlop={10}
+            onPress={() => setShowPassword(!showPassword)}
+            hitSlop={12}
             style={styles.eyeBtn}
             accessibilityRole="button"
             accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
           >
-            <Text
-              style={{
-                color: colors.textMuted,
-                fontFamily: typography.fonts.ui,
-                fontSize: 11,
-                fontWeight: '600',
-              }}
-            >
-              {showPassword ? 'HIDE' : 'SHOW'}
+            <Text style={{ fontSize: 13, color: colors.textMuted, fontWeight: '600' }}>
+              {showPassword ? 'Hide' : 'Show'}
             </Text>
           </Pressable>
-        </View>
+        </Pressable>
         {passwordError ? (
           <Text style={[styles.errorHelper, { color: colors.error, fontFamily: typography.fonts.ui }]}>
             {passwordError}
@@ -189,7 +173,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         ) : null}
       </View>
 
-      {/* Submit Button */}
+      {/* Submit Action */}
       <Pressable
         onPress={onSubmit}
         disabled={isLoading}
@@ -197,15 +181,14 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           styles.submitBtn,
           {
             backgroundColor: colors.primary,
-            opacity: isLoading ? 0.7 : pressed ? 0.92 : 1,
-            transform: [{ scale: pressed ? 0.985 : 1 }],
+            opacity: isLoading ? 0.7 : pressed ? 0.9 : 1,
           },
         ]}
         accessibilityRole="button"
         accessibilityLabel="Sign in"
       >
         <Text style={[styles.submitText, { fontFamily: typography.fonts.ui }]}>
-          {isLoading ? 'Signing in...' : 'Sign In'}
+          {isLoading ? 'Signing In...' : 'Sign In'}
         </Text>
         {!isLoading && <Text style={styles.submitArrow}>→</Text>}
       </Pressable>
@@ -220,15 +203,16 @@ const styles = StyleSheet.create({
   fieldGroup: {
     marginBottom: 16,
   },
+  fieldLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 6,
+    letterSpacing: 0.2,
+  },
   pwdHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
-  },
-  fieldLabel: {
-    fontSize: 12,
-    fontWeight: '700',
     marginBottom: 6,
   },
   forgotLink: {
@@ -240,7 +224,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderRadius: 14,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     height: 48,
   },
   focusedGlow: {
@@ -251,22 +235,20 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   inputIconContainer: {
-    marginRight: 10,
+    marginRight: 8,
     width: 20,
-    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },
   input: {
     flex: 1,
-    height: '100%',
-    fontSize: 14,
-    paddingVertical: 0,
-    includeFontPadding: false,
+    height: 48,
+    fontSize: 15,
+    paddingVertical: 4,
   },
   eyeBtn: {
     paddingLeft: 8,
-    paddingVertical: 6,
+    paddingVertical: 8,
   },
   errorHelper: {
     fontSize: 11,

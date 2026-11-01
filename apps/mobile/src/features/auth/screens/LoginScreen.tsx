@@ -193,10 +193,10 @@ export const LoginScreen: React.FC = () => {
         <ScrollView
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingHorizontal: spacing.lg, paddingBottom: 60 },
+            { paddingHorizontal: spacing.lg, paddingBottom: 120 },
           ]}
           keyboardShouldPersistTaps="handled"
-          automaticallyAdjustKeyboardInsets={true}
+          automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
           showsVerticalScrollIndicator={false}
           bounces={false}
         >

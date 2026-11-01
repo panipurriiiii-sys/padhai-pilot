@@ -7,11 +7,10 @@ import {
   Pressable,
 } from 'react-native';
 import { useTheme } from '../../../theme/ThemeContext';
-import { AuthRole } from './RoleSelector';
 import { UserIcon, MailIcon, LockIcon, TagIcon, BookIcon } from './AuthFieldIcons';
 
 interface RegisterFormProps {
-  activeRole: AuthRole;
+  activeRole: 'STUDENT' | 'TEACHER';
   fullName: string;
   setFullName: (val: string) => void;
   nameError?: string | null;
@@ -74,7 +73,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
         <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
           Full Name
         </Text>
-        <View
+        <Pressable
+          onPress={() => nameInputRef.current?.focus()}
           style={[
             styles.inputWrapper,
             {
@@ -84,16 +84,12 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             focusedField === 'name' && styles.focusedGlow,
           ]}
         >
-          <Pressable
-            onPress={() => nameInputRef.current?.focus()}
-            hitSlop={8}
-            style={styles.inputIconContainer}
-          >
+          <View style={styles.inputIconContainer}>
             <UserIcon color={focusedField === 'name' ? colors.primary : colors.textMuted} size={16} />
-          </Pressable>
+          </View>
           <TextInput
             ref={nameInputRef}
-            style={[styles.input, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}
+            style={[styles.input, { color: colors.textPrimary }]}
             placeholder={activeRole === 'STUDENT' ? 'e.g. Alok Verma' : 'e.g. Dr. Rajesh Gupta'}
             placeholderTextColor={colors.textFaint}
             value={fullName}
@@ -106,7 +102,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             onSubmitEditing={() => emailInputRef.current?.focus()}
             editable={!isLoading}
           />
-        </View>
+        </Pressable>
         {nameError ? (
           <Text style={[styles.errorHelper, { color: colors.error, fontFamily: typography.fonts.ui }]}>
             {nameError}
@@ -119,7 +115,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
         <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
           Email Address
         </Text>
-        <View
+        <Pressable
+          onPress={() => emailInputRef.current?.focus()}
           style={[
             styles.inputWrapper,
             {
@@ -129,16 +126,12 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             focusedField === 'email' && styles.focusedGlow,
           ]}
         >
-          <Pressable
-            onPress={() => emailInputRef.current?.focus()}
-            hitSlop={8}
-            style={styles.inputIconContainer}
-          >
+          <View style={styles.inputIconContainer}>
             <MailIcon color={focusedField === 'email' ? colors.primary : colors.textMuted} size={16} />
-          </Pressable>
+          </View>
           <TextInput
             ref={emailInputRef}
-            style={[styles.input, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}
+            style={[styles.input, { color: colors.textPrimary }]}
             placeholder="name@example.com"
             placeholderTextColor={colors.textFaint}
             value={email}
@@ -152,7 +145,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             onSubmitEditing={() => pwdInputRef.current?.focus()}
             editable={!isLoading}
           />
-        </View>
+        </Pressable>
         {emailError ? (
           <Text style={[styles.errorHelper, { color: colors.error, fontFamily: typography.fonts.ui }]}>
             {emailError}
@@ -165,7 +158,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
         <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
           Password
         </Text>
-        <View
+        <Pressable
+          onPress={() => pwdInputRef.current?.focus()}
           style={[
             styles.inputWrapper,
             {
@@ -175,16 +169,12 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             focusedField === 'pwd' && styles.focusedGlow,
           ]}
         >
-          <Pressable
-            onPress={() => pwdInputRef.current?.focus()}
-            hitSlop={8}
-            style={styles.inputIconContainer}
-          >
+          <View style={styles.inputIconContainer}>
             <LockIcon color={focusedField === 'pwd' ? colors.primary : colors.textMuted} size={16} />
-          </Pressable>
+          </View>
           <TextInput
             ref={pwdInputRef}
-            style={[styles.input, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}
+            style={[styles.input, { color: colors.textPrimary }]}
             placeholder="Min. 8 characters"
             placeholderTextColor={colors.textFaint}
             value={password}
@@ -216,7 +206,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               {showPassword ? 'HIDE' : 'SHOW'}
             </Text>
           </Pressable>
-        </View>
+        </Pressable>
         {passwordError ? (
           <Text style={[styles.errorHelper, { color: colors.error, fontFamily: typography.fonts.ui }]}>
             {passwordError}
@@ -229,7 +219,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
         <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
           Phone Number <Text style={styles.optionalLabel}>(Optional)</Text>
         </Text>
-        <View
+        <Pressable
+          onPress={() => phoneInputRef.current?.focus()}
           style={[
             styles.inputWrapper,
             {
@@ -239,16 +230,12 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             focusedField === 'phone' && styles.focusedGlow,
           ]}
         >
-          <Pressable
-            onPress={() => phoneInputRef.current?.focus()}
-            hitSlop={8}
-            style={styles.inputIconContainer}
-          >
+          <View style={styles.inputIconContainer}>
             <TagIcon color={focusedField === 'phone' ? colors.primary : colors.textMuted} size={16} />
-          </Pressable>
+          </View>
           <TextInput
             ref={phoneInputRef}
-            style={[styles.input, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}
+            style={[styles.input, { color: colors.textPrimary }]}
             placeholder="+91 98765 43210"
             placeholderTextColor={colors.textFaint}
             value={phone}
@@ -260,7 +247,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             onSubmitEditing={() => extraInputRef.current?.focus()}
             editable={!isLoading}
           />
-        </View>
+        </Pressable>
       </View>
 
       {/* Role specific input: Student = Invitation Code, Teacher = Subject */}
@@ -269,7 +256,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
             Batch Invitation Code <Text style={styles.optionalLabel}>(Optional)</Text>
           </Text>
-          <View
+          <Pressable
+            onPress={() => extraInputRef.current?.focus()}
             style={[
               styles.inputWrapper,
               {
@@ -279,16 +267,12 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               focusedField === 'code' && styles.focusedGlow,
             ]}
           >
-            <Pressable
-              onPress={() => extraInputRef.current?.focus()}
-              hitSlop={8}
-              style={styles.inputIconContainer}
-            >
+            <View style={styles.inputIconContainer}>
               <TagIcon color={focusedField === 'code' ? colors.primary : colors.textMuted} size={16} />
-            </Pressable>
+            </View>
             <TextInput
               ref={extraInputRef}
-              style={[styles.input, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}
+              style={[styles.input, { color: colors.textPrimary }]}
               placeholder="e.g. APEX-PHYS-2026"
               placeholderTextColor={colors.textFaint}
               value={invitationCode}
@@ -301,7 +285,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               onSubmitEditing={onSubmit}
               editable={!isLoading}
             />
-          </View>
+          </Pressable>
           {codeError ? (
             <Text style={[styles.errorHelper, { color: colors.error, fontFamily: typography.fonts.ui }]}>
               {codeError}
@@ -317,7 +301,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
             Teaching Subject <Text style={styles.optionalLabel}>(Optional)</Text>
           </Text>
-          <View
+          <Pressable
+            onPress={() => extraInputRef.current?.focus()}
             style={[
               styles.inputWrapper,
               {
@@ -327,16 +312,12 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               focusedField === 'subject' && styles.focusedGlow,
             ]}
           >
-            <Pressable
-              onPress={() => extraInputRef.current?.focus()}
-              hitSlop={8}
-              style={styles.inputIconContainer}
-            >
+            <View style={styles.inputIconContainer}>
               <BookIcon color={focusedField === 'subject' ? colors.primary : colors.textMuted} size={16} />
-            </Pressable>
+            </View>
             <TextInput
               ref={extraInputRef}
-              style={[styles.input, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}
+              style={[styles.input, { color: colors.textPrimary }]}
               placeholder="e.g. Advanced Physics"
               placeholderTextColor={colors.textFaint}
               value={subject}
@@ -349,7 +330,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               onSubmitEditing={onSubmit}
               editable={!isLoading}
             />
-          </View>
+          </Pressable>
           {subjectError ? (
             <Text style={[styles.errorHelper, { color: colors.error, fontFamily: typography.fonts.ui }]}>
               {subjectError}
@@ -403,7 +384,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderRadius: 14,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     height: 48,
   },
   focusedGlow: {
@@ -414,18 +395,16 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   inputIconContainer: {
-    marginRight: 10,
+    marginRight: 8,
     width: 20,
-    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },
   input: {
     flex: 1,
-    height: '100%',
-    fontSize: 14,
-    paddingVertical: 0,
-    includeFontPadding: false,
+    height: 48,
+    fontSize: 15,
+    paddingVertical: 4,
   },
   eyeBtn: {
     paddingLeft: 8,
