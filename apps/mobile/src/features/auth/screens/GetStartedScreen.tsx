@@ -10,7 +10,6 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '../../../theme/ThemeContext';
 import { OnboardingPagination } from '../components/OnboardingPagination';
 import { OnboardingImages } from '../components/onboardingImages';
 
@@ -51,7 +50,6 @@ export const GetStartedScreen: React.FC<GetStartedScreenProps> = ({
   onFinish,
   onLoginPress,
 }) => {
-  const { typography } = useTheme();
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const [activeIndex, setActiveIndex] = useState(0);
@@ -77,20 +75,20 @@ export const GetStartedScreen: React.FC<GetStartedScreenProps> = ({
     <View style={styles.root}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-      {/* 1. Fullscreen Wallpaper Background Layer */}
+      {/* 1. Pure Background Image Layer (Positioned behind content) */}
       <Image
         source={currentBgImage}
         style={styles.backgroundImage}
         resizeMode="cover"
       />
 
-      {/* 2. Top-to-Bottom Readability Tint */}
+      {/* 2. Dark Overlay to guarantee high contrast and readability */}
       <View style={styles.overlayTint} />
 
-      {/* 3. Foreground Interactive Layer (Absolute fill with high elevation to GUARANTEE visibility on Android) */}
+      {/* 3. Foreground Safe Content Layer (Drawn cleanly over the background) */}
       <View
         style={[
-          styles.foregroundContainer,
+          styles.safeContainer,
           {
             paddingTop: topInset,
             paddingBottom: bottomInset,
@@ -102,7 +100,7 @@ export const GetStartedScreen: React.FC<GetStartedScreenProps> = ({
         <View style={styles.topBar}>
           <View style={styles.sessionBadge}>
             <View style={styles.sessionDot} />
-            <Text style={[styles.sessionText, { fontFamily: typography.fonts.ui }]}>
+            <Text style={styles.sessionText}>
               Session 2026–27
             </Text>
           </View>
@@ -114,32 +112,33 @@ export const GetStartedScreen: React.FC<GetStartedScreenProps> = ({
             accessibilityRole="button"
             accessibilityLabel="Skip onboarding"
           >
-            <Text style={[styles.skipText, { fontFamily: typography.fonts.ui }]}>
+            <Text style={styles.skipText}>
               Skip
             </Text>
           </Pressable>
         </View>
 
-        {/* Center / Lower Content Area */}
-        <View style={styles.bottomArea}>
-          {/* Frosted Information Card */}
+        {/* Center Content Card */}
+        <View style={styles.contentWrap}>
           <View style={styles.infoCard}>
             <View style={styles.badgeWrap}>
-              <Text style={[styles.badgeText, { fontFamily: typography.fonts.ui }]}>
+              <Text style={styles.badgeText}>
                 {currentSlide.badge}
               </Text>
             </View>
 
-            <Text style={[styles.titleText, { fontFamily: typography.fonts.display }]}>
+            <Text style={styles.titleText}>
               {currentSlide.title}
             </Text>
 
-            <Text style={[styles.descText, { fontFamily: typography.fonts.ui }]}>
+            <Text style={styles.descText}>
               {currentSlide.description}
             </Text>
           </View>
+        </View>
 
-          {/* Dots Indicator */}
+        {/* Bottom Actions Dock */}
+        <View style={styles.bottomArea}>
           <View style={styles.paginationWrap}>
             <OnboardingPagination
               total={totalSlides}
@@ -148,21 +147,19 @@ export const GetStartedScreen: React.FC<GetStartedScreenProps> = ({
             />
           </View>
 
-          {/* Primary High-Contrast Action Button */}
           <TouchableOpacity
-            activeOpacity={0.88}
+            activeOpacity={0.85}
             onPress={handleNext}
             style={styles.primaryBtn}
             accessibilityRole="button"
             accessibilityLabel={isLast ? 'Get Started' : 'Next slide'}
           >
-            <Text style={[styles.primaryBtnText, { fontFamily: typography.fonts.ui }]}>
+            <Text style={styles.primaryBtnText}>
               {isLast ? 'Get Started' : 'Next'}
             </Text>
             <Text style={styles.arrowIcon}>→</Text>
           </TouchableOpacity>
 
-          {/* Secondary Sign In Navigation */}
           <Pressable
             onPress={onLoginPress}
             hitSlop={14}
@@ -170,7 +167,7 @@ export const GetStartedScreen: React.FC<GetStartedScreenProps> = ({
             accessibilityRole="button"
             accessibilityLabel="Sign in to existing account"
           >
-            <Text style={[styles.loginLinkText, { fontFamily: typography.fonts.ui }]}>
+            <Text style={styles.loginLinkText}>
               Already have an account? <Text style={styles.loginLinkBold}>Sign In</Text>
             </Text>
           </Pressable>
@@ -183,21 +180,35 @@ export const GetStartedScreen: React.FC<GetStartedScreenProps> = ({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+    width: '100%',
+    height: '100%',
     backgroundColor: '#050608',
   },
   backgroundImage: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
   },
   overlayTint: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(5, 6, 8, 0.4)',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(5, 6, 8, 0.48)',
   },
-  foregroundContainer: {
-    ...StyleSheet.absoluteFillObject,
+  safeContainer: {
+    flex: 1,
+    width: '100%',
     justifyContent: 'space-between',
     alignItems: 'center',
-    zIndex: 100,
-    elevation: 50,
+    zIndex: 10,
   },
   topBar: {
     width: '100%',
@@ -242,20 +253,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
   },
-  bottomArea: {
+  contentWrap: {
     width: '100%',
     maxWidth: 440,
     alignItems: 'center',
+    paddingVertical: 8,
   },
   infoCard: {
     width: '100%',
-    backgroundColor: 'rgba(10, 13, 18, 0.82)',
+    backgroundColor: 'rgba(10, 13, 18, 0.85)',
     borderRadius: 22,
-    paddingVertical: 18,
-    paddingHorizontal: 20,
+    paddingVertical: 20,
+    paddingHorizontal: 22,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.16)',
-    marginBottom: 14,
+    borderColor: 'rgba(255, 255, 255, 0.18)',
     alignItems: 'center',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 8 },
@@ -273,27 +284,32 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   badgeText: {
-    fontSize: 10.5,
-    fontWeight: '800',
+    fontSize: 11,
+    fontWeight: '700',
     color: '#60A5FA',
     letterSpacing: 0.8,
   },
   titleText: {
     fontSize: 22,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#FFFFFF',
     textAlign: 'center',
     letterSpacing: -0.4,
-    marginBottom: 6,
+    marginBottom: 8,
   },
   descText: {
-    fontSize: 12.5,
-    lineHeight: 18,
-    color: 'rgba(255, 255, 255, 0.82)',
+    fontSize: 13,
+    lineHeight: 19,
+    color: 'rgba(255, 255, 255, 0.85)',
     textAlign: 'center',
   },
+  bottomArea: {
+    width: '100%',
+    maxWidth: 440,
+    alignItems: 'center',
+  },
   paginationWrap: {
-    marginBottom: 10,
+    marginBottom: 12,
   },
   primaryBtn: {
     width: '100%',
@@ -307,18 +323,18 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.55,
     shadowRadius: 14,
-    elevation: 10,
+    elevation: 8,
   },
   primaryBtnText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '700',
     letterSpacing: 0.3,
   },
   arrowIcon: {
     color: '#FFFFFF',
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '700',
     marginLeft: 8,
   },
   loginLinkWrap: {
@@ -334,7 +350,7 @@ const styles = StyleSheet.create({
     textShadowRadius: 4,
   },
   loginLinkBold: {
-    fontWeight: '800',
+    fontWeight: '700',
     textDecorationLine: 'underline',
     color: '#FFFFFF',
   },
