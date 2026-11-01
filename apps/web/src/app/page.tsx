@@ -5,18 +5,13 @@ import {
   GraduationCap,
   ArrowRight,
   CheckCircle2,
-  Users,
   CalendarCheck,
   Award,
   CreditCard,
   Building2,
   ShieldCheck,
   Sparkles,
-  PhoneCall,
-  Clock,
-  HeartHandshake,
-  FileCheck,
-  TrendingUp,
+  ChevronRight,
 } from 'lucide-react';
 import { PLANS, SITE } from '../config/site';
 
@@ -100,37 +95,42 @@ export default function HomePage() {
   const studentHref = SITE.studentUrl || 'https://student.padhaipilot.com';
 
   return (
-    <div className="min-h-screen bg-[#050608] text-white font-sans selection:bg-[#1677FF] selection:text-white">
+    <div className="min-h-screen bg-[var(--bg-desk)] text-[var(--ink-primary)] font-['Raleway'] antialiased selection:bg-[var(--brand-electric)] selection:text-white">
       {/* 1. TOP NAVBAR */}
-      <header className="sticky top-0 z-50 bg-[#050608]/90 backdrop-blur-md border-b border-white/10 px-6 py-4">
+      <header className="sticky top-0 z-50 bg-[var(--bg-paper)]/95 backdrop-blur-md border-b border-[var(--border-paper)] px-6 py-4 shadow-[0_2px_12px_rgba(60,52,40,0.03)]">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#1677FF] flex items-center justify-center text-white font-serif font-black text-lg shadow-[0_2px_12px_rgba(22,119,255,0.4)]">
+            <div className="w-9 h-9 rounded-xl bg-[var(--brand-electric)] flex items-center justify-center text-white font-['Playfair_Display'] font-black text-lg shadow-[0_2px_8px_rgba(22,119,255,0.35)]">
               P
             </div>
-            <span className="font-serif font-bold text-xl tracking-tight text-white">
-              {SITE.name}
-            </span>
+            <div>
+              <span className="font-['Playfair_Display'] font-bold text-xl tracking-tight text-[var(--ink-primary)]">
+                {SITE.name}
+              </span>
+              <span className="hidden sm:inline-block text-[10px] text-[var(--ink-muted)] ml-2 uppercase font-bold tracking-widest">
+                Tuition Studio
+              </span>
+            </div>
           </div>
 
-          <nav aria-label="Primary" className="hidden sm:flex items-center gap-6 text-xs font-semibold text-white/80">
-            <a href="#benefits" className="hover:text-white transition">Benefits</a>
-            <a href="#features" className="hover:text-white transition">Features</a>
-            <a href="#plans" className="hover:text-white transition">Pricing</a>
-            <Link href="/privacy" className="hover:text-white transition">Privacy</Link>
-            <Link href="/terms" className="hover:text-white transition">Terms</Link>
+          <nav aria-label="Primary" className="hidden sm:flex items-center gap-6 text-xs font-bold text-[var(--ink-secondary)]">
+            <a href="#benefits" className="hover:text-[var(--brand-electric)] transition">Benefits</a>
+            <a href="#features" className="hover:text-[var(--brand-electric)] transition">Features</a>
+            <a href="#plans" className="hover:text-[var(--brand-electric)] transition">Pricing</a>
+            <Link href="/privacy" className="hover:text-[var(--brand-electric)] transition">Privacy</Link>
+            <Link href="/terms" className="hover:text-[var(--brand-electric)] transition">Terms</Link>
           </nav>
 
           <div className="flex items-center gap-3">
             <a
               href={studentHref}
-              className="hidden md:inline-flex px-4 py-2 rounded-xl text-xs font-bold text-white/90 hover:text-white bg-white/10 hover:bg-white/15 transition border border-white/10"
+              className="hidden md:inline-flex px-4 py-2 rounded-xl text-xs font-bold text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] bg-[var(--bg-paper-warm)] hover:bg-[var(--bg-surface-subtle)] transition border border-[var(--border-paper)]"
             >
               Student Sign In
             </a>
             <a
               href={teacherHref}
-              className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#1677FF] hover:bg-[#1260d4] transition shadow-[0_2px_10px_rgba(22,119,255,0.4)] flex items-center gap-1.5"
+              className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-[var(--brand-electric)] hover:bg-[var(--brand-hover)] transition shadow-[0_2px_10px_rgba(22,119,255,0.3)] flex items-center gap-1.5"
             >
               <span>Teacher Portal</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -141,30 +141,28 @@ export default function HomePage() {
 
       <main className="space-y-24 md:space-y-32">
         {/* 2. HERO SECTION */}
-        <section className="relative pt-16 md:pt-24 pb-12 px-6 overflow-hidden">
-          {/* Subtle Background Glow */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-[#1677FF]/15 blur-[120px] rounded-full pointer-events-none" />
-
+        <section className="relative pt-16 md:pt-24 pb-8 px-6 overflow-hidden">
           <div className="max-w-4xl mx-auto text-center space-y-6 relative z-10">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/20 backdrop-blur-md shadow-xs">
-              <Sparkles className="w-3.5 h-3.5 text-[#1677FF]" />
-              <span className="text-xs font-bold text-white tracking-wide uppercase">
-                The All-In-One Platform for Growing Tuitions & Academies
+            {/* Session Pill */}
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--bg-paper)] border border-[var(--border-paper)] shadow-xs">
+              <Sparkles className="w-3.5 h-3.5 text-[var(--brand-electric)]" />
+              <span className="text-xs font-bold text-[var(--ink-secondary)] tracking-wide uppercase">
+                The Academic Platform for Growing Tuitions & Academies
               </span>
             </div>
 
-            <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl font-black tracking-tight leading-[1.15] text-white">
-              Give your tuition the <span className="text-[#1677FF]">professional edge</span> it deserves.
+            <h1 className="font-['Playfair_Display'] text-4xl sm:text-5xl md:text-6xl font-black tracking-tight leading-[1.15] text-[var(--ink-primary)]">
+              Give your tuition the <span className="text-[var(--brand-electric)]">professional edge</span> it deserves.
             </h1>
 
-            <p className="text-base sm:text-lg text-white/80 max-w-2xl mx-auto leading-relaxed font-normal">
-              Effortlessly manage attendance, tests, homework, and fee payments—all in one beautiful app designed specifically for coaching institutes, teachers, and ambitious students.
+            <p className="text-base sm:text-lg text-[var(--ink-muted)] max-w-2xl mx-auto leading-relaxed font-normal">
+              Effortlessly manage attendance, tests, homework, and fee payments—all in one quiet, paper-desk portal crafted for coaching institutes, teachers, and students.
             </p>
 
             <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
               <a
                 href={teacherHref}
-                className="px-7 py-3.5 rounded-2xl text-sm font-bold bg-[#1677FF] hover:bg-[#1260d4] text-white shadow-[0_8px_25px_rgba(22,119,255,0.45)] transition flex items-center gap-2.5 cursor-pointer"
+                className="px-7 py-3.5 rounded-2xl text-sm font-bold bg-[var(--brand-electric)] hover:bg-[var(--brand-hover)] text-white shadow-[0_8px_20px_rgba(22,119,255,0.25)] transition flex items-center gap-2.5 cursor-pointer"
               >
                 <BookOpen className="w-4 h-4" />
                 <span>Get Started as Teacher / Owner</span>
@@ -173,25 +171,25 @@ export default function HomePage() {
 
               <a
                 href={studentHref}
-                className="px-7 py-3.5 rounded-2xl text-sm font-bold bg-white/10 hover:bg-white/15 text-white border border-white/20 backdrop-blur-md transition flex items-center gap-2.5 cursor-pointer"
+                className="px-7 py-3.5 rounded-2xl text-sm font-bold bg-[var(--bg-paper)] hover:bg-[var(--bg-paper-warm)] text-[var(--ink-primary)] border border-[var(--border-paper)] shadow-xs transition flex items-center gap-2.5 cursor-pointer"
               >
-                <GraduationCap className="w-4 h-4 text-[#1677FF]" />
+                <GraduationCap className="w-4 h-4 text-[var(--brand-electric)]" />
                 <span>Student & Parent Portal</span>
               </a>
             </div>
 
             {/* Trust Badges */}
-            <div className="pt-8 flex flex-wrap items-center justify-center gap-6 sm:gap-10 text-xs font-medium text-white/60">
+            <div className="pt-6 flex flex-wrap items-center justify-center gap-6 sm:gap-10 text-xs font-semibold text-[var(--ink-muted)]">
               <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <CheckCircle2 className="w-4 h-4 text-[var(--status-success)]" />
                 Free Starter Plan
               </span>
               <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <CheckCircle2 className="w-4 h-4 text-[var(--status-success)]" />
                 Works on Mobile & Desktop
               </span>
               <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <CheckCircle2 className="w-4 h-4 text-[var(--status-success)]" />
                 Instant WhatsApp Notices
               </span>
             </div>
@@ -200,8 +198,8 @@ export default function HomePage() {
 
         {/* 3. HERO VISUAL SHOWCASE */}
         <section className="max-w-6xl mx-auto px-6">
-          <div className="relative rounded-3xl overflow-hidden border border-white/15 shadow-[0_20px_60px_rgba(0,0,0,0.8)]">
-            <div className="relative h-[320px] sm:h-[450px] md:h-[520px] w-full">
+          <div className="relative rounded-3xl overflow-hidden border border-[var(--border-paper)] shadow-[0_12px_32px_rgba(60,52,40,0.08)] bg-[var(--bg-paper)]">
+            <div className="relative h-[320px] sm:h-[450px] md:h-[500px] w-full">
               <Image
                 src="/onboarding/onboarding_bg_3.jpg"
                 alt="PadhaiPilot Academy Classroom and Management"
@@ -209,21 +207,21 @@ export default function HomePage() {
                 priority
                 className="object-cover object-center"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#050608] via-transparent to-transparent opacity-90" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[var(--ink-primary)]/95 via-[var(--ink-primary)]/30 to-transparent" />
               
-              <div className="absolute bottom-6 left-6 right-6 md:bottom-10 md:left-10 md:right-10 flex flex-col md:flex-row md:items-end justify-between gap-4 z-10">
+              <div className="absolute bottom-6 left-6 right-6 md:bottom-10 md:left-10 md:right-10 flex flex-col md:flex-row md:items-end justify-between gap-4 z-10 text-white">
                 <div className="max-w-xl">
                   <span className="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-white/20 text-white backdrop-blur-md border border-white/30">
                     Trusted by passionate teachers across India
                   </span>
-                  <h3 className="font-serif text-2xl sm:text-3xl font-bold text-white mt-2">
+                  <h3 className="font-['Playfair_Display'] text-2xl sm:text-3xl font-bold text-white mt-2">
                     Transforming classrooms from chaotic registers to effortless confidence.
                   </h3>
                 </div>
 
                 <a
                   href={teacherHref}
-                  className="px-5 py-3 rounded-xl bg-white text-black font-bold text-xs hover:bg-stone-200 transition self-start md:self-auto shrink-0 shadow-lg"
+                  className="px-5 py-3 rounded-xl bg-white text-[var(--ink-primary)] font-bold text-xs hover:bg-[var(--bg-paper-warm)] transition self-start md:self-auto shrink-0 shadow-lg"
                 >
                   Create Free Academy Account →
                 </a>
@@ -235,13 +233,13 @@ export default function HomePage() {
         {/* 4. AUDIENCE BENEFITS SECTION */}
         <section id="benefits" className="max-w-6xl mx-auto px-6 space-y-16">
           <div className="text-center max-w-2xl mx-auto space-y-3">
-            <span className="text-xs font-bold text-[#1677FF] uppercase tracking-widest">
+            <span className="text-xs font-bold text-[var(--brand-electric)] uppercase tracking-widest">
               Tailored for Everyone
             </span>
-            <h2 className="font-serif text-3xl sm:text-4xl font-bold text-white">
+            <h2 className="font-['Playfair_Display'] text-3xl sm:text-4xl font-bold text-[var(--ink-primary)]">
               Everything your coaching needs to succeed every single day.
             </h2>
-            <p className="text-xs sm:text-sm text-white/70">
+            <p className="text-xs sm:text-sm text-[var(--ink-muted)]">
               Clear, friendly tools crafted specifically around coaching schedules, parent communication, and student growth.
             </p>
           </div>
@@ -250,35 +248,35 @@ export default function HomePage() {
             {AUDIENCE_BENEFITS.map((item, idx) => (
               <div
                 key={item.role}
-                className={`p-6 sm:p-8 rounded-3xl bg-white/5 border border-white/10 flex flex-col ${
+                className={`p-6 sm:p-8 rounded-3xl bg-[var(--bg-paper)] border border-[var(--border-paper)] shadow-xs flex flex-col ${
                   idx % 2 === 1 ? 'lg:flex-row-reverse' : 'lg:flex-row'
-                } items-center gap-8 md:gap-12 backdrop-blur-xs`}
+                } items-center gap-8 md:gap-12`}
               >
                 <div className="flex-1 space-y-4">
-                  <span className="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-[#1677FF]/20 text-[#1677FF] border border-[#1677FF]/40">
+                  <span className="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-[var(--brand-subtle-bg)] text-[var(--brand-electric)] border border-[var(--brand-subtle-border)]">
                     {item.role}
                   </span>
-                  <h3 className="font-serif text-2xl sm:text-3xl font-bold text-white leading-snug">
+                  <h3 className="font-['Playfair_Display'] text-2xl sm:text-3xl font-bold text-[var(--ink-primary)] leading-snug">
                     {item.title}
                   </h3>
                   <div className="space-y-3 pt-2">
                     {item.points.map((p, pIdx) => (
                       <div key={pIdx} className="flex items-start gap-3">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                        <span className="text-xs sm:text-sm text-white/80">{p}</span>
+                        <CheckCircle2 className="w-4 h-4 text-[var(--status-success)] shrink-0 mt-0.5" />
+                        <span className="text-xs sm:text-sm text-[var(--ink-secondary)]">{p}</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <div className="w-full lg:w-1/2 relative h-64 sm:h-80 rounded-2xl overflow-hidden border border-white/15 shadow-xl shrink-0">
+                <div className="w-full lg:w-1/2 relative h-64 sm:h-80 rounded-2xl overflow-hidden border border-[var(--border-paper)] shadow-md shrink-0">
                   <Image
                     src={item.image}
                     alt={item.imageAlt}
                     fill
                     className="object-cover"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                 </div>
               </div>
             ))}
@@ -288,13 +286,13 @@ export default function HomePage() {
         {/* 5. MARKETING FEATURES GRID */}
         <section id="features" className="max-w-6xl mx-auto px-6 space-y-12">
           <div className="text-center max-w-2xl mx-auto space-y-3">
-            <span className="text-xs font-bold text-[#1677FF] uppercase tracking-widest">
+            <span className="text-xs font-bold text-[var(--brand-electric)] uppercase tracking-widest">
               Simple & Powerful
             </span>
-            <h2 className="font-serif text-3xl sm:text-4xl font-bold text-white">
+            <h2 className="font-['Playfair_Display'] text-3xl sm:text-4xl font-bold text-[var(--ink-primary)]">
               Features that save hours every week.
             </h2>
-            <p className="text-xs sm:text-sm text-white/70">
+            <p className="text-xs sm:text-sm text-[var(--ink-muted)]">
               No complicated manuals or training sessions needed. Start using it right away.
             </p>
           </div>
@@ -305,19 +303,21 @@ export default function HomePage() {
               return (
                 <div
                   key={fIdx}
-                  className="p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-white/20 transition-all space-y-3 flex flex-col justify-between"
+                  className="p-6 rounded-2xl bg-[var(--bg-paper)] border border-[var(--border-paper)] hover:border-[var(--border-hover)] transition-all space-y-3 flex flex-col justify-between shadow-xs hover:shadow-sm"
                 >
                   <div className="space-y-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#1677FF]/15 border border-[#1677FF]/30 flex items-center justify-center text-[#1677FF]">
+                    <div className="w-10 h-10 rounded-xl bg-[var(--brand-subtle-bg)] border border-[var(--brand-subtle-border)] flex items-center justify-center text-[var(--brand-electric)]">
                       <IconComp className="w-5 h-5" />
                     </div>
                     <div>
-                      <h3 className="font-serif text-lg font-bold text-white">{f.title}</h3>
-                      <p className="text-[11px] font-bold text-[#1677FF] uppercase tracking-wide mt-0.5">
+                      <h3 className="font-['Playfair_Display'] text-lg font-bold text-[var(--ink-primary)]">
+                        {f.title}
+                      </h3>
+                      <p className="text-[11px] font-bold text-[var(--brand-electric)] uppercase tracking-wide mt-0.5">
                         {f.subtitle}
                       </p>
                     </div>
-                    <p className="text-xs text-white/70 leading-relaxed">{f.body}</p>
+                    <p className="text-xs text-[var(--ink-muted)] leading-relaxed">{f.body}</p>
                   </div>
                 </div>
               );
@@ -328,13 +328,13 @@ export default function HomePage() {
         {/* 6. PRICING & SCALE */}
         <section id="plans" className="max-w-6xl mx-auto px-6 space-y-12">
           <div className="text-center max-w-2xl mx-auto space-y-3">
-            <span className="text-xs font-bold text-[#1677FF] uppercase tracking-widest">
+            <span className="text-xs font-bold text-[var(--brand-electric)] uppercase tracking-widest">
               Fair & Transparent
             </span>
-            <h2 className="font-serif text-3xl sm:text-4xl font-bold text-white">
+            <h2 className="font-['Playfair_Display'] text-3xl sm:text-4xl font-bold text-[var(--ink-primary)]">
               Plans that grow alongside your tuition.
             </h2>
-            <p className="text-xs sm:text-sm text-white/70">
+            <p className="text-xs sm:text-sm text-[var(--ink-muted)]">
               Start completely free with Starter Coaching. Upgrade only when you enroll more students.
             </p>
           </div>
@@ -345,62 +345,64 @@ export default function HomePage() {
               return (
                 <div
                   key={p.id}
-                  className={`p-6 rounded-3xl flex flex-col justify-between transition-all ${
+                  className={`p-6 rounded-3xl flex flex-col justify-between transition-all bg-[var(--bg-paper)] ${
                     isPopular
-                      ? 'bg-gradient-to-b from-white/10 to-white/5 border-2 border-[#1677FF] shadow-[0_10px_30px_rgba(22,119,255,0.2)]'
-                      : 'bg-white/5 border border-white/10 hover:border-white/20'
+                      ? 'border-2 border-[var(--brand-electric)] shadow-md shadow-blue-500/5'
+                      : 'border border-[var(--border-paper)] shadow-xs hover:border-[var(--border-hover)]'
                   }`}
                 >
                   <div className="space-y-4">
                     {isPopular && (
-                      <span className="px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-[#1677FF] text-white tracking-widest">
+                      <span className="px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-[var(--brand-electric)] text-white tracking-widest">
                         Most Popular
                       </span>
                     )}
                     <div>
-                      <h3 className="font-serif text-xl font-bold text-white">{p.name}</h3>
-                      <p className="text-xs text-white/60 mt-1">
+                      <h3 className="font-['Playfair_Display'] text-xl font-bold text-[var(--ink-primary)]">
+                        {p.name}
+                      </h3>
+                      <p className="text-xs text-[var(--ink-muted)] mt-1">
                         {p.students === null
                           ? 'Unlimited active students'
                           : `Up to ${p.students} active students`}
                       </p>
                     </div>
 
-                    <div className="pt-2 border-t border-white/10">
-                      <span className="font-serif text-2xl font-bold text-white">
+                    <div className="pt-2 border-t border-[var(--border-paper)]">
+                      <span className="font-['Playfair_Display'] text-2xl font-bold text-[var(--ink-primary)]">
                         {p.price ?? 'Custom'}
                       </span>
                     </div>
 
-                    <div className="space-y-2 text-xs text-white/80 pt-2">
+                    <div className="space-y-2 text-xs text-[var(--ink-secondary)] pt-2">
                       <div className="flex items-center gap-2">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <CheckCircle2 className="w-3.5 h-3.5 text-[var(--status-success)] shrink-0" />
                         <span>Daily Attendance & Timetable</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <CheckCircle2 className="w-3.5 h-3.5 text-[var(--status-success)] shrink-0" />
                         <span>Homework & Marks Register</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <CheckCircle2 className="w-3.5 h-3.5 text-[var(--status-success)] shrink-0" />
                         <span>Student & Parent Portal</span>
                       </div>
                       {p.id !== 'STARTER' && (
                         <div className="flex items-center gap-2">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                          <CheckCircle2 className="w-3.5 h-3.5 text-[var(--status-success)] shrink-0" />
                           <span>Fee Reminders & Receipts</span>
                         </div>
                       )}
                     </div>
                   </div>
 
-                  <div className="pt-6 mt-6 border-t border-white/10">
+                  <div className="pt-6 mt-6 border-t border-[var(--border-paper)]">
                     <a
                       href={teacherHref}
                       className={`w-full py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
                         isPopular
-                          ? 'bg-[#1677FF] hover:bg-[#1260d4] text-white shadow-md'
-                          : 'bg-white/10 hover:bg-white/20 text-white'
+                          ? 'bg-[var(--brand-electric)] hover:bg-[var(--brand-hover)] text-white shadow-sm'
+                          : 'bg-[var(--ink-primary)] hover:bg-black text-white'
                       }`}
                     >
                       <span>Choose {p.name}</span>
@@ -413,9 +415,9 @@ export default function HomePage() {
           </div>
 
           {SITE.contactEmail && (
-            <p className="text-center text-xs text-white/60 pt-4">
+            <p className="text-center text-xs text-[var(--ink-muted)] pt-4">
               Need a personalized demo or custom multi-branch plan? Reach us at{' '}
-              <a className="text-[#1677FF] hover:underline font-bold" href={`mailto:${SITE.contactEmail}`}>
+              <a className="text-[var(--brand-electric)] hover:underline font-bold" href={`mailto:${SITE.contactEmail}`}>
                 {SITE.contactEmail}
               </a>
             </p>
@@ -424,17 +426,17 @@ export default function HomePage() {
 
         {/* 7. BOTTOM CTA CALLOUT */}
         <section className="max-w-4xl mx-auto px-6 pb-12">
-          <div className="p-8 sm:p-12 rounded-3xl bg-gradient-to-r from-[#1677FF]/20 via-[#1677FF]/10 to-transparent border border-[#1677FF]/40 text-center space-y-6">
-            <h2 className="font-serif text-3xl sm:text-4xl font-black text-white">
+          <div className="p-8 sm:p-12 rounded-3xl bg-[var(--bg-paper-warm)] border border-[var(--border-paper)] text-center space-y-6 shadow-sm">
+            <h2 className="font-['Playfair_Display'] text-3xl sm:text-4xl font-black text-[var(--ink-primary)]">
               Ready to give your tuition the easiest upgrade ever?
             </h2>
-            <p className="text-xs sm:text-sm text-white/80 max-w-lg mx-auto">
+            <p className="text-xs sm:text-sm text-[var(--ink-muted)] max-w-lg mx-auto">
               Join educators who have eliminated paperwork and delight their students every day. Setup takes under 2 minutes.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
               <a
                 href={teacherHref}
-                className="px-8 py-3.5 rounded-2xl text-sm font-bold bg-[#1677FF] hover:bg-[#1260d4] text-white shadow-[0_8px_25px_rgba(22,119,255,0.4)] transition flex items-center gap-2"
+                className="px-8 py-3.5 rounded-2xl text-sm font-bold bg-[var(--brand-electric)] hover:bg-[var(--brand-hover)] text-white shadow-[0_4px_16px_rgba(22,119,255,0.3)] transition flex items-center gap-2"
               >
                 <span>Open Your Academy Free</span>
                 <ArrowRight className="w-4 h-4" />
@@ -445,21 +447,21 @@ export default function HomePage() {
       </main>
 
       {/* 8. FOOTER */}
-      <footer className="border-t border-white/10 py-10 px-6 text-xs text-white/60 bg-[#020304]">
+      <footer className="border-t border-[var(--border-paper)] py-10 px-6 text-xs text-[var(--ink-muted)] bg-[var(--bg-paper)]">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2.5">
-            <div className="w-6 h-6 rounded-md bg-[#1677FF] flex items-center justify-center text-white font-serif font-black text-xs">
+            <div className="w-6 h-6 rounded-md bg-[var(--brand-electric)] flex items-center justify-center text-white font-['Playfair_Display'] font-black text-xs">
               P
             </div>
-            <span className="font-serif font-bold text-sm text-white">{SITE.name}</span>
-            <span className="text-[10px] text-white/40 ml-2">© 2026–2027 PadhaiPilot Inc.</span>
+            <span className="font-['Playfair_Display'] font-bold text-sm text-[var(--ink-primary)]">{SITE.name}</span>
+            <span className="text-[10px] text-[var(--ink-faint)] ml-2">© 2026–2027 PadhaiPilot Inc.</span>
           </div>
 
-          <div className="flex items-center gap-6">
-            <Link href="/privacy" className="hover:text-white transition">Privacy Policy</Link>
-            <Link href="/terms" className="hover:text-white transition">Terms of Service</Link>
+          <div className="flex items-center gap-6 font-semibold">
+            <Link href="/privacy" className="hover:text-[var(--ink-primary)] transition">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-[var(--ink-primary)] transition">Terms of Service</Link>
             {SITE.contactEmail && (
-              <a href={`mailto:${SITE.contactEmail}`} className="hover:text-white transition">
+              <a href={`mailto:${SITE.contactEmail}`} className="hover:text-[var(--ink-primary)] transition">
                 Contact Support
               </a>
             )}
