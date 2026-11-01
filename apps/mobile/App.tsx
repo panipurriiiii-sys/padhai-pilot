@@ -6,6 +6,7 @@ import { RootNavigator } from './src/navigation/RootNavigator';
 import { ApiError, apiClient } from './src/services/api/client';
 import { useAuthStore } from './src/store/useAuthStore';
 import { notificationService } from './src/services/notification';
+import { prefetchAppData } from './src/services/api/prefetch';
 
 function App() {
   const [queryClient] = useState(
@@ -16,7 +17,8 @@ function App() {
             // Retry transient failures only (network / 5xx); a 4xx will not fix itself.
             retry: (count: number, error: unknown) =>
               count < 2 && (!(error instanceof ApiError) || error.statusCode === 0 || error.statusCode >= 500),
-            staleTime: 1000 * 60 * 3, // 3 minutes
+            staleTime: 1000 * 60 * 5, // 5 minutes cache retention for fast UI response
+            gcTime: 1000 * 60 * 30, // 30 minutes in-memory garbage collection
             refetchOnWindowFocus: false,
           },
         },
@@ -25,11 +27,20 @@ function App() {
 
   // Sign out when the server rejects the token, and never let one user's cached data reach the next.
   useEffect(() => {
-    void useAuthStore.getState().initializeAuth();
+    void useAuthStore.getState().initializeAuth().then(() => {
+      const state = useAuthStore.getState();
+      if (state.isAuthenticated && state.session?.user?.role) {
+        void prefetchAppData(queryClient, state.session.user.role);
+      }
+    });
     void notificationService.initialize();
     apiClient.setUnauthorizedHandler(() => useAuthStore.getState().logout());
     const unsubscribe = useAuthStore.subscribe((state, prev) => {
-      if (prev.isAuthenticated && !state.isAuthenticated) queryClient.clear();
+      if (prev.isAuthenticated && !state.isAuthenticated) {
+        queryClient.clear();
+      } else if (!prev.isAuthenticated && state.isAuthenticated && state.session?.user?.role) {
+        void prefetchAppData(queryClient, state.session.user.role);
+      }
     });
     return () => {
       unsubscribe();

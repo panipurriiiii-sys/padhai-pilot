@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { IndianRupee, Plus, Receipt, Bell, Ban } from 'lucide-react';
+import { IndianRupee, Plus, Receipt, Bell, Ban, Calendar, Check } from 'lucide-react';
 import type { BatchSummary, BatchFeeStructureItem, BatchFeeSummary, FeeLedgerItem, PaymentMode, FeeRecordStatus } from '@padhai-pilot/shared';
 import { teacherApi } from '../lib/api';
 import { LoadError } from './LoadError';
@@ -19,6 +19,22 @@ const STATUS_STYLE: Record<FeeRecordStatus, string> = {
   VOID: 'bg-stone-100 text-stone-600 border-stone-200',
 };
 
+type BillingCycle = 'MONTHLY' | 'HALF_YEARLY' | 'YEARLY' | 'ONE_TIME';
+
+interface StructFormState {
+  title: string;
+  amount: string;
+  dueDate: string;
+  cycle: BillingCycle;
+  monthCount: number;
+}
+
+function addMonthsToDate(isoDate: string, monthsToAdd: number): string {
+  const d = new Date(isoDate + 'T00:00:00');
+  d.setMonth(d.getMonth() + monthsToAdd);
+  return d.toISOString().slice(0, 10);
+}
+
 /** Batch fees: set the fee, see each student's status (PENDING until paid), record manual payments, issue receipts, send reminders. */
 export function BatchFeesView({ batches }: { batches: BatchSummary[] }) {
   const [batchId, setBatchId] = useState(batches[0]?.id ?? '');
@@ -29,7 +45,7 @@ export function BatchFeesView({ batches }: { batches: BatchSummary[] }) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null);
 
-  const [structForm, setStructForm] = useState<{ title: string; amount: string; dueDate: string } | null>(null);
+  const [structForm, setStructForm] = useState<StructFormState | null>(null);
   const [payFor, setPayFor] = useState<FeeLedgerItem | null>(null);
   const [pay, setPay] = useState({ amount: '', paidOn: today(), mode: 'CASH' as PaymentMode, reference: '', note: '' });
   const [busy, setBusy] = useState(false);
@@ -63,13 +79,61 @@ export function BatchFeesView({ batches }: { batches: BatchSummary[] }) {
   const submitStructure = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!structForm) return;
+    const baseAmount = Number(structForm.amount);
+    if (Number.isNaN(baseAmount) || baseAmount <= 0) {
+      setFormError('Please enter a valid fee amount.');
+      return;
+    }
+
     setBusy(true);
     setFormError(null);
+
     try {
-      await teacherApi.createFeeStructure(batchId, { title: structForm.title.trim(), amount: Number(structForm.amount), dueDate: structForm.dueDate });
+      if (structForm.cycle === 'MONTHLY' && structForm.monthCount > 1) {
+        // Multi-month recurring installments
+        const count = structForm.monthCount;
+        const instalments = Array.from({ length: count }, (_, i) => ({
+          label: `Month ${i + 1}`,
+          amount: baseAmount,
+          dueDate: addMonthsToDate(structForm.dueDate, i),
+        }));
+        await teacherApi.createFeeStructure(batchId, {
+          title: `${structForm.title.trim()} (${count} Months Plan)`,
+          amount: baseAmount * count,
+          dueDate: structForm.dueDate,
+          instalments,
+        });
+      } else if (structForm.cycle === 'HALF_YEARLY') {
+        // 2 terms: 6 months apart
+        const instalments = [
+          { label: 'Term 1 (First Half)', amount: baseAmount, dueDate: structForm.dueDate },
+          { label: 'Term 2 (Second Half)', amount: baseAmount, dueDate: addMonthsToDate(structForm.dueDate, 6) },
+        ];
+        await teacherApi.createFeeStructure(batchId, {
+          title: `${structForm.title.trim()} (Half-Yearly / 2 Terms)`,
+          amount: baseAmount * 2,
+          dueDate: structForm.dueDate,
+          instalments,
+        });
+      } else if (structForm.cycle === 'YEARLY') {
+        // Annual fee
+        await teacherApi.createFeeStructure(batchId, {
+          title: `${structForm.title.trim()} (Annual Plan)`,
+          amount: baseAmount,
+          dueDate: structForm.dueDate,
+        });
+      } else {
+        // Monthly (1 mo) or One-Time
+        await teacherApi.createFeeStructure(batchId, {
+          title: structForm.title.trim(),
+          amount: baseAmount,
+          dueDate: structForm.dueDate,
+        });
+      }
+
       setStructForm(null);
       await load();
-      flash('Fee set. Every enrolled student now has a PENDING fee.');
+      flash('Fee structure created. Enrolled students have been charged accordingly.');
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Could not set the fee.');
     } finally {
@@ -89,7 +153,13 @@ export function BatchFeesView({ batches }: { batches: BatchSummary[] }) {
     setBusy(true);
     setFormError(null);
     try {
-      const p = await teacherApi.recordFeePayment(payFor.id, { amount: Number(pay.amount), paidOn: pay.paidOn, mode: pay.mode, reference: pay.reference.trim() || undefined, note: pay.note.trim() || undefined });
+      const p = await teacherApi.recordFeePayment(payFor.id, {
+        amount: Number(pay.amount),
+        paidOn: pay.paidOn,
+        mode: pay.mode,
+        reference: pay.reference.trim() || undefined,
+        note: pay.note.trim() || undefined,
+      });
       setPayFor(null);
       await load();
       flash(`Payment recorded. Receipt ${p.receiptNumber} issued.`);
@@ -136,14 +206,24 @@ export function BatchFeesView({ batches }: { batches: BatchSummary[] }) {
           <h1 className="font-['Playfair_Display'] text-2xl font-bold text-[var(--ink-primary)] flex items-center gap-2">
             <IndianRupee className="w-5 h-5 text-[var(--brand-electric)]" /> Batch Fees
           </h1>
-          <p className="font-['Raleway'] text-xs text-[var(--ink-muted)] mt-1">Set the fee for a batch, record payments by hand, and students see their balance and receipts.</p>
+          <p className="font-['Raleway'] text-xs text-[var(--ink-muted)] mt-1">
+            Configure monthly, half-yearly, or annual tuition fee schedules. Record student payments and issue official receipts.
+          </p>
         </div>
         <div className="flex flex-wrap gap-2 items-center">
           <select aria-label="Batch" className="input-paper text-xs" value={batchId} onChange={(e) => setBatchId(e.target.value)}>
             {batches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
-          <button type="button" className="btn-secondary text-xs px-3 py-2 flex items-center gap-1.5" disabled={!batchId} onClick={() => { setFormError(null); setStructForm({ title: 'Tuition fee', amount: '', dueDate: today() }); }}>
-            <Plus className="w-3.5 h-3.5" /> Set fee
+          <button
+            type="button"
+            className="btn-secondary text-xs px-3 py-2 flex items-center gap-1.5"
+            disabled={!batchId}
+            onClick={() => {
+              setFormError(null);
+              setStructForm({ title: 'Tuition fee', amount: '', dueDate: today(), cycle: 'MONTHLY', monthCount: 1 });
+            }}
+          >
+            <Plus className="w-3.5 h-3.5" /> Set Fee Schedule
           </button>
           <button type="button" className="btn-secondary text-xs px-3 py-2 flex items-center gap-1.5" disabled={!batchId || fees.length === 0} onClick={() => remind()}>
             <Bell className="w-3.5 h-3.5" /> Remind unpaid
@@ -176,7 +256,7 @@ export function BatchFeesView({ batches }: { batches: BatchSummary[] }) {
               ))}
               <div className="paper-card p-4 col-span-2 lg:col-span-4 text-xs text-[var(--ink-secondary)]">
                 {summary.studentCount} students: {summary.paidCount} paid, {summary.partialCount} partly paid, {summary.pendingCount} pending, {summary.overdueCount} overdue.
-                {structures.length > 0 && ` Fee plan: ${structures.filter((s) => s.status === 'ACTIVE').map((s) => `${s.title} ${inr(s.totalPerStudent)}`).join(', ') || 'none active'}.`}
+                {structures.length > 0 && ` Fee plan: ${structures.filter((s) => s.status === 'ACTIVE').map((s) => `${s.title} (${inr(s.totalPerStudent)})`).join(', ') || 'none active'}.`}
               </div>
             </div>
           )}
@@ -184,48 +264,54 @@ export function BatchFeesView({ batches }: { batches: BatchSummary[] }) {
           {fees.length === 0 ? (
             <div className="paper-card p-12 text-center space-y-2">
               <p className="font-['Playfair_Display'] font-bold text-base text-[var(--ink-primary)]">No fees set for this batch</p>
-              <p className="text-xs text-[var(--ink-muted)]">Use Set fee. Every enrolled student starts as PENDING.</p>
+              <p className="text-xs text-[var(--ink-muted)]">Use Set fee schedule above to configure monthly, half-yearly, or annual tuition charges.</p>
             </div>
           ) : (
             <div className="paper-card overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="text-left text-[var(--ink-muted)] border-b border-[var(--border-paper)]">
-                    <th className="p-3">Student</th><th className="p-3">Fee</th><th className="p-3">Due</th><th className="p-3 text-right">Total</th><th className="p-3 text-right">Paid</th><th className="p-3 text-right">Balance</th><th className="p-3">Status</th><th className="p-3">Actions</th>
+                    <th className="p-3">Student</th><th className="p-3">Fee / Installment</th><th className="p-3">Due</th><th className="p-3 text-right">Total</th><th className="p-3 text-right">Paid</th><th className="p-3 text-right">Balance</th><th className="p-3">Status</th><th className="p-3">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {fees.map((f) => (
                     <React.Fragment key={f.id}>
                       <tr className="border-b border-[var(--border-paper)]">
-                        <td className="p-3 font-bold text-[var(--ink-primary)]">{f.studentName}<div className="font-normal text-[var(--ink-muted)]">{f.rollNumber}</div></td>
-                        <td className="p-3">{f.feeTitle}{f.instalmentNo > 1 ? ` #${f.instalmentNo}` : ''}</td>
-                        <td className="p-3">{new Date(f.dueDate).toLocaleDateString()}</td>
+                        <td className="p-3 font-bold font-['Raleway'] text-[var(--ink-primary)]">{f.studentName || 'Student'}</td>
+                        <td className="p-3">{f.feeTitle}</td>
+                        <td className="p-3 font-data">{new Date(f.dueDate).toLocaleDateString()}</td>
                         <td className="p-3 text-right font-data">{inr(f.totalAmount)}</td>
-                        <td className="p-3 text-right font-data">{inr(f.paidAmount)}</td>
+                        <td className="p-3 text-right font-data text-emerald-800">{inr(f.paidAmount)}</td>
                         <td className="p-3 text-right font-data font-bold">{inr(f.balanceDue)}</td>
                         <td className="p-3"><span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${STATUS_STYLE[f.status]}`}>{f.status}</span></td>
                         <td className="p-3">
-                          <div className="flex gap-1.5 flex-wrap">
-                            <button type="button" className="btn-secondary text-[11px] px-2 py-1" disabled={f.balanceDue <= 0 || f.status === 'VOID'} onClick={() => openPay(f)}>Record payment</button>
-                            {f.balanceDue > 0 && f.status !== 'VOID' && <button type="button" className="text-[11px] px-2 py-1 rounded-lg border border-[var(--border-paper)]" onClick={() => remind([f.id])}>Remind</button>}
+                          <div className="flex gap-1.5">
+                            {f.balanceDue > 0 && (
+                              <button type="button" className="btn-primary text-[11px] px-2.5 py-1" onClick={() => openPay(f)}>Record payment</button>
+                            )}
+                            {f.balanceDue > 0 && f.status !== 'PAID' && (
+                              <button type="button" className="text-[11px] px-2 py-1 rounded border border-[var(--border-paper)] hover:bg-[var(--bg-paper)]" onClick={() => remind([f.id])}>Remind</button>
+                            )}
                           </div>
                         </td>
                       </tr>
-                      {f.payments.map((p) => (
-                        <tr key={p.id} className="bg-[var(--bg-paper-warm)] border-b border-[var(--border-paper)]">
-                          <td className="p-2 pl-6 text-[var(--ink-muted)]" colSpan={3}>{new Date(p.paidOn).toLocaleDateString()} - {p.mode.replace('_', ' ')}{p.reference ? ` (${p.reference})` : ''} - receipt {p.receiptNumber}</td>
-                          <td className="p-2 text-right font-data" colSpan={2}>{p.status === 'VOIDED' ? <s>{inr(p.amount)}</s> : inr(p.amount)}</td>
-                          <td className="p-2" colSpan={3}>
-                            {p.status === 'ISSUED' ? (
-                              <div className="flex gap-3">
-                                <button type="button" className="flex items-center gap-1 text-[11px] underline" onClick={() => openReceipt(p.id)}><Receipt className="w-3 h-3" /> Receipt PDF</button>
-                                <button type="button" className="flex items-center gap-1 text-[11px] underline text-rose-700" onClick={() => voidPayment(p.id)}><Ban className="w-3 h-3" /> Void</button>
-                              </div>
-                            ) : <span className="text-[11px] text-rose-700">Voided{p.voidReason ? `: ${p.voidReason}` : ''}</span>}
+                      {f.payments && f.payments.length > 0 && (
+                        <tr className="bg-[var(--bg-paper-warm)] border-b border-[var(--border-paper)] text-[11px] text-[var(--ink-secondary)]">
+                          <td colSpan={8} className="p-2.5 pl-6">
+                            <span className="font-bold">Receipts: </span>
+                            {f.payments.map((p) => (
+                              <span key={p.id} className="inline-flex items-center gap-1 mr-4">
+                                {p.receiptNumber} ({inr(p.amount)}, {p.mode})
+                                <button type="button" aria-label="Open receipt" className="underline text-[var(--brand-electric)] hover:text-blue-900" onClick={() => openReceipt(p.id)}>PDF</button>
+                                {p.status === 'ISSUED' && (
+                                  <button type="button" aria-label="Void payment" className="text-rose-700 hover:underline" onClick={() => voidPayment(p.id)}>(void)</button>
+                                )}
+                              </span>
+                            ))}
                           </td>
                         </tr>
-                      ))}
+                      )}
                     </React.Fragment>
                   ))}
                 </tbody>
@@ -235,18 +321,180 @@ export function BatchFeesView({ batches }: { batches: BatchSummary[] }) {
         </>
       )}
 
+      {/* Set Fee Schedule Modal */}
       {structForm && (
-        <Modal title="Set batch fee" onClose={() => setStructForm(null)}>
-          <form onSubmit={submitStructure} className="space-y-3">
-            <Field label="Fee name"><input className="input-paper w-full" value={structForm.title} onChange={(e) => setStructForm({ ...structForm, title: e.target.value })} required /></Field>
-            <Field label="Amount per student (Rs)"><input type="number" min={1} step="0.01" className="input-paper w-full" value={structForm.amount} onChange={(e) => setStructForm({ ...structForm, amount: e.target.value })} required /></Field>
-            <Field label="Due date"><input type="date" className="input-paper w-full" value={structForm.dueDate} onChange={(e) => setStructForm({ ...structForm, dueDate: e.target.value })} required /></Field>
-            {formError && <p role="alert" className="text-xs text-rose-700">{formError}</p>}
-            <button className="btn-primary w-full py-2.5 text-xs font-bold" disabled={busy}>{busy ? 'Saving...' : 'Charge all students'}</button>
+        <Modal title="Set Batch Fee Schedule" onClose={() => setStructForm(null)}>
+          <form onSubmit={submitStructure} className="space-y-4">
+            {/* Billing Cycle Selector */}
+            <div>
+              <label className="block text-xs font-['Raleway'] font-bold text-[var(--ink-secondary)] mb-1.5">
+                Billing Cycle / Frequency
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[
+                  { key: 'MONTHLY', label: 'Monthly' },
+                  { key: 'HALF_YEARLY', label: 'Half-Yearly' },
+                  { key: 'YEARLY', label: 'Yearly' },
+                  { key: 'ONE_TIME', label: 'One-Time / Custom' },
+                ].map((cycle) => (
+                  <button
+                    key={cycle.key}
+                    type="button"
+                    onClick={() => {
+                      const newTitle =
+                        cycle.key === 'MONTHLY'
+                          ? 'Monthly Tuition Fee'
+                          : cycle.key === 'HALF_YEARLY'
+                          ? 'Semester Tuition Fee'
+                          : cycle.key === 'YEARLY'
+                          ? 'Annual Tuition Fee'
+                          : 'Course Fee';
+                      setStructForm({ ...structForm, cycle: cycle.key as BillingCycle, title: newTitle });
+                    }}
+                    className={`py-2 px-2 text-xs font-bold rounded-xl border text-center transition ${
+                      structForm.cycle === cycle.key
+                        ? 'bg-[var(--brand-electric)] text-white border-[var(--brand-electric)] shadow-sm'
+                        : 'bg-[var(--bg-paper-warm)] text-[var(--ink-secondary)] border-[var(--border-paper)] hover:bg-[var(--bg-paper)]'
+                    }`}
+                  >
+                    {cycle.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <Field label="Fee Description / Title">
+              <input
+                className="input-paper w-full text-xs"
+                value={structForm.title}
+                onChange={(e) => setStructForm({ ...structForm, title: e.target.value })}
+                required
+              />
+            </Field>
+
+            {structForm.cycle === 'MONTHLY' && (
+              <div className="space-y-3 p-3 rounded-xl bg-blue-50/60 border border-blue-200">
+                <Field label="Monthly Fee per Student (Rs)">
+                  <input
+                    type="number"
+                    min={1}
+                    step="0.01"
+                    placeholder="e.g. 2500"
+                    className="input-paper w-full text-xs"
+                    value={structForm.amount}
+                    onChange={(e) => setStructForm({ ...structForm, amount: e.target.value })}
+                    required
+                  />
+                </Field>
+
+                <div>
+                  <label className="block text-xs font-['Raleway'] font-bold text-[var(--ink-secondary)] mb-1">
+                    Number of Months to Schedule
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[1, 3, 6, 10, 12].map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setStructForm({ ...structForm, monthCount: m })}
+                        className={`px-3 py-1 text-xs rounded-lg font-bold border transition ${
+                          structForm.monthCount === m
+                            ? 'bg-[var(--brand-electric)] text-white border-[var(--brand-electric)]'
+                            : 'bg-white text-[var(--ink-secondary)] border-stone-200'
+                        }`}
+                      >
+                        {m} {m === 1 ? 'Month' : 'Months'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {Number(structForm.amount) > 0 && (
+                  <p className="text-xs text-blue-900 font-medium">
+                    Calculated: {inr(Number(structForm.amount))} / month × {structForm.monthCount} = <strong>{inr(Number(structForm.amount) * structForm.monthCount)}</strong> total per student ({structForm.monthCount} monthly installments).
+                  </p>
+                )}
+              </div>
+            )}
+
+            {structForm.cycle === 'HALF_YEARLY' && (
+              <div className="space-y-3 p-3 rounded-xl bg-amber-50/60 border border-amber-200">
+                <Field label="Fee per Half-Year / Term (Rs)">
+                  <input
+                    type="number"
+                    min={1}
+                    step="0.01"
+                    placeholder="e.g. 12000"
+                    className="input-paper w-full text-xs"
+                    value={structForm.amount}
+                    onChange={(e) => setStructForm({ ...structForm, amount: e.target.value })}
+                    required
+                  />
+                </Field>
+                {Number(structForm.amount) > 0 && (
+                  <p className="text-xs text-amber-900 font-medium">
+                    Calculated: 2 Terms (Term 1 & Term 2, 6 months apart) × {inr(Number(structForm.amount))} = <strong>{inr(Number(structForm.amount) * 2)}</strong> annual total per student.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {structForm.cycle === 'YEARLY' && (
+              <div className="space-y-3 p-3 rounded-xl bg-emerald-50/60 border border-emerald-200">
+                <Field label="Annual Fee per Student (Rs)">
+                  <input
+                    type="number"
+                    min={1}
+                    step="0.01"
+                    placeholder="e.g. 25000"
+                    className="input-paper w-full text-xs"
+                    value={structForm.amount}
+                    onChange={(e) => setStructForm({ ...structForm, amount: e.target.value })}
+                    required
+                  />
+                </Field>
+                {Number(structForm.amount) > 0 && (
+                  <p className="text-xs text-emerald-900 font-medium">
+                    One-time full annual charge of <strong>{inr(Number(structForm.amount))}</strong> per student.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {structForm.cycle === 'ONE_TIME' && (
+              <Field label="Total Amount per Student (Rs)">
+                <input
+                  type="number"
+                  min={1}
+                  step="0.01"
+                  className="input-paper w-full text-xs"
+                  value={structForm.amount}
+                  onChange={(e) => setStructForm({ ...structForm, amount: e.target.value })}
+                  required
+                />
+              </Field>
+            )}
+
+            <Field label="Due Date (First Installment)">
+              <input
+                type="date"
+                className="input-paper w-full text-xs"
+                value={structForm.dueDate}
+                onChange={(e) => setStructForm({ ...structForm, dueDate: e.target.value })}
+                required
+              />
+            </Field>
+
+            {formError && <p role="alert" className="text-xs text-rose-700 bg-rose-50 p-2 rounded-lg border border-rose-200">{formError}</p>}
+
+            <button className="btn-primary w-full py-2.5 text-xs font-bold" disabled={busy}>
+              {busy ? 'Creating Fee Structure...' : 'Confirm & Charge Enrolled Students'}
+            </button>
           </form>
         </Modal>
       )}
 
+      {/* Record Manual Payment Modal */}
       {payFor && (
         <Modal title={`Record payment - ${payFor.studentName}`} onClose={() => setPayFor(null)}>
           <form onSubmit={submitPayment} className="space-y-3">

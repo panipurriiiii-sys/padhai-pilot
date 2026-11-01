@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, View, StyleSheet } from 'react-native';
+import { Alert, View, Text, StyleSheet } from 'react-native';
 import { QueryBoundary } from '../../components/common/QueryBoundary';
 import { Card } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
@@ -17,6 +17,14 @@ import type { PaymentMode } from '@padhai-pilot/shared';
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 const MODES: PaymentMode[] = ['CASH', 'UPI', 'BANK_TRANSFER', 'CHEQUE', 'CARD', 'OTHER'];
 const STATUS_VARIANT = { PAID: 'success', PARTIAL: 'warning', PENDING: 'neutral', OVERDUE: 'error', VOID: 'neutral' } as const;
+
+type BillingCycle = 'MONTHLY' | 'HALF_YEARLY' | 'YEARLY' | 'ONE_TIME';
+
+function addMonthsToDate(isoDate: string, monthsToAdd: number): string {
+  const d = new Date(isoDate + 'T00:00:00');
+  d.setMonth(d.getMonth() + monthsToAdd);
+  return d.toISOString().slice(0, 10);
+}
 
 const PaymentForm: React.FC<{ batchId: string; fee: FeeLedgerItem; onDone: () => void }> = ({ batchId, fee, onDone }) => {
   const { recordPayment } = useFeeMutations(batchId);
@@ -109,16 +117,87 @@ const FeeRow: React.FC<{ batchId: string; fee: FeeLedgerItem }> = ({ batchId, fe
 
 /** Batch fees for the selected batch: set fee, per-student status, mark payments, send reminders. */
 export const TeacherFeesPanel: React.FC<{ batchId: string }> = ({ batchId }) => {
-  const { colors } = useTheme();
+  const { colors, typography } = useTheme();
   const summary = useFeeSummary(batchId);
   const structures = useFeeStructures(batchId);
   const ledger = useFeeLedger(batchId);
   const { createStructure, sendReminders } = useFeeMutations(batchId);
-  const [title, setTitle] = useState('Tuition fee');
+
+  const [cycle, setCycle] = useState<BillingCycle>('MONTHLY');
+  const [title, setTitle] = useState('Monthly Tuition fee');
   const [amount, setAmount] = useState('');
+  const [monthCount, setMonthCount] = useState(1);
   const [dueDate, setDueDate] = useState(todayIso());
-  const valid = !!title.trim() && Number(amount) > 0 && ISO_DAY.test(dueDate);
+
+  const numAmt = Number(amount);
+  const valid = !!title.trim() && numAmt > 0 && ISO_DAY.test(dueDate);
   const hasStructure = (structures.data ?? []).some((s) => s.status === 'ACTIVE');
+
+  const handleSelectCycle = (newCycle: BillingCycle) => {
+    setCycle(newCycle);
+    if (newCycle === 'MONTHLY') setTitle('Monthly Tuition fee');
+    else if (newCycle === 'HALF_YEARLY') setTitle('Semester Tuition fee');
+    else if (newCycle === 'YEARLY') setTitle('Annual Tuition fee');
+    else setTitle('Course fee');
+  };
+
+  const handleCreate = () => {
+    if (!valid) return;
+
+    if (cycle === 'MONTHLY' && monthCount > 1) {
+      const instalments = Array.from({ length: monthCount }, (_, i) => ({
+        label: `Month ${i + 1}`,
+        amount: numAmt,
+        dueDate: addMonthsToDate(dueDate, i),
+      }));
+      createStructure.mutate(
+        {
+          title: `${title.trim()} (${monthCount} Months)`,
+          amount: numAmt * monthCount,
+          dueDate,
+          instalments,
+        },
+        {
+          onSuccess: (r) => {
+            setAmount('');
+            Alert.alert('Fee Schedule Created', `${r.studentsCharged} students charged ${formatInr(r.totalPerStudent)} across ${monthCount} monthly instalments.`);
+          },
+          onError: (e) => Alert.alert('Could not create fee', errorMessage(e)),
+        },
+      );
+    } else if (cycle === 'HALF_YEARLY') {
+      const instalments = [
+        { label: 'Term 1 (First Half)', amount: numAmt, dueDate },
+        { label: 'Term 2 (Second Half)', amount: numAmt, dueDate: addMonthsToDate(dueDate, 6) },
+      ];
+      createStructure.mutate(
+        {
+          title: `${title.trim()} (Half-Yearly / 2 Terms)`,
+          amount: numAmt * 2,
+          dueDate,
+          instalments,
+        },
+        {
+          onSuccess: (r) => {
+            setAmount('');
+            Alert.alert('Fee Schedule Created', `${r.studentsCharged} students charged ${formatInr(r.totalPerStudent)} across 2 terms.`);
+          },
+          onError: (e) => Alert.alert('Could not create fee', errorMessage(e)),
+        },
+      );
+    } else {
+      createStructure.mutate(
+        { title: title.trim(), amount: numAmt, dueDate },
+        {
+          onSuccess: (r) => {
+            setAmount('');
+            Alert.alert('Fee Created', `${r.studentsCharged} students charged ${formatInr(r.totalPerStudent)}.`);
+          },
+          onError: (e) => Alert.alert('Could not create fee', errorMessage(e)),
+        },
+      );
+    }
+  };
 
   return (
     <>
@@ -133,24 +212,79 @@ export const TeacherFeesPanel: React.FC<{ batchId: string }> = ({ batchId }) => 
       </QueryBoundary>
 
       <Card style={{ marginVertical: 12 }}>
-        <Subtitle>{hasStructure ? 'Add another fee' : 'Set batch fee'}</Subtitle>
-        <Caption>Every enrolled student starts as PENDING. Payments are marked by you.</Caption>
-        <Input label="Title" value={title} onChangeText={setTitle} />
-        <Input label="Amount per student (INR)" keyboardType="decimal-pad" value={amount} onChangeText={setAmount} />
-        <Input label="Due date (YYYY-MM-DD)" value={dueDate} onChangeText={setDueDate} autoCapitalize="none" />
+        <Subtitle>{hasStructure ? 'Add Fee Schedule' : 'Set Batch Fee Schedule'}</Subtitle>
+        <Caption>Configure monthly, half-yearly or annual plans for all enrolled students.</Caption>
+
+        {/* Billing Cycle Selector */}
+        <Caption style={{ marginTop: 10, fontWeight: '700' }}>Billing Cycle / Frequency</Caption>
+        <View style={[styles.wrap, { marginVertical: 6 }]}>
+          {(['MONTHLY', 'HALF_YEARLY', 'YEARLY', 'ONE_TIME'] as BillingCycle[]).map((c) => (
+            <Button
+              key={c}
+              size="sm"
+              variant={cycle === c ? 'primary' : 'outline'}
+              title={c === 'HALF_YEARLY' ? 'Half-Yearly' : c === 'ONE_TIME' ? 'One-Time' : c.charAt(0) + c.slice(1).toLowerCase()}
+              onPress={() => handleSelectCycle(c)}
+            />
+          ))}
+        </View>
+
+        <Input label="Fee Title" value={title} onChangeText={setTitle} />
+        <Input
+          label={
+            cycle === 'MONTHLY'
+              ? 'Monthly Fee per Student (INR)'
+              : cycle === 'HALF_YEARLY'
+              ? 'Fee per Half-Year / Term (INR)'
+              : cycle === 'YEARLY'
+              ? 'Annual Fee per Student (INR)'
+              : 'Fee Amount per Student (INR)'
+          }
+          keyboardType="decimal-pad"
+          value={amount}
+          onChangeText={setAmount}
+        />
+
+        {cycle === 'MONTHLY' && (
+          <View style={{ marginBottom: 10 }}>
+            <Caption style={{ marginBottom: 6, fontWeight: '600' }}>Number of Months to Schedule</Caption>
+            <View style={styles.wrap}>
+              {[1, 3, 6, 10, 12].map((m) => (
+                <Button
+                  key={m}
+                  size="sm"
+                  variant={monthCount === m ? 'primary' : 'outline'}
+                  title={`${m} Mo`}
+                  onPress={() => setMonthCount(m)}
+                />
+              ))}
+            </View>
+            {numAmt > 0 && (
+              <Text style={{ fontFamily: typography.fonts.ui, fontSize: 12, color: colors.primary, marginTop: 4 }}>
+                {`Plan: ${formatInr(numAmt)}/mo × ${monthCount} = ${formatInr(numAmt * monthCount)} total per student (${monthCount} instalments).`}
+              </Text>
+            )}
+          </View>
+        )}
+
+        {cycle === 'HALF_YEARLY' && numAmt > 0 && (
+          <Text style={{ fontFamily: typography.fonts.ui, fontSize: 12, color: colors.primary, marginBottom: 8 }}>
+            {`Plan: 2 Terms (6 months apart) × ${formatInr(numAmt)} = ${formatInr(numAmt * 2)} annual total per student.`}
+          </Text>
+        )}
+
+        {cycle === 'YEARLY' && numAmt > 0 && (
+          <Text style={{ fontFamily: typography.fonts.ui, fontSize: 12, color: colors.primary, marginBottom: 8 }}>
+            {`Plan: Full annual fee of ${formatInr(numAmt)} per student.`}
+          </Text>
+        )}
+
+        <Input label="Due date (First Installment, YYYY-MM-DD)" value={dueDate} onChangeText={setDueDate} autoCapitalize="none" />
         <Button
-          title="Create fee for batch"
+          title={cycle === 'MONTHLY' && monthCount > 1 ? `Create ${monthCount}-Month Fee Schedule` : 'Create Fee Schedule'}
           disabled={!valid}
           loading={createStructure.isPending}
-          onPress={() =>
-            createStructure.mutate(
-              { title: title.trim(), amount: Number(amount), dueDate },
-              {
-                onSuccess: (r) => { setAmount(''); Alert.alert('Fee created', `${r.studentsCharged} students charged ${formatInr(r.totalPerStudent)}.`); },
-                onError: (e) => Alert.alert('Could not create fee', errorMessage(e)),
-              },
-            )
-          }
+          onPress={handleCreate}
         />
       </Card>
 
@@ -182,8 +316,8 @@ export const TeacherFeesPanel: React.FC<{ batchId: string }> = ({ batchId }) => 
 };
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  kpi: { flexGrow: 1, flexBasis: '30%' },
+  grid: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  kpi: { flex: 1, padding: 12 },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 },
 });

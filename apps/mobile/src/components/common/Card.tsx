@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Pressable, StyleProp, View, ViewStyle } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { paperShadow } from '../../theme/shadows';
@@ -11,8 +11,8 @@ export interface CardProps {
   variant?: 'flat' | 'elevated' | 'outlined' | 'selected';
 }
 
-/** Clean luxury surface card with soft ambient shadow and refined micro-border. */
-export const Card: React.FC<CardProps> = ({ children, style, onPress, variant = 'flat' }) => {
+/** Clean luxury surface card with soft ambient shadow and refined micro-border. Memoized for high performance. */
+export const Card: React.FC<CardProps> = memo(({ children, style, onPress, variant = 'flat' }) => {
   const { colors, spacing, radii, isDark } = useTheme();
 
   const base: ViewStyle = {
@@ -50,4 +50,6 @@ export const Card: React.FC<CardProps> = ({ children, style, onPress, variant = 
     );
   }
   return <View style={[base, style]}>{children}</View>;
-};
+});
+
+Card.displayName = 'Card';

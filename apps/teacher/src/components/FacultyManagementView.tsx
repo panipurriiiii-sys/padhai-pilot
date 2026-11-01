@@ -501,6 +501,22 @@ export function FacultyManagementView({
                 />
               </div>
 
+              <div>
+                <label className="block text-xs font-['Raleway'] font-bold text-[var(--ink-secondary)] mb-1">
+                  Initial Login Password (Optional)
+                </label>
+                <input
+                  type="password"
+                  placeholder="Set password for instant faculty login (min 8 chars)"
+                  value={newFaculty.initialPassword || ''}
+                  onChange={(e) => setNewFaculty({ ...newFaculty, initialPassword: e.target.value })}
+                  className="input-paper w-full text-xs font-['Inter'] py-2"
+                />
+                <p className="text-[10px] text-[var(--ink-muted)] mt-1">
+                  If set, faculty can immediately sign in with this password on the mobile app or web portal.
+                </p>
+              </div>
+
               {/* Compensation */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 rounded-xl bg-[var(--bg-surface-subtle)] border border-[var(--border-paper)]">
                 <div>

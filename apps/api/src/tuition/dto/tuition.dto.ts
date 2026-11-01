@@ -37,6 +37,7 @@ export class CreateFacultyDto {
   assignedSubjects!: string[];
   delegatedPermissions?: DelegatedPermission[];
   batchIds?: string[];
+  initialPassword?: string;
 }
 
 export class UpdateFacultyDto {
@@ -50,6 +51,7 @@ export class UpdateFacultyDto {
   assignedSubjects?: string[];
   delegatedPermissions?: DelegatedPermission[];
   batchIds?: string[];
+  initialPassword?: string;
 }
 
 export class GenerateSalaryRecordDto {
