@@ -31,9 +31,9 @@ describe('api base url', () => {
   it('uses the emulator host in dev and Vercel in production, always ending in /api', () => {
     expect(DEV_API_BASE_URL).toBe('http://10.0.2.2:3001/api');
     expect(PROD_API_BASE_URL).toBe('https://padhai-pilot.vercel.app/api');
-    expect(apiClient.getBaseUrl()).toBe(DEV_API_BASE_URL);
+    expect(apiClient.getBaseUrl()).toBe(PROD_API_BASE_URL);
     apiClient.setBaseUrl('http://192.168.1.5:3001/');
     expect(apiClient.getBaseUrl()).toBe('http://192.168.1.5:3001/api');
-    apiClient.setBaseUrl(DEV_API_BASE_URL);
+    apiClient.setBaseUrl(PROD_API_BASE_URL);
   });
 });
