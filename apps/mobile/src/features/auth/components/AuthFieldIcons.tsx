@@ -41,3 +41,4 @@ export const BookIcon: React.FC<FieldIconProps> = ({ color = '#78716C', size = 1
     <Path d="M6 10h10" />
   </Svg>
 );
+
