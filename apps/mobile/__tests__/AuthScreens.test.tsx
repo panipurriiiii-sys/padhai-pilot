@@ -20,7 +20,7 @@ describe('Auth & Onboarding Screens', () => {
     insets: { top: 44, left: 0, right: 0, bottom: 34 },
   };
 
-  it('renders GetStartedScreen cleanly with bottom dock controls and no upper text clutter', () => {
+  it('renders GetStartedScreen cleanly with high contrast visible text, buttons and controls', () => {
     let tree: ReactTestRenderer.ReactTestRenderer | undefined;
     ReactTestRenderer.act(() => {
       tree = ReactTestRenderer.create(
@@ -34,12 +34,11 @@ describe('Auth & Onboarding Screens', () => {
     });
     expect(tree).toBeDefined();
     const str = JSON.stringify(tree?.toJSON());
+    expect(str).toContain('LEARN & GROW');
+    expect(str).toContain('Your Study Space');
     expect(str).toContain('Next');
     expect(str).toContain('Already have an account?');
     expect(str).toContain('Sign In');
-    // Verifies upper text clutter has been removed
-    expect(str).not.toContain('LEARN & GROW');
-    expect(str).not.toContain('Your Study Space');
   });
 
   it('renders LoginScreen root into onboarding by default', () => {
@@ -58,5 +57,6 @@ describe('Auth & Onboarding Screens', () => {
     const str = JSON.stringify(tree?.toJSON());
     expect(str).toContain('Next');
     expect(str).toContain('Already have an account?');
+    expect(str).toContain('LEARN & GROW');
   });
 });
