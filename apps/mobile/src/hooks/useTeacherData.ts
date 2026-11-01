@@ -27,6 +27,9 @@ export const teacherKeys = {
   materials: ['teacher', 'materials'] as const,
   leaves: ['teacher', 'leaves'] as const,
   salaries: ['teacher', 'salaries'] as const,
+  reports: ['teacher', 'reports'] as const,
+  analytics: ['teacher', 'analytics'] as const,
+  queries: (batchId?: string, status?: string) => ['teacher', 'queries', batchId ?? 'all', status ?? 'all'] as const,
 };
 
 export const useTeacherDashboard = () =>
@@ -225,4 +228,25 @@ export const useLessonPlanMutations = () => {
     create: useMutation({ mutationFn: teacherService.createLessonPlan, onSuccess: refresh }),
     toggle: useMutation({ mutationFn: teacherService.toggleLessonPlan, onSuccess: refresh }),
   };
+};
+
+export const useTeacherReports = () =>
+  useQuery({ queryKey: teacherKeys.reports, queryFn: teacherService.getReports, staleTime: 5 * MIN });
+
+export const useTeacherAnalytics = () =>
+  useQuery({ queryKey: teacherKeys.analytics, queryFn: teacherService.getAnalytics, staleTime: 5 * MIN });
+
+export const useTeacherQueries = (batchId?: string, status?: string) =>
+  useQuery({
+    queryKey: teacherKeys.queries(batchId, status),
+    queryFn: () => teacherService.getQueries({ batchId, status }),
+    staleTime: 2 * MIN,
+  });
+
+export const useReplyToQuery = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { queryId: string; body: string }) => teacherService.replyToQuery(v.queryId, v.body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['teacher', 'queries'] }),
+  });
 };

@@ -173,4 +173,19 @@ export const teacherService = {
   getLeaves: async () => list(await apiClient.get<FacultyLeaveItem[]>('/tuition/leaves')),
   applyLeave: (dto: ApplyFacultyLeaveDto) => apiClient.post<FacultyLeaveItem>('/tuition/leaves/apply', dto),
   getSalaries: async () => list(await apiClient.get<SalaryStatementItem[]>('/tuition/salaries')),
+
+  // Reports & Analytics
+  getReports: () => apiClient.get<any>('/teacher/reports'),
+  getAnalytics: () => apiClient.get<any>('/analytics/teacher'),
+
+  // Academic Queries (Student Doubts & Questions)
+  getQueries: async (params?: { status?: string; batchId?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.status) q.append('status', params.status);
+    if (params?.batchId) q.append('batchId', params.batchId);
+    const queryString = q.toString() ? `?${q.toString()}` : '';
+    return list(await apiClient.get<any[]>(`/teacher/queries${queryString}`));
+  },
+  replyToQuery: (queryId: string, body: string) =>
+    apiClient.post<{ success: boolean; reply: any }>(`/teacher/queries/${queryId}/reply`, { body }),
 };

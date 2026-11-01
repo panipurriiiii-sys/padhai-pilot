@@ -29,6 +29,8 @@ import {
 } from '../../hooks/useTeacherData';
 import type { TimetableConflictError, WeekDay } from '@padhai-pilot/shared';
 import { StudentLeaveReview } from '../leave/StudentLeavePanels';
+import { TeacherQueriesPanel } from './TeacherQueriesPanel';
+import { TeacherReportsPanel } from './TeacherReportsPanel';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useNavigationStore } from '../../store/useNavigationStore';
 import { useTheme } from '../../theme/ThemeContext';
@@ -54,6 +56,8 @@ const MENU: Array<{ key: View_; label: string; hint: string; icon: IconName; ton
   { key: 'timetable', label: 'Weekly Timetable', hint: 'Schedule slots, room allocations & days', icon: 'clock', tone: 'blue' },
   { key: 'studentLeave', label: 'Student Leave Requests', hint: 'Approve or reject student leave', icon: 'users', tone: 'amber' },
   { key: 'leave', label: 'My Leave', hint: 'Apply for leave & track approval', icon: 'calendar-check', tone: 'teal' },
+  { key: 'queries', label: 'Student Doubts & Queries', hint: 'Answer questions asked by batch students', icon: 'help-circle', tone: 'amber' },
+  { key: 'reports', label: 'Analytics & Reports', hint: 'Attendance rates, batch benchmarks & stats', icon: 'trending-up', tone: 'teal' },
   { key: 'salary', label: 'Salary Slips', hint: 'Monthly salary statements & breakdown', icon: 'receipt', tone: 'emerald' },
   { key: 'profile', label: 'Account & Sign Out', hint: 'Faculty profile and session details', icon: 'user', tone: 'blue' },
 ];
@@ -562,6 +566,8 @@ export const TeacherMoreScreen: React.FC = () => {
           {view === 'timetable' ? <Timetable /> : null}
           {view === 'leave' ? <Leave /> : null}
           {view === 'studentLeave' ? <StudentLeaveReview /> : null}
+          {view === 'queries' ? <TeacherQueriesPanel /> : null}
+          {view === 'reports' ? <TeacherReportsPanel /> : null}
           {view === 'salary' ? <Salary /> : null}
           {view === 'profile' ? (
             <>
