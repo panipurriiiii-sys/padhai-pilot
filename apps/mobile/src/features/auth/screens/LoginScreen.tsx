@@ -49,76 +49,112 @@ export const LoginScreen: React.FC = () => {
   const [invitationCode, setInvitationCode] = useState('');
   const [subject, setSubject] = useState('');
 
-  const [formError, setFormError] = useState<string | null>(null);
+  // Field validation errors
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [bannerError, setBannerError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  const clearValidation = () => {
+    setNameError(null);
+    setEmailError(null);
+    setPasswordError(null);
+    setBannerError(null);
+    setSuccessMsg(null);
+    clearError();
+  };
 
   // If currently in onboarding flow
   if (viewMode === 'ONBOARDING') {
     return (
       <GetStartedScreen
-        onFinish={() => setViewMode('REGISTER')}
-        onLoginPress={() => setViewMode('SIGN_IN')}
+        onFinish={() => {
+          clearValidation();
+          setViewMode('REGISTER');
+        }}
+        onLoginPress={() => {
+          clearValidation();
+          setViewMode('SIGN_IN');
+        }}
       />
     );
   }
 
   const handleSignIn = async () => {
-    setFormError(null);
-    setSuccessMsg(null);
-    clearError();
+    clearValidation();
+    let hasError = false;
 
     const cleanEmail = email.trim();
     if (!cleanEmail) {
-      setFormError('Email address is required.');
-      return;
+      setEmailError('Please enter your email address.');
+      hasError = true;
+    } else if (!cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+      setEmailError('Please enter a valid email address.');
+      hasError = true;
     }
+
     if (!password) {
-      setFormError('Password is required.');
-      return;
+      setPasswordError('Please enter your password.');
+      hasError = true;
     }
+
+    if (hasError) return;
 
     try {
       await login({ email: cleanEmail, password });
       setTab(activeRole === 'STUDENT' ? 'student_dashboard' : 'teacher_dashboard');
-    } catch {
-      // Handled via useAuthStore error
+    } catch (err: any) {
+      setBannerError(err?.message || 'Invalid email or password.');
     }
   };
 
   const handleRegister = async () => {
-    setFormError(null);
-    setSuccessMsg(null);
-    clearError();
+    clearValidation();
+    let hasError = false;
+
+    const cleanName = fullName.trim();
+    if (!cleanName) {
+      setNameError('Please enter your full name.');
+      hasError = true;
+    }
 
     const cleanEmail = email.trim();
-    if (!fullName.trim()) {
-      setFormError('Full name is required.');
-      return;
-    }
     if (!cleanEmail) {
-      setFormError('Email address is required.');
-      return;
+      setEmailError('Please enter your email address.');
+      hasError = true;
+    } else if (!cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+      setEmailError('Please enter a valid email address.');
+      hasError = true;
     }
-    if (!password || password.length < 6) {
-      setFormError('Password must be at least 6 characters.');
-      return;
+
+    if (!password) {
+      setPasswordError('Please enter a password.');
+      hasError = true;
+    } else if (password.length < 6) {
+      setPasswordError('Password must be at least 6 characters.');
+      hasError = true;
     }
+
+    if (hasError) return;
 
     if (activeRole === 'STUDENT') {
       try {
         await registerStudent({
-          fullName: fullName.trim(),
+          fullName: cleanName,
           email: cleanEmail,
           password,
           phone: phone.trim() || undefined,
           invitationCode: invitationCode.trim() || undefined,
         });
         setTab('student_dashboard');
-      } catch {}
+      } catch (err: any) {
+        setBannerError(err?.message || 'Student registration failed. Please try again.');
+      }
     } else {
       try {
         await registerTeacher({
-          fullName: fullName.trim(),
+          fullName: cleanName,
           email: cleanEmail,
           password,
           phone: phone.trim() || undefined,
@@ -126,28 +162,30 @@ export const LoginScreen: React.FC = () => {
           invitationCode: invitationCode.trim() || undefined,
         });
         setTab('teacher_dashboard');
-      } catch {}
+      } catch (err: any) {
+        setBannerError(err?.message || 'Teacher registration failed. Please try again.');
+      }
     }
   };
 
   const handleForgotPassword = async () => {
-    setFormError(null);
-    setSuccessMsg(null);
-    clearError();
+    clearValidation();
 
     const cleanEmail = email.trim();
     if (!cleanEmail) {
-      setFormError('Please enter your registered email address.');
+      setEmailError('Please enter your registered email address.');
       return;
     }
 
     try {
       const res = await forgotPassword(cleanEmail);
       setSuccessMsg(res.message || 'Password reset link sent to your registered email.');
-    } catch {}
+    } catch (err: any) {
+      setBannerError(err?.message || 'Unable to process reset request. Please verify email.');
+    }
   };
 
-  const displayedError = formError || error;
+  const displayedBanner = bannerError || error;
 
   return (
     <ScreenContainer>
@@ -160,12 +198,11 @@ export const LoginScreen: React.FC = () => {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Top Brand & Session Header */}
+          {/* Top Brand Header (matches Teacher Portal) */}
           <LuxuryHeader
             showBack={viewMode !== 'SIGN_IN'}
             onBack={() => {
-              setFormError(null);
-              setSuccessMsg(null);
+              clearValidation();
               if (viewMode === 'FORGOT_PASSWORD') {
                 setViewMode('SIGN_IN');
               } else {
@@ -174,23 +211,23 @@ export const LoginScreen: React.FC = () => {
             }}
           />
 
-          {/* Luxury Floating Paper Card */}
+          {/* Centered Auth Card */}
           <LuxuryCard>
             {/* Card Title & Subtitle */}
             <View style={styles.titleSection}>
               <Text style={[styles.mainTitle, { color: colors.textPrimary, fontFamily: typography.fonts.display }]}>
-                {viewMode === 'SIGN_IN' && 'Sign In'}
-                {viewMode === 'REGISTER' && 'Create Account'}
-                {viewMode === 'FORGOT_PASSWORD' && 'Reset Password'}
+                {viewMode === 'SIGN_IN' && 'Sign in to your account'}
+                {viewMode === 'REGISTER' && 'Create your account'}
+                {viewMode === 'FORGOT_PASSWORD' && 'Reset your password'}
               </Text>
               <Text style={[styles.mainSubtitle, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
-                {viewMode === 'SIGN_IN' && 'Access your academic records, batches, or attendance.'}
-                {viewMode === 'REGISTER' && 'Join as a student or register your teaching specialization.'}
-                {viewMode === 'FORGOT_PASSWORD' && 'Enter your email to verify and reset your credentials.'}
+                {viewMode === 'SIGN_IN' && 'Enter your details to access your portal.'}
+                {viewMode === 'REGISTER' && 'Sign up to manage batches, attendance, and tests.'}
+                {viewMode === 'FORGOT_PASSWORD' && 'Enter your email to receive a password reset code.'}
               </Text>
             </View>
 
-            {/* Auth Mode Toggle (Sign In vs Register) */}
+            {/* Segmented Switcher for Login / Register */}
             {(viewMode === 'SIGN_IN' || viewMode === 'REGISTER') && (
               <SegmentedToggle
                 options={[
@@ -199,46 +236,43 @@ export const LoginScreen: React.FC = () => {
                 ]}
                 activeKey={viewMode}
                 onSelect={(k) => {
-                  setFormError(null);
-                  setSuccessMsg(null);
-                  clearError();
+                  clearValidation();
                   setViewMode(k);
                 }}
               />
             )}
 
-            {/* Role Toggle for Register */}
+            {/* Role Switcher in Register Mode */}
             {viewMode === 'REGISTER' && (
               <SegmentedToggle
                 options={[
                   { key: 'STUDENT', label: 'Student' },
-                  { key: 'TEACHER', label: 'Faculty / Teacher' },
+                  { key: 'TEACHER', label: 'Teacher / Faculty' },
                 ]}
                 activeKey={activeRole}
                 onSelect={(r) => {
+                  clearValidation();
                   setActiveRole(r);
-                  clearError();
-                  setFormError(null);
                 }}
               />
             )}
 
-            {/* Notification Banners */}
-            <AuthBanner type="error" message={displayedError} />
-            <AuthBanner type="success" message={successMsg} />
+            {/* Status Alerts */}
+            <AuthBanner type="error" message={displayedBanner} onDismiss={() => setBannerError(null)} />
+            <AuthBanner type="success" message={successMsg} onDismiss={() => setSuccessMsg(null)} />
 
-            {/* Active View Form */}
+            {/* Form Views */}
             {viewMode === 'SIGN_IN' && (
               <LoginForm
                 email={email}
                 setEmail={setEmail}
+                emailError={emailError}
                 password={password}
                 setPassword={setPassword}
+                passwordError={passwordError}
                 onSubmit={handleSignIn}
                 onForgotPassword={() => {
-                  setFormError(null);
-                  setSuccessMsg(null);
-                  clearError();
+                  clearValidation();
                   setViewMode('FORGOT_PASSWORD');
                 }}
                 isLoading={isLoading}
@@ -250,10 +284,13 @@ export const LoginScreen: React.FC = () => {
                 activeRole={activeRole}
                 fullName={fullName}
                 setFullName={setFullName}
+                nameError={nameError}
                 email={email}
                 setEmail={setEmail}
+                emailError={emailError}
                 password={password}
                 setPassword={setPassword}
+                passwordError={passwordError}
                 phone={phone}
                 setPhone={setPhone}
                 invitationCode={invitationCode}
@@ -269,11 +306,10 @@ export const LoginScreen: React.FC = () => {
               <ForgotPasswordForm
                 email={email}
                 setEmail={setEmail}
+                emailError={emailError}
                 onSubmit={handleForgotPassword}
                 onBackToLogin={() => {
-                  setFormError(null);
-                  setSuccessMsg(null);
-                  clearError();
+                  clearValidation();
                   setViewMode('SIGN_IN');
                 }}
                 isLoading={isLoading}
@@ -286,9 +322,7 @@ export const LoginScreen: React.FC = () => {
             <AuthFooterToggle
               mode={viewMode === 'SIGN_IN' ? 'SIGN_IN' : 'REGISTER'}
               onToggle={() => {
-                setFormError(null);
-                setSuccessMsg(null);
-                clearError();
+                clearValidation();
                 setViewMode(viewMode === 'SIGN_IN' ? 'REGISTER' : 'SIGN_IN');
               }}
             />
@@ -312,15 +346,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   mainTitle: {
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: '700',
-    letterSpacing: -0.4,
-    marginBottom: 6,
+    letterSpacing: -0.3,
+    marginBottom: 4,
     textAlign: 'center',
   },
   mainSubtitle: {
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 12,
+    lineHeight: 16,
     textAlign: 'center',
   },
 });
