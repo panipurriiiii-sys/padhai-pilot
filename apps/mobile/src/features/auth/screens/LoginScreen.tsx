@@ -347,6 +347,8 @@ const styles = StyleSheet.create({
   },
   innerContent: {
     width: '100%',
+    maxWidth: 440,
+    alignSelf: 'center',
     alignItems: 'center',
     paddingVertical: 12,
   },

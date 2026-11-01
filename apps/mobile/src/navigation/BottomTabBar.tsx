@@ -42,7 +42,8 @@ export const BottomTabBar: React.FC = () => {
   return (
     <View
       style={{
-        flexDirection: 'row',
+        width: '100%',
+        alignItems: 'center',
         paddingTop: 6,
         paddingHorizontal: 8,
         paddingBottom: Math.max(insets.bottom, 10),
@@ -51,47 +52,55 @@ export const BottomTabBar: React.FC = () => {
         borderTopColor: colors.tabBarBorder,
       }}
     >
-      {tabs.map((tab) => {
-        const active = currentTab === tab.key || !!tab.also?.includes(currentTab);
-        return (
-          <Pressable
-            key={tab.key}
-            onPress={() => setTab(tab.key)}
-            hitSlop={hitSlop.medium}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: active }}
-            accessibilityLabel={`${tab.label} tab`}
-            style={({ pressed }) => ({
-              flex: 1,
-              alignItems: 'center',
-              opacity: pressed ? 0.7 : 1,
-            })}
-          >
-            <View
-              style={{
+      <View
+        style={{
+          flexDirection: 'row',
+          width: '100%',
+          maxWidth: 640,
+        }}
+      >
+        {tabs.map((tab) => {
+          const active = currentTab === tab.key || !!tab.also?.includes(currentTab);
+          return (
+            <Pressable
+              key={tab.key}
+              onPress={() => setTab(tab.key)}
+              hitSlop={hitSlop.medium}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: active }}
+              accessibilityLabel={`${tab.label} tab`}
+              style={({ pressed }) => ({
+                flex: 1,
                 alignItems: 'center',
-                paddingVertical: 4,
-                paddingHorizontal: 10,
-                borderRadius: 16,
-                backgroundColor: active ? colors.primarySubtle : 'transparent',
-              }}
+                opacity: pressed ? 0.7 : 1,
+              })}
             >
-              <Icon name={tab.icon} size={19} color={active ? colors.primary : colors.textFaint} />
-            </View>
-            <Text
-              style={{
-                marginTop: 2,
-                fontFamily: typography.fonts.ui,
-                fontSize: 10,
-                fontWeight: active ? '700' : '500',
-                color: active ? colors.primary : colors.textMuted,
-              }}
-            >
-              {tab.label}
-            </Text>
-          </Pressable>
-        );
-      })}
+              <View
+                style={{
+                  alignItems: 'center',
+                  paddingVertical: 4,
+                  paddingHorizontal: 10,
+                  borderRadius: 16,
+                  backgroundColor: active ? colors.primarySubtle : 'transparent',
+                }}
+              >
+                <Icon name={tab.icon} size={19} color={active ? colors.primary : colors.textFaint} />
+              </View>
+              <Text
+                style={{
+                  marginTop: 2,
+                  fontFamily: typography.fonts.ui,
+                  fontSize: 10,
+                  fontWeight: active ? '700' : '500',
+                  color: active ? colors.primary : colors.textMuted,
+                }}
+              >
+                {tab.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
     </View>
   );
 };

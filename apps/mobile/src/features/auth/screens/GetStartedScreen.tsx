@@ -7,36 +7,14 @@ import {
   Text,
   Pressable,
   TouchableOpacity,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../../theme/ThemeContext';
-import { OnboardingSlide, OnboardingSlideData } from '../components/OnboardingSlide';
 import { OnboardingPagination } from '../components/OnboardingPagination';
 import { OnboardingImages } from '../components/onboardingImages';
 
-const ONBOARDING_SLIDES: OnboardingSlideData[] = [
-  {
-    id: 'campus',
-    badge: 'LEARN & GROW',
-    title: 'Your Study Space',
-    subtitle: 'Daily routine',
-    description: 'Track your batches, class timings, and homework all in one place.',
-  },
-  {
-    id: 'golden_hour',
-    badge: 'STAY CONSISTENT',
-    title: 'Daily Attendance',
-    subtitle: 'Never miss a class',
-    description: 'Mark attendance smoothly and stay updated with teacher announcements.',
-  },
-  {
-    id: 'twilight_vista',
-    badge: 'REACH YOUR GOAL',
-    title: 'Track Your Progress',
-    subtitle: 'Results & milestones',
-    description: 'Check test scores, fee receipts, and overall performance anytime.',
-  },
-];
+const TOTAL_SLIDES = OnboardingImages.length || 3;
 
 interface GetStartedScreenProps {
   onFinish: () => void;
@@ -49,57 +27,51 @@ export const GetStartedScreen: React.FC<GetStartedScreenProps> = ({
 }) => {
   const { typography } = useTheme();
   const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
   const [activeIndex, setActiveIndex] = useState(0);
 
   const handleNext = () => {
-    if (activeIndex < ONBOARDING_SLIDES.length - 1) {
+    if (activeIndex < TOTAL_SLIDES - 1) {
       setActiveIndex((prev) => prev + 1);
     } else {
       onFinish();
     }
   };
 
-  const activeSlide = ONBOARDING_SLIDES[activeIndex];
   const currentBgImage = OnboardingImages[activeIndex] || OnboardingImages[0];
-  const isLast = activeIndex === ONBOARDING_SLIDES.length - 1;
+  const isLast = activeIndex === TOTAL_SLIDES - 1;
 
-  const topInset = Math.max(insets.top, 20);
+  // Responsive safe insets
   const bottomInset = Math.max(insets.bottom, 24);
+  const horizontalPadding = windowWidth > 480 ? 32 : 20;
 
   return (
     <View style={styles.root}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-      {/* 1. Fullscreen Background Image Layer */}
+      {/* 1. Fullscreen Background Image Layer (Unobstructed Artwork) */}
       <Image
         source={currentBgImage}
         style={styles.backgroundImage}
         resizeMode="cover"
       />
 
-      {/* 2. Top-to-Bottom Readability Tint */}
-      <View style={styles.overlayTint} />
+      {/* 2. Subtle Bottom Gradient/Tint so buttons pop crisply against any artwork */}
+      <View style={styles.bottomScrim} />
 
-      {/* 3. Main Content Container using natural flex layout */}
-      <View style={[styles.contentContainer, { paddingTop: topInset, paddingBottom: bottomInset }]}>
-        {/* Top Bar with Session Pill */}
-        <View style={styles.topBar}>
-          <View style={styles.sessionBadge}>
-            <Text style={[styles.sessionText, { fontFamily: typography.fonts.ui }]}>
-              Session 2026–27
-            </Text>
-          </View>
-        </View>
-
-        {/* Center Slide Content */}
-        <View style={styles.centerContent}>
-          <OnboardingSlide slide={activeSlide} isActive />
-        </View>
-
-        {/* Bottom Actions Dock */}
+      {/* 3. Bottom Dock: Responsive, centered, and safely positioned */}
+      <View
+        style={[
+          styles.contentContainer,
+          {
+            paddingBottom: bottomInset,
+            paddingHorizontal: horizontalPadding,
+          },
+        ]}
+      >
         <View style={styles.bottomDock}>
           <OnboardingPagination
-            total={ONBOARDING_SLIDES.length}
+            total={TOTAL_SLIDES}
             activeIndex={activeIndex}
             onSelectIndex={setActiveIndex}
           />
@@ -142,43 +114,23 @@ const styles = StyleSheet.create({
   backgroundImage: {
     ...StyleSheet.absoluteFillObject,
   },
-  overlayTint: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.42)',
+  bottomScrim: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 240,
+    backgroundColor: 'rgba(5, 6, 8, 0.45)',
   },
   contentContainer: {
     flex: 1,
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    zIndex: 10,
-  },
-  topBar: {
-    width: '100%',
-    alignItems: 'flex-end',
-    paddingTop: 8,
-  },
-  sessionBadge: {
-    paddingVertical: 5,
-    paddingHorizontal: 12,
-    borderRadius: 14,
-    backgroundColor: 'rgba(0, 0, 0, 0.55)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.35)',
-  },
-  sessionText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
-  },
-  centerContent: {
-    flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     alignItems: 'center',
-    paddingVertical: 20,
+    zIndex: 10,
   },
   bottomDock: {
     width: '100%',
+    maxWidth: 440,
     alignItems: 'center',
   },
   primaryBtn: {
@@ -189,7 +141,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 14,
+    marginTop: 16,
     shadowColor: '#1677FF',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.5,
@@ -209,8 +161,8 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   loginLinkWrap: {
-    paddingVertical: 12,
-    marginTop: 2,
+    paddingVertical: 14,
+    marginTop: 4,
   },
   loginLinkText: {
     color: '#FFFFFF',
