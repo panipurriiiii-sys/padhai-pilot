@@ -12,11 +12,19 @@ interface BatchPickerProps {
   value?: string;
   onChange: (batchId: string) => void;
   allowCreate?: boolean;
+  showAllOption?: boolean;
+  allLabel?: string;
 }
 
 /** Horizontal chip list of the batches this faculty member is assigned to (server-filtered). Auto-selects first batch if none selected. */
-export const BatchPicker: React.FC<BatchPickerProps> = ({ value, onChange, allowCreate = true }) => {
-  const { colors, spacing, radii, typography, isDark } = useTheme();
+export const BatchPicker: React.FC<BatchPickerProps> = ({
+  value,
+  onChange,
+  allowCreate = true,
+  showAllOption = false,
+  allLabel = 'All Batches',
+}) => {
+  const { colors, spacing, radii, typography } = useTheme();
   const query = useBatches();
   const { create } = useBatchMutations();
 
@@ -27,12 +35,12 @@ export const BatchPicker: React.FC<BatchPickerProps> = ({ value, onChange, allow
   const [newBatchGrade, setNewBatchGrade] = useState('');
   const [newBatchRoom, setNewBatchRoom] = useState('');
 
-  // Auto-select first batch if none currently selected
+  // Auto-select first batch if none currently selected and showAllOption is false
   useEffect(() => {
-    if (!value && query.data && query.data.length > 0) {
+    if (!showAllOption && !value && query.data && query.data.length > 0) {
       onChange(query.data[0].id);
     }
-  }, [value, query.data, onChange]);
+  }, [value, query.data, onChange, showAllOption]);
 
   const handleCreateBatch = () => {
     const name = newBatchName.trim();
@@ -76,6 +84,34 @@ export const BatchPicker: React.FC<BatchPickerProps> = ({ value, onChange, allow
       >
         {(batches) => (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: spacing.md }}>
+            {showAllOption ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ selected: !value }}
+                onPress={() => onChange('')}
+                style={{
+                  marginRight: spacing.sm,
+                  paddingVertical: spacing.sm,
+                  paddingHorizontal: spacing.md,
+                  borderRadius: radii.full,
+                  borderWidth: 1,
+                  borderColor: !value ? colors.primary : colors.border,
+                  backgroundColor: !value ? colors.primarySubtle : colors.surface,
+                }}
+              >
+                <Text
+                  style={{
+                    fontFamily: typography.fonts.ui,
+                    fontSize: 12,
+                    fontWeight: '700',
+                    color: !value ? colors.primary : colors.textSecondary,
+                  }}
+                >
+                  {allLabel}
+                </Text>
+              </Pressable>
+            ) : null}
+
             {batches.map((b) => {
               const active = b.id === value;
               return (

@@ -11,6 +11,7 @@ import { Icon, IconName } from '../../components/common/Icon';
 import { IconChip, Tone } from '../../components/common/Paper';
 import { Body, Caption, Subtitle } from '../../components/common/Typography';
 import {
+  useBatches,
   useApplyLeave,
   useCreateAnnouncement,
   useCreateAssignment,
@@ -45,6 +46,8 @@ type View_ =
   | 'timetable'
   | 'studentLeave'
   | 'leave'
+  | 'queries'
+  | 'reports'
   | 'salary'
   | 'profile';
 
@@ -104,6 +107,7 @@ const Grading: React.FC<{ assignmentId: string }> = ({ assignmentId }) => {
 const Homework: React.FC = () => {
   const q = useTeacherAssignments();
   const create = useCreateAssignment();
+  const batches = useBatches();
   const [open, setOpen] = useState<string | null>(null);
   const [batchId, setBatchId] = useState<string>();
   const [title, setTitle] = useState('');
@@ -112,6 +116,12 @@ const Homework: React.FC = () => {
   const [due, setDue] = useState(todayIso());
   const [attachment, setAttachment] = useState('');
   const attachmentOk = attachment.trim() === '' || /^https:\/\/\S+$/i.test(attachment.trim());
+  useEffect(() => {
+    if (batchId) {
+      const b = batches.data?.find((x) => x.id === batchId);
+      if (b?.subject && !subject) setSubject(b.subject);
+    }
+  }, [batchId, batches.data]);
   const ready = attachmentOk && !!batchId && title.trim() && subject.trim() && instructions.trim() && /^\d{4}-\d{2}-\d{2}$/.test(due);
   return (
     <>
@@ -214,9 +224,16 @@ const LessonPlans: React.FC = () => {
   const [subject, setSubject] = useState('');
   const [weekNumber, setWeekNumber] = useState('1');
   const [content, setContent] = useState('');
+  const batches = useBatches();
   const q = useLessonPlans();
   const { create, toggle } = useLessonPlanMutations();
 
+  useEffect(() => {
+    if (batchId) {
+      const b = batches.data?.find((x) => x.id === batchId);
+      if (b?.subject && !subject) setSubject(b.subject);
+    }
+  }, [batchId, batches.data]);
   const valid = !!batchId && title.trim() && topic.trim() && subject.trim() && Number(weekNumber) > 0;
 
   const submit = () => {
@@ -339,6 +356,7 @@ const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 const Timetable: React.FC = () => {
   const { spacing } = useTheme();
   const [batchId, setBatchId] = useState<string>();
+  const batches = useBatches();
   const q = useTeacherTimetable(batchId);
   const { create, update, remove } = useTimetableMutations();
   const [editId, setEditId] = useState<string | null>(null);
@@ -347,6 +365,13 @@ const Timetable: React.FC = () => {
   const [start, setStart] = useState('16:00');
   const [end, setEnd] = useState('17:00');
   const [room, setRoom] = useState('');
+  useEffect(() => {
+    if (batchId) {
+      const b = batches.data?.find((x) => x.id === batchId);
+      if (b?.subject && !subject) setSubject(b.subject);
+      if (b?.room && !room) setRoom(b.room);
+    }
+  }, [batchId, batches.data]);
   const valid = !!batchId && !!subject.trim() && HHMM.test(start) && HHMM.test(end) && end > start;
   const reset = () => { setEditId(null); setSubject(''); setRoom(''); };
   const conflictText = (e: unknown) => {

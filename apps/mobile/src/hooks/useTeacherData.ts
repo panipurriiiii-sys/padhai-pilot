@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { teacherService } from '../services/api/teacherService';
 import type {
+  CreateBatchPayload,
   CreateTimetableSlotPayload,
   PromoteBatchPayload,
   UpdateBatchPayload,
@@ -149,6 +150,10 @@ export const useBatchMutations = () => {
     qc.invalidateQueries({ queryKey: ['teacher', 'roster'] });
   };
   return {
+    create: useMutation({
+      mutationFn: (data: CreateBatchPayload) => teacherService.createBatch(data),
+      onSuccess: refresh,
+    }),
     update: useMutation({
       mutationFn: (v: { batchId: string; data: UpdateBatchPayload }) => teacherService.updateBatch(v.batchId, v.data),
       onSuccess: refresh,

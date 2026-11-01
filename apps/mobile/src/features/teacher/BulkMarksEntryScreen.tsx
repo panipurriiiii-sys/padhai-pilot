@@ -8,7 +8,7 @@ import { Badge } from '../../components/common/Badge';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
 import { Caption, Subtitle } from '../../components/common/Typography';
-import { useAssessments, usePublishAssessment, useRoster, useSaveMarksDraft } from '../../hooks/useTeacherData';
+import { useAssessments, useBatches, usePublishAssessment, useRoster, useSaveMarksDraft } from '../../hooks/useTeacherData';
 import { errorMessage, formatDate, todayIso } from '../../lib/format';
 
 interface Entry {
@@ -27,6 +27,14 @@ export const BulkMarksEntryScreen: React.FC = () => {
   const assessments = useAssessments();
   const saveDraft = useSaveMarksDraft();
   const publish = usePublishAssessment();
+  const batches = useBatches();
+
+  useEffect(() => {
+    if (batchId) {
+      const b = batches.data?.find((x) => x.id === batchId);
+      if (b?.subject && !subject) setSubject(b.subject);
+    }
+  }, [batchId, batches.data]);
 
   useEffect(() => {
     if (roster.data) {

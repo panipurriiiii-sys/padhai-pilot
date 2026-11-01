@@ -9,7 +9,7 @@ import { Badge } from '../../components/common/Badge';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
 import { Body, Caption, Subtitle } from '../../components/common/Typography';
-import { useCreateDiary, useCreateMaterial, useDiaries, useTeacherMaterials } from '../../hooks/useTeacherData';
+import { useBatches, useCreateDiary, useCreateMaterial, useDiaries, useTeacherMaterials } from '../../hooks/useTeacherData';
 import type { StudyMaterialCategory } from '../../services/api/teacherService';
 import { errorMessage, formatDate, todayIso } from '../../lib/format';
 import { openUrl } from '../../lib/links';
@@ -23,6 +23,14 @@ const DiaryForm: React.FC = () => {
   const [concepts, setConcepts] = useState('');
   const [homework, setHomework] = useState('');
   const create = useCreateDiary();
+  const batches = useBatches();
+
+  React.useEffect(() => {
+    if (batchId) {
+      const b = batches.data?.find((x) => x.id === batchId);
+      if (b?.subject && !subject) setSubject(b.subject);
+    }
+  }, [batchId, batches.data]);
 
   const submit = (publish: boolean) =>
     create.mutate(
@@ -113,6 +121,14 @@ const MaterialForm: React.FC = () => {
   const [link, setLink] = useState('');
   const [category, setCategory] = useState<StudyMaterialCategory>('CHAPTER_NOTES');
   const create = useCreateMaterial();
+  const batches = useBatches();
+
+  React.useEffect(() => {
+    if (batchId) {
+      const b = batches.data?.find((x) => x.id === batchId);
+      if (b?.subject && !subject) setSubject(b.subject);
+    }
+  }, [batchId, batches.data]);
   const linkOk = link.trim() === '' || /^https:\/\//i.test(link.trim());
   const ready = !!batchId && title.trim() && subject.trim() && link.trim() && linkOk;
 
