@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Alert, View, StyleSheet } from 'react-native';
-import { Screen } from '../../components/common/Screen';
+import { Screen, SectionTitle } from '../../components/common/Screen';
 import { QueryBoundary } from '../../components/common/QueryBoundary';
 import { Card } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
@@ -10,6 +10,7 @@ import { Body, Caption, Subtitle } from '../../components/common/Typography';
 import { FeesScreen } from './FeesScreen';
 import { StudentLeaveApply } from '../leave/StudentLeavePanels';
 import {
+  useAnnouncementsData,
   useAskQuery,
   useDocumentsData,
   useJoinBatch,
@@ -27,17 +28,28 @@ import { useTheme } from '../../theme/ThemeContext';
 import { errorMessage, formatDate, formatDateTime } from '../../lib/format';
 import { openUrl } from '../../lib/links';
 
-type View_ = 'menu' | 'timetable' | 'planner' | 'doubts' | 'documents' | 'notifications' | 'fees' | 'leave' | 'profile';
+type View_ =
+  | 'menu'
+  | 'timetable'
+  | 'announcements'
+  | 'planner'
+  | 'doubts'
+  | 'documents'
+  | 'notifications'
+  | 'fees'
+  | 'leave'
+  | 'profile';
 
 const MENU: Array<{ key: Exclude<View_, 'menu'>; label: string; hint: string }> = [
-  { key: 'timetable', label: 'Timetable', hint: 'Weekly class schedule' },
-  { key: 'notifications', label: 'Notifications', hint: 'Results, fees and announcements' },
-  { key: 'fees', label: 'Fees & receipts', hint: 'Dues and payment status' },
-  { key: 'leave', label: 'Leave', hint: 'Apply and track decisions' },
-  { key: 'planner', label: 'Study planner', hint: 'Your personal task list' },
-  { key: 'doubts', label: 'Ask a teacher', hint: 'Doubts and answers' },
-  { key: 'documents', label: 'Documents', hint: 'Report cards and receipts' },
-  { key: 'profile', label: 'Profile & batch', hint: 'Account, join a batch, sign out' },
+  { key: 'timetable', label: 'Weekly Timetable', hint: 'Weekly lecture schedule & room slots' },
+  { key: 'fees', label: 'Fees & Receipts', hint: 'Dues breakdown and paid receipt PDFs' },
+  { key: 'leave', label: 'Apply for Leave', hint: 'Request leave from faculty & track approval' },
+  { key: 'announcements', label: 'Noticeboard', hint: 'Institute & batch notices' },
+  { key: 'planner', label: 'Study Planner', hint: 'Your personal daily task list' },
+  { key: 'doubts', label: 'Ask a Teacher (Doubts)', hint: 'Ask questions & read faculty replies' },
+  { key: 'documents', label: 'Documents & Certificates', hint: 'ID cards, report cards & receipts' },
+  { key: 'notifications', label: 'Notifications', hint: 'Results, dues and attendance alerts' },
+  { key: 'profile', label: 'Profile & Batch Code', hint: 'Account, join a batch, sign out' },
 ];
 
 const Timetable: React.FC = () => {
@@ -52,10 +64,31 @@ const Timetable: React.FC = () => {
             {d.slots.map((s) => (
               <Card key={`${d.day}-${s.time}-${s.subject}`} style={{ marginTop: spacing.xs }}>
                 <Body>{s.subject}</Body>
-                <Caption>{`${s.time} · ${s.room} · ${s.faculty}`}</Caption>
+                <Caption>{`${s.time} · ${s.room ? `Room ${s.room}` : 'Classroom'} · ${s.faculty}`}</Caption>
               </Card>
             ))}
           </View>
+        ))
+      }
+    </QueryBoundary>
+  );
+};
+
+const Announcements: React.FC = () => {
+  const { spacing } = useTheme();
+  const q = useAnnouncementsData();
+  return (
+    <QueryBoundary query={q} isEmpty={(d) => d.length === 0} emptyTitle="No announcements" emptyDescription="School & batch notices will appear here.">
+      {(items) =>
+        items.map((a) => (
+          <Card key={a.id} style={{ marginBottom: spacing.sm }}>
+            <View style={styles.row}>
+              <Subtitle style={{ flex: 1 }}>{a.title}</Subtitle>
+              {a.priority === 'URGENT' ? <Badge label="Urgent" variant="error" /> : null}
+            </View>
+            <Body numberOfLines={4} style={{ marginTop: spacing.xs }}>{a.content}</Body>
+            <Caption style={{ marginTop: spacing.xs }}>{`${a.authorName} · ${formatDate(a.createdAt)}`}</Caption>
+          </Card>
         ))
       }
     </QueryBoundary>
@@ -70,7 +103,7 @@ const Planner: React.FC = () => {
   return (
     <>
       <Card style={{ marginBottom: spacing.md }}>
-        <Input label="New task" value={title} onChangeText={setTitle} />
+        <Input label="New task" value={title} onChangeText={setTitle} placeholder="e.g. Revise Chapter 4 formulas" />
         <Button
           title="Add task"
           loading={create.isPending}
@@ -114,8 +147,8 @@ const Doubts: React.FC = () => {
   return (
     <>
       <Card style={{ marginBottom: spacing.md }}>
-        <Input label="Subject" value={subject} onChangeText={setSubject} />
-        <Input label="Your question" value={question} onChangeText={setQuestion} multiline />
+        <Input label="Subject" value={subject} onChangeText={setSubject} placeholder="e.g. Physics" />
+        <Input label="Your question" value={question} onChangeText={setQuestion} multiline placeholder="Type your doubt or academic query..." />
         <Button
           title="Send to faculty"
           loading={ask.isPending}
@@ -123,7 +156,7 @@ const Doubts: React.FC = () => {
           onPress={() =>
             ask.mutate(
               { subject: subject.trim(), questionText: question.trim() },
-              { onSuccess: () => { setQuestion(''); }, onError: (e) => Alert.alert('Could not send', errorMessage(e)) },
+              { onSuccess: () => { setQuestion(''); Alert.alert('Sent', 'Your doubt has been submitted to faculty.'); }, onError: (e) => Alert.alert('Could not send', errorMessage(e)) },
             )
           }
         />
@@ -137,7 +170,12 @@ const Doubts: React.FC = () => {
                 <Badge label={d.status} variant={d.status === 'ANSWERED' ? 'success' : 'warning'} />
               </View>
               <Body style={{ marginTop: spacing.xs }}>{d.questionText}</Body>
-              {d.facultyReply ? <Caption>{`${d.facultyName ?? 'Faculty'}: ${d.facultyReply}`}</Caption> : null}
+              {d.facultyReply ? (
+                <View style={{ marginTop: 8, padding: 8, backgroundColor: 'rgba(22, 119, 255, 0.06)', borderRadius: 8 }}>
+                  <Caption style={{ fontWeight: '700', color: '#1677FF' }}>{`${d.facultyName ?? 'Faculty'}:`}</Caption>
+                  <Body style={{ marginTop: 2 }}>{d.facultyReply}</Body>
+                </View>
+              ) : null}
             </Card>
           ))
         }
@@ -156,7 +194,7 @@ const Documents: React.FC = () => {
           <Card key={d.id} style={{ marginBottom: spacing.sm }}>
             <Subtitle>{d.title}</Subtitle>
             <Caption>{`${d.category.replace(/_/g, ' ')} · ${formatDate(d.issueDate)}`}</Caption>
-            <Button title="Open" variant="secondary" size="sm" style={{ marginTop: spacing.sm }} onPress={() => openUrl(d.downloadUrl)} />
+            <Button title="Open Document ↗" variant="secondary" size="sm" style={{ marginTop: spacing.sm }} onPress={() => openUrl(d.downloadUrl)} />
           </Card>
         ))
       }
@@ -178,7 +216,7 @@ const Notifications: React.FC = () => {
               {!n.isRead ? <Badge label="NEW" variant="primary" /> : null}
             </View>
             <Body>{n.message}</Body>
-            <Caption>{formatDateTime(n.createdAt)}</Caption>
+            <Caption style={{ marginTop: 4 }}>{formatDateTime(n.createdAt)}</Caption>
           </Card>
         ))
       }
@@ -200,16 +238,16 @@ const Profile: React.FC = () => {
             <Subtitle>{p.fullName}</Subtitle>
             <Caption>{p.email}</Caption>
             <Body style={{ marginTop: spacing.xs }}>{`${p.instituteName} · ${p.batchName}`}</Body>
-            <Caption>{`Roll ${p.rollNumber} · ${p.academicYear}`}</Caption>
+            <Caption>{`Roll Number: ${p.rollNumber} · Academic Year: ${p.academicYear}`}</Caption>
           </Card>
         )}
       </QueryBoundary>
       <Card style={{ marginBottom: spacing.md }}>
-        <Subtitle>Join a batch</Subtitle>
-        <Caption>Enter the invitation code from your teacher.</Caption>
+        <Subtitle>Join a Batch</Subtitle>
+        <Caption>Enter the invitation code provided by your teacher.</Caption>
         <Input value={code} onChangeText={setCode} autoCapitalize="characters" placeholder="e.g. APEX-1234" />
         <Button
-          title="Join"
+          title="Join Batch"
           loading={join.isPending}
           disabled={!code.trim()}
           onPress={() =>
@@ -220,7 +258,7 @@ const Profile: React.FC = () => {
           }
         />
       </Card>
-      <Button title="Sign out" variant="outline" onPress={logout} />
+      <Button title="Sign Out" variant="outline" onPress={logout} />
     </>
   );
 };
@@ -235,7 +273,7 @@ export const StudentMoreScreen: React.FC = () => {
     return (
       <>
         <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md }}>
-          <Button title="‹ Back" variant="ghost" size="sm" onPress={() => setView('menu')} />
+          <Button title="‹ Back to Menu" variant="ghost" size="sm" onPress={() => setView('menu')} />
         </View>
         <FeesScreen />
       </>
@@ -243,18 +281,30 @@ export const StudentMoreScreen: React.FC = () => {
   }
 
   return (
-    <Screen eyebrow="MORE" title={current?.label ?? 'More'} subtitle={current?.hint}>
+    <Screen eyebrow="MORE" title={current?.label ?? 'More Options'} subtitle={current?.hint ?? 'Student portal utilities'}>
       {view === 'menu' ? (
-        MENU.map((m) => (
-          <Card key={m.key} style={{ marginBottom: spacing.sm }} onPress={() => setView(m.key)}>
-            <Subtitle>{m.label}</Subtitle>
-            <Caption>{m.hint}</Caption>
+        <>
+          {/* Quick link to Fees */}
+          <Card style={{ marginBottom: spacing.sm, borderWidth: 1.5, borderColor: '#1677FF' }} onPress={() => setView('fees')}>
+            <View style={styles.row}>
+              <Subtitle style={{ color: '#1677FF' }}>Fees & Receipts Ledger →</Subtitle>
+              <Badge label="Finance" variant="info" />
+            </View>
+            <Caption>View term dues, fee balances and download payment receipt PDFs</Caption>
           </Card>
-        ))
+
+          {MENU.map((m) => (
+            <Card key={m.key} style={{ marginBottom: spacing.sm }} onPress={() => setView(m.key)}>
+              <Subtitle>{m.label}</Subtitle>
+              <Caption>{m.hint}</Caption>
+            </Card>
+          ))}
+        </>
       ) : (
         <>
-          <Button title="‹ Back" variant="ghost" size="sm" onPress={() => setView('menu')} style={{ alignSelf: 'flex-start', marginBottom: spacing.sm }} />
+          <Button title="‹ Back to Menu" variant="ghost" size="sm" onPress={() => setView('menu')} style={{ alignSelf: 'flex-start', marginBottom: spacing.sm }} />
           {view === 'timetable' ? <Timetable /> : null}
+          {view === 'announcements' ? <Announcements /> : null}
           {view === 'leave' ? <StudentLeaveApply /> : null}
           {view === 'planner' ? <Planner /> : null}
           {view === 'doubts' ? <Doubts /> : null}

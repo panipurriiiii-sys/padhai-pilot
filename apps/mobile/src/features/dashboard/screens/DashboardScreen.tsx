@@ -4,6 +4,7 @@ import { Screen, SectionTitle } from '../../../components/common/Screen';
 import { QueryBoundary } from '../../../components/common/QueryBoundary';
 import { Card } from '../../../components/common/Card';
 import { Badge } from '../../../components/common/Badge';
+import { Button } from '../../../components/common/Button';
 import { Body, Caption, StatValue, Subtitle } from '../../../components/common/Typography';
 import { useDashboardData } from '../../../hooks/useStudentData';
 import { useNavigationStore } from '../../../store/useNavigationStore';
@@ -19,12 +20,19 @@ export const DashboardScreen: React.FC = () => {
 
   return (
     <Screen
-      eyebrow={session?.user?.instituteName?.toUpperCase()}
+      eyebrow={session?.user?.instituteName?.toUpperCase() || 'STUDENT PORTAL'}
       title={session?.user?.fullName || session?.user?.name || 'Student'}
       subtitle="Your day at a glance"
       refreshing={query.isRefetching}
       onRefresh={() => query.refetch()}
     >
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+        <Button title="Homework & Tests" icon="file-check-2" variant="primary" size="sm" onPress={() => setTab('student_academics')} />
+        <Button title="Learning Vault" icon="notebook-pen" variant="secondary" size="sm" onPress={() => setTab('student_diary')} />
+        <Button title="Results & Attendance" icon="award" variant="outline" size="sm" onPress={() => setTab('student_results')} />
+        <Button title="Fees & Dues" icon="receipt" variant="outline" size="sm" onPress={() => setTab('student_fees')} />
+      </View>
+
       <QueryBoundary query={query}>
         {(d) => (
           <>
@@ -103,10 +111,12 @@ export const DashboardScreen: React.FC = () => {
                 <Card key={a.id} style={{ marginBottom: spacing.sm }}>
                   <View style={styles.row}>
                     <Subtitle style={{ flex: 1 }}>{a.title}</Subtitle>
-                    {a.priority === 'URGENT' ? <Badge label="URGENT" variant="error" /> : null}
+                    {a.priority === 'URGENT' ? <Badge label="Urgent" variant="error" /> : null}
                   </View>
                   <Body numberOfLines={3}>{a.content}</Body>
-                  <Caption>{formatDate(a.date)}</Caption>
+                  <Caption style={{ marginTop: spacing.xs }}>
+                    {`${a.authorName} · ${formatDate(a.createdAt)}`}
+                  </Caption>
                 </Card>
               ))
             )}
@@ -118,7 +128,7 @@ export const DashboardScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 20 },
   kpi: { flexGrow: 1, flexBasis: '45%' },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
 });
