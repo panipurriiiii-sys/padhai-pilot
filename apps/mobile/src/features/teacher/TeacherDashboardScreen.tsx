@@ -4,8 +4,7 @@ import { Screen } from '../../components/common/Screen';
 import { QueryBoundary } from '../../components/common/QueryBoundary';
 import { Card } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
-import { Button } from '../../components/common/Button';
-import { EmptyPaper, KpiCard, SectionHeader, TimeBlock } from '../../components/common/Paper';
+import { EmptyPaper, KpiCard, QuickActionsBar, SectionHeader, TimeBlock } from '../../components/common/Paper';
 import { useTeacherDashboard } from '../../hooks/useTeacherData';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useNavigationStore } from '../../store/useNavigationStore';
@@ -22,31 +21,41 @@ export const TeacherDashboardScreen: React.FC = () => {
   return (
     <Screen
       eyebrow="Faculty Operations"
-      title="Academic Overview & Schedule"
-      subtitle={`${session?.user?.instituteName ?? ''}${session?.user?.instituteName ? ' · ' : ''}${today}`}
+      title="Academic Overview"
+      subtitle={`${session?.user?.instituteName ?? 'Academic Center'}${session?.user?.instituteName ? ' · ' : ''}${today}`}
       refreshing={query.isRefetching}
       onRefresh={() => query.refetch()}
     >
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 }}>
-        <Button title="Daily Diary" icon="book-open" onPress={() => setTab('teacher_learning')} />
-        <Button title="Mark Attendance" icon="calendar-check" variant="secondary" onPress={() => setTab('teacher_attendance')} />
-        <Button title="New Assignment" icon="plus" variant="subtle" onPress={() => setTab('teacher_more')} />
-      </View>
+      <QuickActionsBar
+        items={[
+          { label: 'Attendance', icon: 'calendar-check', tone: 'emerald', onPress: () => setTab('teacher_attendance') },
+          { label: 'Daily Diary', icon: 'book-open', tone: 'blue', onPress: () => setTab('teacher_learning') },
+          { label: 'Enter Marks', icon: 'file-spreadsheet', tone: 'amber', onPress: () => setTab('teacher_marks') },
+          { label: 'Batches', icon: 'users', tone: 'teal', onPress: () => setTab('teacher_classes') },
+        ]}
+      />
 
       <QueryBoundary query={query}>
         {(d) => (
           <>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
               <KpiCard label="Today's Classes" value={String(d.todayClassesCount)} caption="Scheduled for today" icon="clock" tone="blue" />
               <KpiCard
                 label="Pending Attendance"
                 value={String(d.pendingAttendanceCount)}
-                caption={d.pendingAttendanceCount > 0 ? 'Sessions require submission' : 'All recorded'}
+                caption={d.pendingAttendanceCount > 0 ? 'Sessions pending' : 'All recorded'}
                 icon="circle-alert"
                 tone={d.pendingAttendanceCount > 0 ? 'amber' : 'emerald'}
                 onPress={() => setTab('teacher_attendance')}
               />
-              <KpiCard label="Submissions to Grade" value={String(d.pendingReviewsCount)} caption="Awaiting teacher review" icon="file-check" tone="teal" onPress={() => setTab('teacher_more')} />
+              <KpiCard
+                label="To Grade"
+                value={String(d.pendingReviewsCount)}
+                caption="Awaiting review"
+                icon="file-check"
+                tone="teal"
+                onPress={() => setTab('teacher_more')}
+              />
               <KpiCard
                 label="Total Students"
                 value={String(d.totalStudentsCount)}
@@ -59,35 +68,36 @@ export const TeacherDashboardScreen: React.FC = () => {
 
             <SectionHeader title="Today's Class Schedule" icon="clock" action="Full Timetable" onAction={() => setTab('teacher_more')} />
             {d.todaySchedule.length === 0 ? (
-              <EmptyPaper message="No lectures scheduled for today. Check your full timetable for upcoming slots." />
+              <EmptyPaper message="No lectures scheduled for today. Check your timetable for upcoming slots." />
             ) : (
               d.todaySchedule.map((slot) => (
-                <Card key={slot.id} onPress={() => setTab('teacher_attendance')} style={{ marginBottom: 12, padding: 14 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                <Card key={slot.id} onPress={() => setTab('teacher_attendance')} style={{ marginBottom: 10, padding: 14 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                     <TimeBlock start={slot.startTime} end={slot.endTime} />
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontFamily: typography.fonts.ui, fontSize: 14, fontWeight: '700', color: colors.textPrimary }}>{slot.subject}</Text>
-                      <Text style={{ fontFamily: typography.fonts.ui, fontSize: 12, color: colors.textMuted }}>
-                        {`${slot.batchName}${slot.room ? ` · ${slot.room}` : ''}`}
+                      <Text style={{ fontFamily: typography.fonts.ui, fontSize: 12, color: colors.textMuted, marginTop: 2 }}>
+                        {`${slot.batchName}${slot.room ? ` · Room ${slot.room}` : ''}`}
                       </Text>
                     </View>
+                    <Badge label="Mark" variant="info" />
                   </View>
                 </Card>
               ))
             )}
 
-            <SectionHeader title="Noticeboard" icon="megaphone" />
+            <SectionHeader title="Noticeboard" icon="megaphone" action="Post Notice" onAction={() => setTab('teacher_more')} />
             {d.recentAnnouncements.length === 0 ? (
               <EmptyPaper message="No announcements yet." />
             ) : (
               d.recentAnnouncements.map((a) => (
-                <Card key={a.id} style={{ marginBottom: 12 }}>
+                <Card key={a.id} style={{ marginBottom: 10, padding: 14 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                     <Text style={{ flex: 1, fontFamily: typography.fonts.ui, fontSize: 14, fontWeight: '700', color: colors.textPrimary }}>{a.title}</Text>
                     {a.priority === 'URGENT' ? <Badge label="Urgent" variant="error" /> : null}
                   </View>
-                  <Text numberOfLines={3} style={{ fontFamily: typography.fonts.ui, fontSize: 12, color: colors.textSecondary }}>{a.content}</Text>
-                  <Text style={{ fontFamily: typography.fonts.data, fontSize: 10.5, color: colors.textMuted, marginTop: 6 }}>
+                  <Text numberOfLines={3} style={{ fontFamily: typography.fonts.ui, fontSize: 12, lineHeight: 18, color: colors.textSecondary }}>{a.content}</Text>
+                  <Text style={{ fontFamily: typography.fonts.data, fontSize: 10.5, color: colors.textMuted, marginTop: 8 }}>
                     {`${a.authorName} · ${formatDate(a.createdAt)}`}
                   </Text>
                 </Card>

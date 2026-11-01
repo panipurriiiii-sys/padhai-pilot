@@ -6,7 +6,6 @@ import { useAuthStore } from '../store/useAuthStore';
 import { useTheme } from '../theme/ThemeContext';
 import { isStaffRole } from '../lib/format';
 import { Icon, IconName } from '../components/common/Icon';
-import { paperShadow } from '../theme/shadows';
 
 interface TabItem {
   key: MainTabKey;
@@ -19,10 +18,10 @@ interface TabItem {
 // Same destinations and icons as the Teacher Portal sidebar, condensed to five thumb-reachable tabs.
 const TEACHER_TABS: TabItem[] = [
   { key: 'teacher_dashboard', label: 'Overview', icon: 'layout-dashboard' },
-  { key: 'teacher_learning', label: 'Diary', icon: 'notebook-pen', also: ['teacher_diary', 'teacher_materials'] },
+  { key: 'teacher_classes', label: 'Batches', icon: 'users' },
   { key: 'teacher_attendance', label: 'Attendance', icon: 'calendar-check' },
-  { key: 'teacher_marks', label: 'Marks', icon: 'file-spreadsheet' },
-  { key: 'teacher_more', label: 'More', icon: 'layers', also: ['teacher_profile', 'teacher_classes'] },
+  { key: 'teacher_learning', label: 'Diary', icon: 'notebook-pen', also: ['teacher_diary', 'teacher_materials'] },
+  { key: 'teacher_more', label: 'More', icon: 'layers', also: ['teacher_profile', 'teacher_marks'] },
 ];
 
 const STUDENT_TABS: TabItem[] = [
@@ -34,7 +33,7 @@ const STUDENT_TABS: TabItem[] = [
 ];
 
 export const BottomTabBar: React.FC = () => {
-  const { colors, typography, hitSlop, isDark } = useTheme();
+  const { colors, typography, hitSlop } = useTheme();
   const { currentTab, setTab } = useNavigationStore();
   const role = useAuthStore((s) => s.session?.user?.role);
   const insets = useSafeAreaInsets();
@@ -44,7 +43,7 @@ export const BottomTabBar: React.FC = () => {
     <View
       style={{
         flexDirection: 'row',
-        paddingTop: 8,
+        paddingTop: 6,
         paddingHorizontal: 8,
         paddingBottom: Math.max(insets.bottom, 10),
         backgroundColor: colors.tabBarBackground,
@@ -62,35 +61,34 @@ export const BottomTabBar: React.FC = () => {
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
             accessibilityLabel={`${tab.label} tab`}
-            style={({ pressed }) => ({ flex: 1, alignItems: 'center', opacity: pressed ? 0.7 : 1 })}
+            style={({ pressed }) => ({
+              flex: 1,
+              alignItems: 'center',
+              opacity: pressed ? 0.7 : 1,
+            })}
           >
             <View
-              style={[
-                {
-                  minWidth: 62,
-                  alignItems: 'center',
-                  paddingVertical: 6,
-                  paddingHorizontal: 8,
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: 'transparent',
-                },
-                active && { backgroundColor: colors.surface, borderColor: colors.border, ...paperShadow(isDark) },
-              ]}
+              style={{
+                alignItems: 'center',
+                paddingVertical: 4,
+                paddingHorizontal: 10,
+                borderRadius: 16,
+                backgroundColor: active ? colors.primarySubtle : 'transparent',
+              }}
             >
-              <Icon name={tab.icon} size={18} color={active ? colors.primary : colors.textFaint} />
-              <Text
-                style={{
-                  marginTop: 3,
-                  fontFamily: typography.fonts.ui,
-                  fontSize: 10,
-                  fontWeight: active ? '700' : '500',
-                  color: active ? colors.textPrimary : colors.textMuted,
-                }}
-              >
-                {tab.label}
-              </Text>
+              <Icon name={tab.icon} size={19} color={active ? colors.primary : colors.textFaint} />
             </View>
+            <Text
+              style={{
+                marginTop: 2,
+                fontFamily: typography.fonts.ui,
+                fontSize: 10,
+                fontWeight: active ? '700' : '500',
+                color: active ? colors.primary : colors.textMuted,
+              }}
+            >
+              {tab.label}
+            </Text>
           </Pressable>
         );
       })}

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import type { BatchSummary, StudentRosterItem } from '@padhai-pilot/shared';
 import { BatchActions } from './BatchActions';
+import { teacherApi } from '../lib/api';
 
 interface BatchesViewProps {
   batches: BatchSummary[];
@@ -184,13 +185,14 @@ export function BatchesView({
                   <th className="py-3 px-4">Student Name</th>
                   <th className="py-3 px-4">Email</th>
                   <th className="py-3 px-4 text-center">Attendance %</th>
+                  <th className="py-3 px-4 text-center">Report Card</th>
                   <th className="py-3 px-4 text-right">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border-paper)] font-['Raleway']">
                 {filteredStudents.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-8 text-center text-[var(--ink-muted)]">
+                    <td colSpan={6} className="py-8 text-center text-[var(--ink-muted)]">
                       {searchTerm
                         ? `No student records found matching "${searchTerm}".`
                         : 'No students enrolled in this batch yet. Generate an invitation code to invite students.'}

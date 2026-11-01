@@ -145,6 +145,11 @@ function StudentPortal() {
   const [studyTasks, setStudyTasks] = useState<StudyTask[]>([]);
   const [documents, setDocuments] = useState<OfficialDocument[]>([]);
   const [profileData, setProfileData] = useState<StudentProfileData | null>(null);
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordUpdating, setPasswordUpdating] = useState(false);
+  const [passwordNotice, setPasswordNotice] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
   const [analytics, setAnalytics] = useState<StudentAnalyticsSummary | null>(null);
   const [sessionNotice, setSessionNotice] = useState<string | null>(null);
 
@@ -267,6 +272,12 @@ function StudentPortal() {
   const [isSubmittingSupport, setIsSubmittingSupport] = useState(false);
 
   // Auth States
+  const [showGetStarted, setShowGetStarted] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return !localStorage.getItem('padhai_student_onboarded');
+    }
+    return false;
+  });
   const [authMode, setAuthMode] = useState<'SIGN_IN' | 'REGISTER'>('SIGN_IN');
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -432,6 +443,35 @@ function StudentPortal() {
   };
 
   // Invitation Verification & Join
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordNotice(null);
+    if (!oldPassword || !newPassword) {
+      setPasswordNotice({ type: 'error', msg: 'Please provide both current and new password.' });
+      return;
+    }
+    if (newPassword.length < 8) {
+      setPasswordNotice({ type: 'error', msg: 'New password must be at least 8 characters long.' });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordNotice({ type: 'error', msg: 'New passwords do not match.' });
+      return;
+    }
+    setPasswordUpdating(true);
+    try {
+      await studentApi.changePassword(oldPassword, newPassword);
+      setPasswordNotice({ type: 'success', msg: 'Password updated successfully.' });
+      setOldPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err: any) {
+      setPasswordNotice({ type: 'error', msg: err?.message || 'Failed to update password.' });
+    } finally {
+      setPasswordUpdating(false);
+    }
+  };
+
   const handleVerifyInvite = async () => {
     if (!inviteCodeInput.trim()) return;
     setIsValidatingInvite(true);
@@ -662,7 +702,7 @@ function StudentPortal() {
   // --------------------------------------------------------------------------
   if (!student) {
     return (
-      <main className="min-h-screen bg-[var(--bg-desk)] text-[var(--ink-primary)] flex items-center justify-center p-4 sm:p-6 font-sans">
+      <main className="min-h-screen bg-[var(--bg-desk)] text-[var(--ink-primary)] flex items-center justify-center p-4 sm:p-6 font-['Raleway']">
         <div className="w-full max-w-md bg-[var(--bg-paper)] border border-[var(--border-paper)] rounded-2xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
           {/* Subtle Glow Header */}
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[var(--brand-electric)] via-[var(--brand-deep)] to-[#047857]" />
@@ -672,10 +712,10 @@ function StudentPortal() {
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[var(--bg-paper-warm)] border border-[var(--border-paper)] text-[var(--brand-electric)] mb-3 shadow-inner">
               <GraduationCap className="w-6 h-6" />
             </div>
-            <h1 className="font-display text-2xl font-bold tracking-tight text-[var(--ink-primary)]">
+            <h1 className="font-['Playfair_Display'] text-2xl font-bold tracking-tight text-[var(--ink-primary)]">
               PadhaiPilot
             </h1>
-            <p className="font-sans text-xs text-[var(--ink-muted)] mt-1">
+            <p className="font-['Raleway'] text-xs text-[var(--ink-muted)] mt-1">
               Student Academic Portal & Verified Results Vault
             </p>
           </div>
@@ -711,17 +751,17 @@ function StudentPortal() {
           </div>
 
           {sessionNotice && !authError && (
-            <div role="status" className="mb-4 p-2.5 rounded-lg bg-[rgba(245,158,11,0.12)] border border-[rgba(245,158,11,0.3)] text-[#B45309] text-xs">{sessionNotice}</div>
+            <div role="status" className="mb-4 p-2.5 rounded-lg bg-[var(--status-warning-bg)] border border-[var(--status-warning-border)] text-[var(--status-warning-text)] text-xs">{sessionNotice}</div>
           )}
           {authError && (
-            <div className="mb-4 p-3 rounded-xl bg-[rgba(244,63,94,0.12)] border border-[rgba(244,63,94,0.3)] text-xs text-[#BE123C] flex items-center gap-2">
+            <div className="mb-4 p-3 rounded-xl bg-[var(--status-danger-bg)] border border-[var(--status-danger-border)] text-xs text-[var(--status-danger)] flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0" />
               <span>{authError}</span>
             </div>
           )}
 
           {authSuccessMsg && (
-            <div className="mb-4 p-3 rounded-xl bg-[rgba(16,185,129,0.12)] border border-[rgba(16,185,129,0.3)] text-xs text-[#047857] flex items-center gap-2">
+            <div className="mb-4 p-3 rounded-xl bg-[var(--status-success-bg)] border border-[var(--status-success-border)] text-xs text-[var(--status-success)] flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 shrink-0" />
               <span>{authSuccessMsg}</span>
             </div>
@@ -853,7 +893,7 @@ function StudentPortal() {
               <button
                 type="submit"
                 disabled={loginLoading}
-                className="w-full py-2.5 rounded-xl bg-[#047857] hover:bg-emerald-600 text-xs font-semibold text-white transition flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 mt-2"
+                className="w-full py-2.5 rounded-xl bg-[var(--status-success)] hover:bg-emerald-600 text-xs font-semibold text-white transition flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 mt-2"
               >
                 {loginLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
                 <span>Create Student Account</span>
@@ -869,7 +909,7 @@ function StudentPortal() {
   // LOGGED-IN PORTAL INTERFACE
   // --------------------------------------------------------------------------
   return (
-    <div className="min-h-screen bg-[var(--bg-desk)] text-[var(--ink-primary)] flex flex-col font-sans">
+    <div className="min-h-screen bg-[var(--bg-desk)] text-[var(--ink-primary)] flex flex-col font-['Raleway']">
       {/* TOP HEADER */}
       <header className="sticky top-0 z-40 bg-[var(--bg-paper)]/90 backdrop-blur-md border-b border-[var(--border-paper)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
@@ -880,14 +920,14 @@ function StudentPortal() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-display font-bold text-base tracking-tight text-[var(--ink-primary)]">
+                <span className="font-['Playfair_Display'] font-bold text-base tracking-tight text-[var(--ink-primary)]">
                   {student.instituteName || 'Institute'}
                 </span>
                 <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[rgba(22,119,255,0.12)] text-[var(--brand-electric)] border border-[rgba(22,119,255,0.25)]">
                   Student Vault
                 </span>
               </div>
-              <div className="text-[11px] text-[var(--ink-muted)] font-sans">
+              <div className="text-[11px] text-[var(--ink-muted)] font-['Raleway']">
                 {profileData?.batchName || 'Enrolled Batch'}{profileData?.rollNumber ? ` • Roll: ${profileData.rollNumber}` : ''}
               </div>
             </div>
@@ -903,7 +943,7 @@ function StudentPortal() {
             >
               <Bell className="w-4 h-4" />
               {unreadNotificationCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#BE123C] text-white text-[9px] font-bold flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[var(--status-danger)] text-white text-[9px] font-bold flex items-center justify-center">
                   {unreadNotificationCount}
                 </span>
               )}
@@ -911,7 +951,7 @@ function StudentPortal() {
 
             {/* Student Pill & Sign Out */}
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--bg-paper-warm)] border border-[var(--border-paper)]">
-              <div className="w-6 h-6 rounded-full bg-[var(--brand-electric)]/20 text-[var(--brand-electric)] font-semibold text-xs flex items-center justify-center font-display">
+              <div className="w-6 h-6 rounded-full bg-[var(--brand-electric)]/20 text-[var(--brand-electric)] font-semibold text-xs flex items-center justify-center font-['Playfair_Display']">
                 {student.fullName.charAt(0)}
               </div>
               <span className="text-xs font-semibold text-[var(--ink-primary)] max-w-[120px] truncate">
@@ -921,7 +961,7 @@ function StudentPortal() {
 
             <button
               onClick={handleLogout}
-              className="p-2 rounded-xl bg-[var(--bg-paper-warm)] border border-[var(--border-paper)] hover:bg-[rgba(244,63,94,0.15)] text-[var(--ink-muted)] hover:text-[#BE123C] transition"
+              className="p-2 rounded-xl bg-[var(--bg-paper-warm)] border border-[var(--border-paper)] hover:bg-[var(--status-danger-bg)] text-[var(--ink-muted)] hover:text-[var(--status-danger)] transition"
               title="Sign Out"
             >
               <LogOut className="w-4 h-4" />
@@ -997,13 +1037,13 @@ function StudentPortal() {
                 {/* Greeting & Welcome Banner */}
                 <div className="p-6 rounded-2xl bg-gradient-to-r from-[var(--bg-paper)] via-[var(--bg-paper-warm)] to-[var(--bg-paper)] border border-[var(--border-paper)] flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl">
                   <div>
-                    <span className="text-[11px] font-semibold text-[var(--brand-electric)] tracking-wider uppercase font-data">
+                    <span className="text-[11px] font-semibold text-[var(--brand-electric)] tracking-wider uppercase font-['Inter']">
                       Verified Academic Dashboard
                     </span>
-                    <h2 className="font-display text-2xl sm:text-3xl font-bold text-[var(--ink-primary)] mt-1">
+                    <h2 className="font-['Playfair_Display'] text-2xl sm:text-3xl font-bold text-[var(--ink-primary)] mt-1">
                       Welcome back, {student.fullName}
                     </h2>
-                    <p className="font-sans text-xs text-[var(--ink-muted)] mt-1">
+                    <p className="font-['Raleway'] text-xs text-[var(--ink-muted)] mt-1">
                       Enrolled in {profileData?.batchName || student.instituteName || 'All Batches'}
                     </p>
                   </div>
@@ -1031,9 +1071,9 @@ function StudentPortal() {
                   <div className="p-4 rounded-xl bg-[var(--bg-paper)] border border-[var(--border-paper)]">
                     <div className="flex items-center justify-between text-[var(--ink-muted)] text-xs mb-1">
                       <span>Attendance Rate</span>
-                      <CheckCircle2 className="w-4 h-4 text-[#047857]" />
+                      <CheckCircle2 className="w-4 h-4 text-[var(--status-success)]" />
                     </div>
-                    <div className="font-data text-2xl font-bold text-[#047857]">
+                    <div className="font-['Inter'] text-2xl font-bold text-[var(--status-success)]">
                       {attendanceData.percentage}%
                     </div>
                     <div className="text-[10px] text-[var(--ink-muted)] mt-1">
@@ -1046,7 +1086,7 @@ function StudentPortal() {
                       <span>Average Score</span>
                       <TrendingUp className="w-4 h-4 text-[var(--brand-electric)]" />
                     </div>
-                    <div className="font-data text-2xl font-bold text-[var(--ink-primary)]">
+                    <div className="font-['Inter'] text-2xl font-bold text-[var(--ink-primary)]">
                       {avgScorePercentage !== null ? `${avgScorePercentage}%` : '—'}
                     </div>
                     <div className="text-[10px] text-[var(--ink-muted)] mt-1">
@@ -1057,9 +1097,9 @@ function StudentPortal() {
                   <div className="p-4 rounded-xl bg-[var(--bg-paper)] border border-[var(--border-paper)]">
                     <div className="flex items-center justify-between text-[var(--ink-muted)] text-xs mb-1">
                       <span>Pending Homework</span>
-                      <Clock className="w-4 h-4 text-[#B45309]" />
+                      <Clock className="w-4 h-4 text-[var(--status-warning-text)]" />
                     </div>
-                    <div className="font-data text-2xl font-bold text-[#B45309]">
+                    <div className="font-['Inter'] text-2xl font-bold text-[var(--status-warning-text)]">
                       {assignments.filter((a) => a.status === 'PENDING').length}
                     </div>
                     <div className="text-[10px] text-[var(--ink-muted)] mt-1">
@@ -1072,7 +1112,7 @@ function StudentPortal() {
                       <span>Fee Balance</span>
                       <CreditCard className="w-4 h-4 text-[var(--ink-secondary)]" />
                     </div>
-                    <div className="font-data text-2xl font-bold text-[var(--ink-primary)]">
+                    <div className="font-['Inter'] text-2xl font-bold text-[var(--ink-primary)]">
                       ₹{feesData.balanceDue.toLocaleString()}
                     </div>
                     <div className="text-[10px] text-[var(--ink-muted)] mt-1">
@@ -1088,7 +1128,7 @@ function StudentPortal() {
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
                         <Calendar className="w-4 h-4 text-[var(--brand-electric)]" />
-                        <h3 className="font-sans font-bold text-sm text-[var(--ink-primary)]">
+                        <h3 className="font-['Raleway'] font-bold text-sm text-[var(--ink-primary)]">
                           Today's Academic Schedule
                         </h3>
                       </div>
@@ -1121,7 +1161,7 @@ function StudentPortal() {
                               </div>
                             </div>
                           </div>
-                          <div className="font-data text-xs font-semibold text-[var(--brand-electric)] bg-[rgba(22,119,255,0.1)] px-2.5 py-1 rounded-lg">
+                          <div className="font-['Inter'] text-xs font-semibold text-[var(--brand-electric)] bg-[rgba(22,119,255,0.1)] px-2.5 py-1 rounded-lg">
                             {slot.time}
                           </div>
                         </div>
@@ -1133,8 +1173,8 @@ function StudentPortal() {
                   <div className="p-5 rounded-2xl bg-[var(--bg-paper)] border border-[var(--border-paper)] flex flex-col justify-between">
                     <div>
                       <div className="flex items-center gap-2 mb-3">
-                        <Sparkles className="w-4 h-4 text-[#B45309]" />
-                        <h3 className="font-sans font-bold text-sm text-[var(--ink-primary)]">
+                        <Sparkles className="w-4 h-4 text-[var(--status-warning-text)]" />
+                        <h3 className="font-['Raleway'] font-bold text-sm text-[var(--ink-primary)]">
                           Faculty Notices
                         </h3>
                       </div>
@@ -1149,13 +1189,13 @@ function StudentPortal() {
                               <span
                                 className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
                                   ann.priority === 'URGENT'
-                                    ? 'bg-[rgba(244,63,94,0.15)] text-[#BE123C]'
+                                    ? 'bg-[var(--status-danger-bg)] text-[var(--status-danger)]'
                                     : 'bg-[rgba(22,119,255,0.15)] text-[var(--brand-electric)]'
                                 }`}
                               >
                                 {ann.priority}
                               </span>
-                              <span className="font-data text-[10px] text-[var(--ink-muted)]">
+                              <span className="font-['Inter'] text-[10px] text-[var(--ink-muted)]">
                                 {ann.date}
                               </span>
                             </div>
@@ -1186,14 +1226,14 @@ function StudentPortal() {
                   <div className="p-5 rounded-2xl bg-[var(--bg-paper)] border border-[var(--border-paper)]">
                     <div className="flex items-center justify-between mb-3.5">
                       <div className="flex items-center gap-2">
-                        <BookOpen className="w-4 h-4 text-[#047857]" />
-                        <h3 className="font-sans font-bold text-sm text-[var(--ink-primary)]">
+                        <BookOpen className="w-4 h-4 text-[var(--status-success)]" />
+                        <h3 className="font-['Raleway'] font-bold text-sm text-[var(--ink-primary)]">
                           Latest Classroom Diary
                         </h3>
                       </div>
                       <button
                         onClick={() => setActiveTab('DIARY')}
-                        className="text-xs text-[#047857] hover:underline font-semibold"
+                        className="text-xs text-[var(--status-success)] hover:underline font-semibold"
                       >
                         View All
                       </button>
@@ -1202,7 +1242,7 @@ function StudentPortal() {
                     {diaries[0] ? (
                       <div className="p-4 rounded-xl bg-[var(--bg-paper-warm)] border border-[var(--border-paper)] space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-bold text-[#047857] uppercase tracking-wider">
+                          <span className="text-[10px] font-bold text-[var(--status-success)] uppercase tracking-wider">
                             {diaries[0].subject} • {diaries[0].lessonDate}
                           </span>
                           <span className="text-[10px] text-[var(--ink-muted)]">
@@ -1216,7 +1256,7 @@ function StudentPortal() {
                           {diaries[0].conceptsTaught}
                         </p>
                         {diaries[0].homeworkAssigned && (
-                          <div className="pt-2 border-t border-[var(--border-paper)] text-[11px] text-[#B45309] flex items-center gap-1.5">
+                          <div className="pt-2 border-t border-[var(--border-paper)] text-[11px] text-[var(--status-warning-text)] flex items-center gap-1.5">
                             <Clock className="w-3.5 h-3.5 shrink-0" />
                             <span className="truncate">HW: {diaries[0].homeworkAssigned}</span>
                           </div>
@@ -1234,7 +1274,7 @@ function StudentPortal() {
                     <div className="flex items-center justify-between mb-3.5">
                       <div className="flex items-center gap-2">
                         <FileText className="w-4 h-4 text-[var(--brand-electric)]" />
-                        <h3 className="font-sans font-bold text-sm text-[var(--ink-primary)]">
+                        <h3 className="font-['Raleway'] font-bold text-sm text-[var(--ink-primary)]">
                           Recent Notes & Worksheets
                         </h3>
                       </div>
@@ -1287,10 +1327,10 @@ function StudentPortal() {
               <div className="space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
-                    <h2 className="font-display text-2xl font-bold text-[var(--ink-primary)]">
+                    <h2 className="font-['Playfair_Display'] text-2xl font-bold text-[var(--ink-primary)]">
                       Daily Teaching Diary
                     </h2>
-                    <p className="font-sans text-xs text-[var(--ink-muted)] mt-1">
+                    <p className="font-['Raleway'] text-xs text-[var(--ink-muted)] mt-1">
                       Direct faculty lesson records, topics taught, and assigned homework for your batch.
                     </p>
                   </div>
@@ -1317,7 +1357,7 @@ function StudentPortal() {
                       onClick={() => setSelectedSubject(sub)}
                       className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
                         selectedSubject === sub
-                          ? 'bg-[#047857] text-white shadow'
+                          ? 'bg-[var(--status-success)] text-white shadow'
                           : 'bg-[var(--bg-paper)] border border-[var(--border-paper)] text-[var(--ink-muted)] hover:text-[var(--ink-primary)]'
                       }`}
                     >
@@ -1343,10 +1383,10 @@ function StudentPortal() {
                       >
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--border-paper)] pb-3">
                           <div className="flex items-center gap-2.5">
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[rgba(16,185,129,0.15)] text-[#047857]">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[var(--status-success-bg)] text-[var(--status-success)]">
                               {diary.subject}
                             </span>
-                            <span className="font-data text-xs font-semibold text-[var(--ink-primary)]">
+                            <span className="font-['Inter'] text-xs font-semibold text-[var(--ink-primary)]">
                               {diary.lessonDate} {diary.sessionTime ? ` (${diary.sessionTime})` : ''}
                             </span>
                           </div>
@@ -1356,7 +1396,7 @@ function StudentPortal() {
                         </div>
 
                         <div>
-                          <h3 className="font-sans font-bold text-base text-[var(--ink-primary)]">
+                          <h3 className="font-['Raleway'] font-bold text-base text-[var(--ink-primary)]">
                             {diary.chapterTitle}
                           </h3>
                           <div className="mt-2 text-xs text-[var(--ink-secondary)] leading-relaxed whitespace-pre-line bg-[var(--bg-paper-warm)] p-3.5 rounded-xl border border-[var(--border-paper)]">
@@ -1373,14 +1413,14 @@ function StudentPortal() {
                         )}
 
                         {diary.homeworkAssigned && (
-                          <div className="p-3 rounded-xl bg-[rgba(245,158,11,0.08)] border border-[rgba(245,158,11,0.2)] text-xs text-[#B45309] flex items-center justify-between gap-3">
+                          <div className="p-3 rounded-xl bg-[var(--status-warning-bg)] border border-[var(--status-warning-border)] text-xs text-[var(--status-warning-text)] flex items-center justify-between gap-3">
                             <div className="flex items-center gap-2">
                               <Clock className="w-4 h-4 shrink-0" />
                               <span><strong className="text-amber-300">Homework:</strong> {diary.homeworkAssigned}</span>
                             </div>
                             <button
                               onClick={() => setActiveTab('ASSIGNMENTS')}
-                              className="px-2.5 py-1 rounded bg-[#B45309] text-black font-semibold text-[11px] shrink-0 hover:bg-amber-400 transition"
+                              className="px-2.5 py-1 rounded bg-[var(--status-warning)] text-black font-semibold text-[11px] shrink-0 hover:bg-amber-400 transition"
                             >
                               Submit
                             </button>
@@ -1390,7 +1430,7 @@ function StudentPortal() {
                         {diary.attachmentUrl && (
                           <div className="flex items-center justify-between pt-1">
                             <span className="text-[11px] text-[var(--ink-muted)] flex items-center gap-1.5">
-                              <FileCheck className="w-3.5 h-3.5 text-[#047857]" />
+                              <FileCheck className="w-3.5 h-3.5 text-[var(--status-success)]" />
                               <span>Faculty Attached Lesson Notes</span>
                             </span>
                             <a
@@ -1415,10 +1455,10 @@ function StudentPortal() {
               <div className="space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
-                    <h2 className="font-display text-2xl font-bold text-[var(--ink-primary)]">
+                    <h2 className="font-['Playfair_Display'] text-2xl font-bold text-[var(--ink-primary)]">
                       Study Materials & Notes Vault
                     </h2>
-                    <p className="font-sans text-xs text-[var(--ink-muted)] mt-1">
+                    <p className="font-['Raleway'] text-xs text-[var(--ink-muted)] mt-1">
                       Direct high-speed delivery from verified Media CDN (media.dhyey.cc). Zero database bloat.
                     </p>
                   </div>
@@ -1464,10 +1504,10 @@ function StudentPortal() {
                           <span className="px-2 py-0.5 rounded bg-[var(--bg-paper-warm)] text-[var(--brand-electric)] font-semibold border border-[var(--border-paper)]">
                             {mat.category.replace(/_/g, ' ')}
                           </span>
-                          <span className="font-data">{mat.fileSize || 'PDF'}</span>
+                          <span className="font-['Inter']">{mat.fileSize || 'PDF'}</span>
                         </div>
 
-                        <h3 className="font-sans font-bold text-sm text-[var(--ink-primary)] line-clamp-2">
+                        <h3 className="font-['Raleway'] font-bold text-sm text-[var(--ink-primary)] line-clamp-2">
                           {mat.title}
                         </h3>
 
@@ -1494,7 +1534,7 @@ function StudentPortal() {
                               className="p-1.5 rounded-lg bg-[var(--bg-paper-warm)] hover:bg-[var(--bg-surface-subtle)] text-[var(--ink-muted)] hover:text-white transition"
                               title="Copy CDN Link"
                             >
-                              {copiedId === mat.id ? <Check className="w-3.5 h-3.5 text-[#047857]" /> : <Copy className="w-3.5 h-3.5" />}
+                              {copiedId === mat.id ? <Check className="w-3.5 h-3.5 text-[var(--status-success)]" /> : <Copy className="w-3.5 h-3.5" />}
                             </button>
                           )}
 
@@ -1521,10 +1561,10 @@ function StudentPortal() {
             {activeTab === 'TIMETABLE' && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="font-display text-2xl font-bold text-[var(--ink-primary)]">
+                  <h2 className="font-['Playfair_Display'] text-2xl font-bold text-[var(--ink-primary)]">
                     Weekly Academic Timetable
                   </h2>
-                  <p className="font-sans text-xs text-[var(--ink-muted)] mt-1">
+                  <p className="font-['Raleway'] text-xs text-[var(--ink-muted)] mt-1">
                     Scheduled lecture sessions, doubt clinics, and weekly assessments.
                   </p>
                 </div>
@@ -1536,7 +1576,7 @@ function StudentPortal() {
                       className="p-5 rounded-2xl bg-[var(--bg-paper)] border border-[var(--border-paper)] space-y-3"
                     >
                       <div className="flex items-center justify-between pb-2 border-b border-[var(--border-paper)]">
-                        <h3 className="font-sans font-bold text-sm text-[var(--ink-primary)]">
+                        <h3 className="font-['Raleway'] font-bold text-sm text-[var(--ink-primary)]">
                           {dayPlan.day}
                         </h3>
                         <span className="text-[10px] text-[var(--brand-electric)] font-semibold bg-[rgba(22,119,255,0.1)] px-2 py-0.5 rounded">
@@ -1552,7 +1592,7 @@ function StudentPortal() {
                           >
                             <div className="flex items-center justify-between text-xs">
                               <span className="font-bold text-[var(--ink-primary)]">{slot.subject}</span>
-                              <span className="font-data text-[11px] text-[var(--brand-electric)] font-semibold">
+                              <span className="font-['Inter'] text-[11px] text-[var(--brand-electric)] font-semibold">
                                 {slot.time}
                               </span>
                             </div>
@@ -1577,10 +1617,10 @@ function StudentPortal() {
               <div className="space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
-                    <h2 className="font-display text-2xl font-bold text-[var(--ink-primary)]">
+                    <h2 className="font-['Playfair_Display'] text-2xl font-bold text-[var(--ink-primary)]">
                       Attendance Ledger & Eligibility
                     </h2>
-                    <p className="font-sans text-xs text-[var(--ink-muted)] mt-1">
+                    <p className="font-['Raleway'] text-xs text-[var(--ink-muted)] mt-1">
                       Verified roll-call attendance recorded by faculty. Submit correction requests if needed.
                     </p>
                   </div>
@@ -1604,10 +1644,10 @@ function StudentPortal() {
                       Current Standing
                     </div>
                     <div className="flex items-baseline gap-3 justify-center md:justify-start">
-                      <span className="font-data text-4xl font-extrabold text-[#047857]">
+                      <span className="font-['Inter'] text-4xl font-extrabold text-[var(--status-success)]">
                         {attendanceData.percentage}%
                       </span>
-                      <span className="text-xs text-[#047857] font-semibold px-2 py-0.5 rounded bg-[rgba(16,185,129,0.12)]">
+                      <span className="text-xs text-[var(--status-success)] font-semibold px-2 py-0.5 rounded bg-[var(--status-success-bg)]">
                         Eligible for Mock Tests (Min 75% required)
                       </span>
                     </div>
@@ -1618,15 +1658,15 @@ function StudentPortal() {
 
                   <div className="flex items-center gap-4">
                     <div className="text-center p-3 rounded-xl bg-[var(--bg-paper-warm)] border border-[var(--border-paper)] min-w-[70px]">
-                      <div className="font-data text-lg font-bold text-[#047857]">{attendanceData.attended}</div>
+                      <div className="font-['Inter'] text-lg font-bold text-[var(--status-success)]">{attendanceData.attended}</div>
                       <div className="text-[10px] text-[var(--ink-muted)]">Present</div>
                     </div>
                     <div className="text-center p-3 rounded-xl bg-[var(--bg-paper-warm)] border border-[var(--border-paper)] min-w-[70px]">
-                      <div className="font-data text-lg font-bold text-[#BE123C]">{attendanceData.absent}</div>
+                      <div className="font-['Inter'] text-lg font-bold text-[var(--status-danger)]">{attendanceData.absent}</div>
                       <div className="text-[10px] text-[var(--ink-muted)]">Absent</div>
                     </div>
                     <div className="text-center p-3 rounded-xl bg-[var(--bg-paper-warm)] border border-[var(--border-paper)] min-w-[70px]">
-                      <div className="font-data text-lg font-bold text-[#B45309]">{attendanceData.late}</div>
+                      <div className="font-['Inter'] text-lg font-bold text-[var(--status-warning-text)]">{attendanceData.late}</div>
                       <div className="text-[10px] text-[var(--ink-muted)]">Late</div>
                     </div>
                   </div>
@@ -1650,16 +1690,16 @@ function StudentPortal() {
                       <tbody className="divide-y divide-[var(--border-paper)] text-xs">
                         {attendanceData.records.map((rec) => (
                           <tr key={rec.id} className="hover:bg-[var(--bg-paper-warm)]/40 transition">
-                            <td className="p-3.5 font-data text-[var(--ink-primary)]">{rec.date}</td>
+                            <td className="p-3.5 font-['Inter'] text-[var(--ink-primary)]">{rec.date}</td>
                             <td className="p-3.5 text-[var(--ink-secondary)]">{rec.subjectName || 'Class Session'}</td>
                             <td className="p-3.5">
                               <span
                                 className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                                   rec.status === 'PRESENT'
-                                    ? 'bg-[rgba(16,185,129,0.15)] text-[#047857]'
+                                    ? 'bg-[var(--status-success-bg)] text-[var(--status-success)]'
                                     : rec.status === 'LATE'
-                                    ? 'bg-[rgba(245,158,11,0.15)] text-[#B45309]'
-                                    : 'bg-[rgba(244,63,94,0.15)] text-[#BE123C]'
+                                    ? 'bg-[var(--status-warning-bg)] text-[var(--status-warning-text)]'
+                                    : 'bg-[var(--status-danger-bg)] text-[var(--status-danger)]'
                                 }`}
                               >
                                 {rec.status}
@@ -1679,10 +1719,10 @@ function StudentPortal() {
             {activeTab === 'ASSIGNMENTS' && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="font-display text-2xl font-bold text-[var(--ink-primary)]">
+                  <h2 className="font-['Playfair_Display'] text-2xl font-bold text-[var(--ink-primary)]">
                     Homework & Assignment Tracker
                   </h2>
-                  <p className="font-sans text-xs text-[var(--ink-muted)] mt-1">
+                  <p className="font-['Raleway'] text-xs text-[var(--ink-muted)] mt-1">
                     Solve daily problem practice (DPP) sets and submit homework for faculty evaluation.
                   </p>
                 </div>
@@ -1711,17 +1751,17 @@ function StudentPortal() {
                           <span
                             className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                               asg.status === 'GRADED'
-                                ? 'bg-[rgba(16,185,129,0.15)] text-[#047857]'
+                                ? 'bg-[var(--status-success-bg)] text-[var(--status-success)]'
                                 : asg.status === 'SUBMITTED'
                                 ? 'bg-[rgba(22,119,255,0.15)] text-[var(--brand-electric)]'
-                                : 'bg-[rgba(245,158,11,0.15)] text-[#B45309]'
+                                : 'bg-[var(--status-warning-bg)] text-[var(--status-warning-text)]'
                             }`}
                           >
                             {asg.status}
                           </span>
                         </div>
 
-                        <h3 className="font-sans font-bold text-sm text-[var(--ink-primary)]">
+                        <h3 className="font-['Raleway'] font-bold text-sm text-[var(--ink-primary)]">
                           {asg.title}
                         </h3>
 
@@ -1730,7 +1770,7 @@ function StudentPortal() {
                         </p>
 
                         <div className="text-[11px] text-[var(--ink-secondary)] pt-1">
-                          Max Marks: <strong className="font-data">{asg.maxMarks}</strong>
+                          Max Marks: <strong className="font-['Inter']">{asg.maxMarks}</strong>
                         </div>
                         {asg.attachmentUrl && (
                           <a href={asg.attachmentUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[var(--brand-electric)] underline">
@@ -1741,9 +1781,9 @@ function StudentPortal() {
 
                       {asg.submission?.marksObtained !== undefined && (
                         <div className="p-3 rounded-xl bg-[var(--bg-paper-warm)] border border-[var(--border-paper)] text-xs space-y-1">
-                          <div className="flex items-center justify-between text-[#047857] font-bold">
+                          <div className="flex items-center justify-between text-[var(--status-success)] font-bold">
                             <span>Score Released:</span>
-                            <span className="font-data">{asg.submission.marksObtained} / {asg.maxMarks}</span>
+                            <span className="font-['Inter']">{asg.submission.marksObtained} / {asg.maxMarks}</span>
                           </div>
                           {asg.submission.feedback && (
                             <div className="text-[11px] text-[var(--ink-muted)]">
@@ -1779,10 +1819,10 @@ function StudentPortal() {
             {activeTab === 'TESTS' && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="font-display text-2xl font-bold text-[var(--ink-primary)]">
+                  <h2 className="font-['Playfair_Display'] text-2xl font-bold text-[var(--ink-primary)]">
                     Online Tests & Examination Center
                   </h2>
-                  <p className="font-sans text-xs text-[var(--ink-muted)] mt-1">
+                  <p className="font-['Raleway'] text-xs text-[var(--ink-muted)] mt-1">
                     Computer-based tests (CBT) with server-side time tracking, negative marking, and instant scoring.
                   </p>
                 </div>
@@ -1801,17 +1841,17 @@ function StudentPortal() {
                           <span
                             className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                               test.status === 'ACTIVE'
-                                ? 'bg-[rgba(16,185,129,0.15)] text-[#047857]'
+                                ? 'bg-[var(--status-success-bg)] text-[var(--status-success)]'
                                 : test.status === 'COMPLETED'
                                 ? 'bg-[rgba(22,119,255,0.15)] text-[var(--brand-electric)]'
-                                : 'bg-[rgba(245,158,11,0.15)] text-[#B45309]'
+                                : 'bg-[var(--status-warning-bg)] text-[var(--status-warning-text)]'
                             }`}
                           >
                             {test.status}
                           </span>
                         </div>
 
-                        <h3 className="font-sans font-bold text-sm text-[var(--ink-primary)]">
+                        <h3 className="font-['Raleway'] font-bold text-sm text-[var(--ink-primary)]">
                           {test.title}
                         </h3>
 
@@ -1820,16 +1860,16 @@ function StudentPortal() {
                         </p>
 
                         <div className="flex items-center gap-3 text-[11px] text-[var(--ink-secondary)] pt-1">
-                          <span>Duration: <strong className="font-data">{test.durationMinutes}m</strong></span>
+                          <span>Duration: <strong className="font-['Inter']">{test.durationMinutes}m</strong></span>
                           <span>•</span>
-                          <span>Max: <strong className="font-data">{test.totalMarks}M</strong></span>
+                          <span>Max: <strong className="font-['Inter']">{test.totalMarks}M</strong></span>
                         </div>
                       </div>
 
                       {test.attempt && (
-                        <div className="p-3 rounded-xl bg-[var(--bg-paper-warm)] border border-[var(--border-paper)] text-xs text-[#047857] font-bold flex items-center justify-between">
+                        <div className="p-3 rounded-xl bg-[var(--bg-paper-warm)] border border-[var(--border-paper)] text-xs text-[var(--status-success)] font-bold flex items-center justify-between">
                           <span>Attempt Scored:</span>
-                          <span className="font-data">{test.attempt.score} / {test.totalMarks}</span>
+                          <span className="font-['Inter']">{test.attempt.score} / {test.totalMarks}</span>
                         </div>
                       )}
 
@@ -1852,10 +1892,10 @@ function StudentPortal() {
               <div className="space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
-                    <h2 className="font-display text-2xl font-bold text-[var(--ink-primary)]">
+                    <h2 className="font-['Playfair_Display'] text-2xl font-bold text-[var(--ink-primary)]">
                       Verified Classroom Assessment Results
                     </h2>
-                    <p className="font-sans text-xs text-[var(--ink-muted)] mt-1">
+                    <p className="font-['Raleway'] text-xs text-[var(--ink-muted)] mt-1">
                       Scores published by faculty via bulk assessment entry. Download official report cards.
                     </p>
                   </div>
@@ -1896,13 +1936,13 @@ function StudentPortal() {
                           <tr key={res.assessmentId} className="hover:bg-[var(--bg-paper-warm)]/40 transition">
                             <td className="p-3.5 font-bold text-[var(--ink-primary)]">{res.title}</td>
                             <td className="p-3.5 text-[var(--ink-secondary)]">{res.subject}</td>
-                            <td className="p-3.5 font-data text-[var(--ink-muted)]">{res.maxMarks}</td>
-                            <td className="p-3.5 font-data font-bold text-[#047857]">{res.obtainedMarks ?? '—'}</td>
-                            <td className="p-3.5 font-data font-bold text-[var(--brand-electric)]">
+                            <td className="p-3.5 font-['Inter'] text-[var(--ink-muted)]">{res.maxMarks}</td>
+                            <td className="p-3.5 font-['Inter'] font-bold text-[var(--status-success)]">{res.obtainedMarks ?? '—'}</td>
+                            <td className="p-3.5 font-['Inter'] font-bold text-[var(--brand-electric)]">
                               {res.percentage !== null ? `${res.percentage}%` : '—'}
                             </td>
                             <td className="p-3.5">
-                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[rgba(16,185,129,0.15)] text-[#047857]">
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[var(--status-success-bg)] text-[var(--status-success)]">
                                 {res.grade || '—'}
                               </span>
                             </td>
@@ -1925,10 +1965,10 @@ function StudentPortal() {
               <div className="space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
-                    <h2 className="font-display text-2xl font-bold text-[var(--ink-primary)]">
+                    <h2 className="font-['Playfair_Display'] text-2xl font-bold text-[var(--ink-primary)]">
                       Faculty Academic Doubts Clinic
                     </h2>
-                    <p className="font-sans text-xs text-[var(--ink-muted)] mt-1">
+                    <p className="font-['Raleway'] text-xs text-[var(--ink-muted)] mt-1">
                       Submit homework or conceptual doubts to faculty and receive verified answers.
                     </p>
                   </div>
@@ -1962,8 +2002,8 @@ function StudentPortal() {
                         <span
                           className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                             q.status === 'ANSWERED'
-                              ? 'bg-[rgba(16,185,129,0.15)] text-[#047857]'
-                              : 'bg-[rgba(245,158,11,0.15)] text-[#B45309]'
+                              ? 'bg-[var(--status-success-bg)] text-[var(--status-success)]'
+                              : 'bg-[var(--status-warning-bg)] text-[var(--status-warning-text)]'
                           }`}
                         >
                           {q.status}
@@ -1977,9 +2017,9 @@ function StudentPortal() {
 
                       {q.facultyReply && (
                         <div className="p-3.5 rounded-xl bg-[var(--bg-paper-warm)] border border-[rgba(16,185,129,0.2)] text-xs text-[var(--ink-secondary)] space-y-1">
-                          <div className="flex items-center justify-between text-[#047857] font-bold text-[11px]">
+                          <div className="flex items-center justify-between text-[var(--status-success)] font-bold text-[11px]">
                             <span>Faculty Response ({q.facultyName || 'Faculty'})</span>
-                            <span className="font-data text-[10px] text-[var(--ink-muted)]">{q.repliedAt?.split('T')[0]}</span>
+                            <span className="font-['Inter'] text-[10px] text-[var(--ink-muted)]">{q.repliedAt?.split('T')[0]}</span>
                           </div>
                           <p className="leading-relaxed">{q.facultyReply}</p>
                         </div>
@@ -1994,10 +2034,10 @@ function StudentPortal() {
             {activeTab === 'PLANNER' && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="font-display text-2xl font-bold text-[var(--ink-primary)]">
+                  <h2 className="font-['Playfair_Display'] text-2xl font-bold text-[var(--ink-primary)]">
                     Personal Study Planner & Daily Checklist
                   </h2>
-                  <p className="font-sans text-xs text-[var(--ink-muted)] mt-1">
+                  <p className="font-['Raleway'] text-xs text-[var(--ink-muted)] mt-1">
                     Manage daily study goals, DPP checklists, and syllabus preparation deadlines.
                   </p>
                 </div>
@@ -2063,7 +2103,7 @@ function StudentPortal() {
                           className="text-[var(--brand-electric)] hover:text-[var(--brand-hover)] transition"
                         >
                           {task.isCompleted ? (
-                            <CheckSquare className="w-4 h-4 text-[#047857]" />
+                            <CheckSquare className="w-4 h-4 text-[var(--status-success)]" />
                           ) : (
                             <Square className="w-4 h-4 text-[var(--ink-muted)]" />
                           )}
@@ -2082,7 +2122,7 @@ function StudentPortal() {
                             <span
                               className={
                                 task.priority === 'HIGH'
-                                  ? 'text-[#BE123C] font-semibold'
+                                  ? 'text-[var(--status-danger)] font-semibold'
                                   : 'text-[var(--ink-muted)]'
                               }
                             >
@@ -2094,7 +2134,7 @@ function StudentPortal() {
 
                       <button
                         onClick={() => handleDeleteTask(task.id)}
-                        className="p-1.5 rounded-lg text-[var(--ink-muted)] hover:text-[#BE123C] hover:bg-[var(--bg-paper-warm)] transition"
+                        className="p-1.5 rounded-lg text-[var(--ink-muted)] hover:text-[var(--status-danger)] hover:bg-[var(--bg-paper-warm)] transition"
                         title="Delete task"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -2109,10 +2149,10 @@ function StudentPortal() {
             {activeTab === 'DOCUMENTS' && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="font-display text-2xl font-bold text-[var(--ink-primary)]">
+                  <h2 className="font-['Playfair_Display'] text-2xl font-bold text-[var(--ink-primary)]">
                     Official Student Documents & PDF Center
                   </h2>
-                  <p className="font-sans text-xs text-[var(--ink-muted)] mt-1">
+                  <p className="font-['Raleway'] text-xs text-[var(--ink-muted)] mt-1">
                     Download official statements, report cards, fee receipts, and timetables.
                   </p>
                 </div>
@@ -2156,10 +2196,10 @@ function StudentPortal() {
             {activeTab === 'PROFILE' && (
               <div className="space-y-6 max-w-4xl">
                 <div>
-                  <h2 className="font-display text-2xl font-bold text-[var(--ink-primary)]">
+                  <h2 className="font-['Playfair_Display'] text-2xl font-bold text-[var(--ink-primary)]">
                     Student Profile & Institute Enrollment
                   </h2>
-                  <p className="font-sans text-xs text-[var(--ink-muted)] mt-1">
+                  <p className="font-['Raleway'] text-xs text-[var(--ink-muted)] mt-1">
                     Manage your credentials, verify institute membership, or join a new batch via invitation code.
                   </p>
                 </div>
@@ -2185,7 +2225,7 @@ function StudentPortal() {
                   </div>
 
                   <div className="space-y-3">
-                    <div className="text-xs font-bold text-[#047857] uppercase tracking-wider">
+                    <div className="text-xs font-bold text-[var(--status-success)] uppercase tracking-wider">
                       Academic Allocation
                     </div>
                     <div>
@@ -2202,7 +2242,7 @@ function StudentPortal() {
                     </div>
                     <div>
                       <label className="text-[10px] text-[var(--ink-muted)] uppercase block">Student Roll Number</label>
-                      <div className="text-sm font-data font-bold text-[#047857]">
+                      <div className="text-sm font-['Inter'] font-bold text-[var(--status-success)]">
                         {profileData?.rollNumber || '—'}
                       </div>
                     </div>
@@ -2213,7 +2253,7 @@ function StudentPortal() {
                 <div className="p-6 rounded-2xl bg-[var(--bg-paper)] border border-[var(--border-paper)] space-y-4 shadow-xl">
                   <div className="flex items-center gap-2">
                     <KeyRound className="w-4 h-4 text-[var(--brand-electric)]" />
-                    <h3 className="font-sans font-bold text-sm text-[var(--ink-primary)]">
+                    <h3 className="font-['Raleway'] font-bold text-sm text-[var(--ink-primary)]">
                       Join Another Batch via Invitation Code
                     </h3>
                   </div>
@@ -2239,16 +2279,16 @@ function StudentPortal() {
                   </div>
 
                   {inviteValidationResult && (
-                    <div className="p-4 rounded-xl bg-[var(--bg-paper-warm)] border border-[rgba(16,185,129,0.3)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="p-4 rounded-xl bg-[var(--bg-paper-warm)] border border-[var(--status-success-border)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div>
-                        <div className="text-xs font-bold text-[#047857]">Valid Invitation Verified!</div>
+                        <div className="text-xs font-bold text-[var(--status-success)]">Valid Invitation Verified!</div>
                         <div className="text-xs text-[var(--ink-primary)] font-medium mt-0.5">
                           {inviteValidationResult.instituteName} — {inviteValidationResult.batchName} ({inviteValidationResult.subject})
                         </div>
                       </div>
                       <button
                         onClick={handleConfirmJoinBatch}
-                        className="px-4 py-2 rounded-xl bg-[#047857] hover:bg-emerald-600 text-xs font-bold text-white transition shadow"
+                        className="px-4 py-2 rounded-xl bg-[var(--status-success)] hover:bg-emerald-600 text-xs font-bold text-white transition shadow"
                       >
                         Confirm Enrollment
                       </button>
@@ -2256,14 +2296,14 @@ function StudentPortal() {
                   )}
 
                   {inviteStatusMsg && (
-                    <div className="text-xs text-[#B45309] font-medium">{inviteStatusMsg}</div>
+                    <div className="text-xs text-[var(--status-warning-text)] font-medium">{inviteStatusMsg}</div>
                   )}
                 </div>
 
                 {/* SUPPORT & HELP */}
                 <div className="p-6 rounded-2xl bg-[var(--bg-paper)] border border-[var(--border-paper)] flex items-center justify-between shadow-xl">
                   <div>
-                    <h3 className="font-sans font-bold text-sm text-[var(--ink-primary)]">
+                    <h3 className="font-['Raleway'] font-bold text-sm text-[var(--ink-primary)]">
                       Academic Help & Support Desk
                     </h3>
                     <p className="text-xs text-[var(--ink-muted)] mt-0.5">
@@ -2296,7 +2336,7 @@ function StudentPortal() {
               <div className="flex items-center justify-between pb-4 border-b border-[var(--border-paper)]">
                 <div className="flex items-center gap-2">
                   <Bell className="w-4 h-4 text-[var(--brand-electric)]" />
-                  <h3 className="font-sans font-bold text-base text-[var(--ink-primary)]">
+                  <h3 className="font-['Raleway'] font-bold text-base text-[var(--ink-primary)]">
                     Notifications
                   </h3>
                 </div>
@@ -2348,7 +2388,7 @@ function StudentPortal() {
           <div className="w-full max-w-lg bg-[var(--bg-paper)] border border-[var(--border-paper)] rounded-2xl p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-sans font-bold text-base text-[var(--ink-primary)]">
+                <h3 className="font-['Raleway'] font-bold text-base text-[var(--ink-primary)]">
                   Submit Homework: {selectedAssignment.title}
                 </h3>
                 <p className="text-xs text-[var(--ink-muted)]">Max Marks: {selectedAssignment.maxMarks}</p>
@@ -2416,7 +2456,7 @@ function StudentPortal() {
           <div className="w-full max-w-2xl bg-[var(--bg-paper)] border border-[var(--border-paper)] rounded-2xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-[var(--border-paper)] pb-3">
               <div>
-                <h3 className="font-sans font-bold text-lg text-[var(--ink-primary)]">
+                <h3 className="font-['Raleway'] font-bold text-lg text-[var(--ink-primary)]">
                   {activeTest.title}
                 </h3>
                 <p className="text-xs text-[var(--ink-muted)]">
@@ -2432,15 +2472,15 @@ function StudentPortal() {
             </div>
 
             {testResultFeedback ? (
-              <div className="p-5 rounded-xl bg-[rgba(16,185,129,0.12)] border border-[rgba(16,185,129,0.3)] text-center space-y-3">
-                <CheckCircle2 className="w-10 h-10 text-[#047857] mx-auto" />
-                <div className="font-display text-xl font-bold text-[var(--ink-primary)]">
+              <div className="p-5 rounded-xl bg-[var(--status-success-bg)] border border-[var(--status-success-border)] text-center space-y-3">
+                <CheckCircle2 className="w-10 h-10 text-[var(--status-success)] mx-auto" />
+                <div className="font-['Playfair_Display'] text-xl font-bold text-[var(--ink-primary)]">
                   Test Submitted Successfully!
                 </div>
                 <p className="text-xs text-[var(--ink-secondary)]">{testResultFeedback}</p>
                 <button
                   onClick={() => setActiveTest(null)}
-                  className="px-5 py-2 rounded-xl bg-[#047857] text-white font-bold text-xs"
+                  className="px-5 py-2 rounded-xl bg-[var(--status-success)] text-white font-bold text-xs"
                 >
                   Return to Dashboard
                 </button>
@@ -2453,7 +2493,7 @@ function StudentPortal() {
                     className="p-4 rounded-xl bg-[var(--bg-paper-warm)] border border-[var(--border-paper)] space-y-3"
                   >
                     <div className="text-xs font-bold text-[var(--ink-primary)] flex items-center gap-2">
-                      <span className="w-5 h-5 rounded-full bg-[var(--brand-electric)]/20 text-[var(--brand-electric)] flex items-center justify-center text-[10px] font-data">
+                      <span className="w-5 h-5 rounded-full bg-[var(--brand-electric)]/20 text-[var(--brand-electric)] flex items-center justify-center text-[10px] font-['Inter']">
                         {idx + 1}
                       </span>
                       <span>{q.text}</span>
@@ -2494,7 +2534,7 @@ function StudentPortal() {
                   type="button"
                   onClick={handleSubmitTest}
                   disabled={isSubmittingTest}
-                  className="w-full py-3 rounded-xl bg-[#047857] hover:bg-emerald-600 text-xs font-bold text-white transition flex items-center justify-center gap-2 shadow-lg disabled:opacity-50"
+                  className="w-full py-3 rounded-xl bg-[var(--status-success)] hover:bg-emerald-600 text-xs font-bold text-white transition flex items-center justify-center gap-2 shadow-lg disabled:opacity-50"
                 >
                   {isSubmittingTest ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                   <span>Submit Assessment For Server Grading</span>
@@ -2513,7 +2553,7 @@ function StudentPortal() {
             className="w-full max-w-md bg-[var(--bg-paper)] border border-[var(--border-paper)] rounded-2xl p-6 shadow-2xl space-y-4"
           >
             <div className="flex items-center justify-between">
-              <h3 className="font-sans font-bold text-base text-[var(--ink-primary)]">
+              <h3 className="font-['Raleway'] font-bold text-base text-[var(--ink-primary)]">
                 Attendance Correction Request
               </h3>
               <button
@@ -2581,7 +2621,7 @@ function StudentPortal() {
             className="w-full max-w-lg bg-[var(--bg-paper)] border border-[var(--border-paper)] rounded-2xl p-6 shadow-2xl space-y-4"
           >
             <div className="flex items-center justify-between">
-              <h3 className="font-sans font-bold text-base text-[var(--ink-primary)]">
+              <h3 className="font-['Raleway'] font-bold text-base text-[var(--ink-primary)]">
                 Ask Academic Doubt
               </h3>
               <button
@@ -2665,7 +2705,7 @@ function StudentPortal() {
             className="w-full max-w-md bg-[var(--bg-paper)] border border-[var(--border-paper)] rounded-2xl p-6 shadow-2xl space-y-4"
           >
             <div className="flex items-center justify-between">
-              <h3 className="font-sans font-bold text-base text-[var(--ink-primary)]">
+              <h3 className="font-['Raleway'] font-bold text-base text-[var(--ink-primary)]">
                 Submit Support Ticket
               </h3>
               <button

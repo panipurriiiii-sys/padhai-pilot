@@ -5,6 +5,7 @@ import { ThemeProvider } from './src/theme/ThemeContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { ApiError, apiClient } from './src/services/api/client';
 import { useAuthStore } from './src/store/useAuthStore';
+import { notificationService } from './src/services/notification';
 
 function App() {
   const [queryClient] = useState(
@@ -25,6 +26,7 @@ function App() {
   // Sign out when the server rejects the token, and never let one user's cached data reach the next.
   useEffect(() => {
     void useAuthStore.getState().initializeAuth();
+    void notificationService.initialize();
     apiClient.setUnauthorizedHandler(() => useAuthStore.getState().logout());
     const unsubscribe = useAuthStore.subscribe((state, prev) => {
       if (prev.isAuthenticated && !state.isAuthenticated) queryClient.clear();

@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Megaphone, Plus, Calendar, AlertCircle, X, CheckCircle } from 'lucide-react';
+import { Megaphone, Plus, Calendar, AlertCircle, X, CheckCircle, Trash2 } from 'lucide-react';
 import type { BatchSummary, AnnouncementItem } from '@padhai-pilot/shared';
 
 interface AnnouncementsViewProps {
   batches: BatchSummary[];
   announcements: AnnouncementItem[];
+  onDeleteAnnouncement?: (id: string) => Promise<void>;
   onCreateAnnouncement: (data: {
     batchId?: string;
     title: string;
@@ -19,6 +20,7 @@ export function AnnouncementsView({
   batches,
   announcements,
   onCreateAnnouncement,
+  onDeleteAnnouncement,
 }: AnnouncementsViewProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -107,6 +109,7 @@ export function AnnouncementsView({
                   </span>
                 </div>
 
+                <div className="flex items-center gap-2">
                 <span className="text-xs text-stone-500 font-['Inter']">
                   {new Date(ann.createdAt).toLocaleDateString(undefined, {
                     month: 'short',
@@ -114,6 +117,22 @@ export function AnnouncementsView({
                     year: 'numeric',
                   })}
                 </span>
+                {onDeleteAnnouncement && (
+                  <button
+                    type="button"
+                    aria-label="Delete announcement"
+                    onClick={async () => {
+                      if (window.confirm('Delete this broadcast announcement?')) {
+                        await onDeleteAnnouncement(ann.id);
+                      }
+                    }}
+                    className="p-1 text-stone-400 hover:text-rose-600 rounded transition"
+                    title="Delete announcement"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
               </div>
 
               <h3 className="font-['Raleway'] font-bold text-base text-stone-900 leading-snug">

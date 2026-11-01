@@ -1,10 +1,10 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { Screen, SectionTitle } from '../../../components/common/Screen';
+import { View, Text } from 'react-native';
+import { Screen } from '../../../components/common/Screen';
 import { QueryBoundary } from '../../../components/common/QueryBoundary';
 import { Card } from '../../../components/common/Card';
 import { Badge } from '../../../components/common/Badge';
-import { Body, Caption, StatValue, Subtitle } from '../../../components/common/Typography';
+import { EmptyPaper, KpiCard, QuickActionsBar, SectionHeader, TimeBlock } from '../../../components/common/Paper';
 import { useDashboardData } from '../../../hooks/useStudentData';
 import { useNavigationStore } from '../../../store/useNavigationStore';
 import { useAuthStore } from '../../../store/useAuthStore';
@@ -12,101 +12,124 @@ import { useTheme } from '../../../theme/ThemeContext';
 import { formatDate, formatInr } from '../../../lib/format';
 
 export const DashboardScreen: React.FC = () => {
-  const { colors, spacing } = useTheme();
+  const { colors, typography } = useTheme();
   const { setTab } = useNavigationStore();
   const session = useAuthStore((s) => s.session);
   const query = useDashboardData();
+  const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
 
   return (
     <Screen
-      eyebrow={session?.user?.instituteName?.toUpperCase()}
+      eyebrow={session?.user?.instituteName ?? 'Student Portal'}
       title={session?.user?.fullName || session?.user?.name || 'Student'}
-      subtitle="Your day at a glance"
+      subtitle={today}
       refreshing={query.isRefetching}
       onRefresh={() => query.refetch()}
     >
+      <QuickActionsBar
+        items={[
+          { label: 'Homework', icon: 'file-check-2', tone: 'blue', onPress: () => setTab('student_academics') },
+          { label: 'Vault', icon: 'notebook-pen', tone: 'teal', onPress: () => setTab('student_diary') },
+          { label: 'Results', icon: 'award', tone: 'emerald', onPress: () => setTab('student_results') },
+          { label: 'Fees', icon: 'receipt', tone: 'amber', onPress: () => setTab('student_fees') },
+        ]}
+      />
+
       <QueryBoundary query={query}>
         {(d) => (
           <>
-            <View style={styles.grid}>
-              <Card style={styles.kpi} onPress={() => setTab('student_results')}>
-                <Caption>Attendance</Caption>
-                <StatValue color={d.stats.attendanceRate < 75 ? colors.warning : colors.primary}>
-                  {`${Math.round(d.stats.attendanceRate)}%`}
-                </StatValue>
-                <Caption>{`${d.stats.classesAttended}/${d.stats.totalClasses} classes`}</Caption>
-              </Card>
-              <Card style={styles.kpi} onPress={() => setTab('student_results')}>
-                <Caption>Average score</Caption>
-                <StatValue>{d.stats.totalTests ? `${d.stats.avgPercentage}%` : '—'}</StatValue>
-                <Caption>{`${d.stats.totalTests} published results`}</Caption>
-              </Card>
-              <Card style={styles.kpi} onPress={() => setTab('student_academics')}>
-                <Caption>Homework due</Caption>
-                <StatValue>{String(d.stats.pendingAssignments)}</StatValue>
-                <Caption>{`${d.stats.upcomingTests} upcoming tests`}</Caption>
-              </Card>
-              <Card style={styles.kpi} onPress={() => setTab('student_fees')}>
-                <Caption>Fee balance</Caption>
-                <StatValue color={d.stats.feeBalance > 0 ? colors.warning : colors.success}>
-                  {formatInr(d.stats.feeBalance)}
-                </StatValue>
-                <Caption>{d.stats.feeBalance > 0 ? 'Payment pending' : 'All clear'}</Caption>
-              </Card>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+              <KpiCard
+                label="Attendance"
+                value={`${Math.round(d.stats.attendanceRate)}%`}
+                caption={`${d.stats.classesAttended}/${d.stats.totalClasses} attended`}
+                icon="calendar-check"
+                tone={d.stats.attendanceRate < 75 ? 'amber' : 'emerald'}
+                onPress={() => setTab('student_results')}
+              />
+              <KpiCard
+                label="Avg Score"
+                value={d.stats.totalTests ? `${d.stats.avgPercentage}%` : '—'}
+                caption={`${d.stats.totalTests} results published`}
+                icon="award"
+                tone="blue"
+                onPress={() => setTab('student_results')}
+              />
+              <KpiCard
+                label="Homework Due"
+                value={String(d.stats.pendingAssignments)}
+                caption={`${d.stats.upcomingTests} upcoming tests`}
+                icon="file-check-2"
+                tone="rose"
+                onPress={() => setTab('student_academics')}
+              />
+              <KpiCard
+                label="Fee Balance"
+                value={formatInr(d.stats.feeBalance)}
+                caption={d.stats.feeBalance > 0 ? 'Pending payment' : 'All clear'}
+                icon="receipt"
+                tone={d.stats.feeBalance > 0 ? 'amber' : 'emerald'}
+                onPress={() => setTab('student_fees')}
+              />
             </View>
 
-            <SectionTitle>Today&apos;s classes</SectionTitle>
+            <SectionHeader title="Today's Classes" icon="clock" action="Full Timetable" onAction={() => setTab('student_more')} />
             {d.timetable.length === 0 ? (
-              <Caption>No classes scheduled today.</Caption>
+              <EmptyPaper message="No classes scheduled for today. Check your timetable for upcoming lectures." />
             ) : (
               d.timetable.map((slot) => (
-                <Card key={`${slot.time}-${slot.subject}`} style={{ marginBottom: spacing.sm }}>
-                  <Subtitle>{slot.subject}</Subtitle>
-                  <Caption>{`${slot.time} · ${slot.room} · ${slot.faculty}`}</Caption>
+                <Card key={`${slot.time}-${slot.subject}`} style={{ marginBottom: 10, padding: 14 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <TimeBlock start={slot.time} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontFamily: typography.fonts.ui, fontSize: 14, fontWeight: '700', color: colors.textPrimary }}>
+                        {slot.subject}
+                      </Text>
+                      <Text style={{ fontFamily: typography.fonts.ui, fontSize: 12, color: colors.textMuted, marginTop: 2 }}>
+                        {`${slot.room}${slot.faculty ? ` · ${slot.faculty}` : ''}`}
+                      </Text>
+                    </View>
+                  </View>
                 </Card>
               ))
             )}
 
-            <SectionTitle>Homework</SectionTitle>
+            <SectionHeader title="Homework & Submissions" icon="file-text" action="View All" onAction={() => setTab('student_academics')} />
             {d.upcomingAssignments.length === 0 ? (
-              <Caption>Nothing pending.</Caption>
+              <EmptyPaper message="All caught up! No pending homework assignments." />
             ) : (
               d.upcomingAssignments.map((a) => (
-                <Card key={a.id} style={{ marginBottom: spacing.sm }} onPress={() => setTab('student_academics')}>
-                  <View style={styles.row}>
-                    <Subtitle style={{ flex: 1 }}>{a.title}</Subtitle>
+                <Card key={a.id} style={{ marginBottom: 10, padding: 14 }} onPress={() => setTab('student_academics')}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+                    <Text style={{ flex: 1, fontFamily: typography.fonts.ui, fontSize: 14, fontWeight: '700', color: colors.textPrimary }}>
+                      {a.title}
+                    </Text>
                     <Badge label={a.status} variant={a.status === 'GRADED' ? 'success' : 'warning'} />
                   </View>
-                  <Caption>{`${a.subject} · due ${formatDate(a.dueDate)}`}</Caption>
+                  <Text style={{ fontFamily: typography.fonts.ui, fontSize: 12, color: colors.textMuted }}>
+                    {`${a.subject} · due ${formatDate(a.dueDate)}`}
+                  </Text>
                 </Card>
               ))
             )}
 
-            <SectionTitle>Latest from your teachers</SectionTitle>
+            <SectionHeader title="Latest from Teachers" icon="book-open" action="Open Vault" onAction={() => setTab('student_diary')} />
             {d.recentDiaries.length === 0 ? (
-              <Caption>No diary entries published yet.</Caption>
+              <EmptyPaper message="No teacher diary notes posted recently." />
             ) : (
               d.recentDiaries.map((e) => (
-                <Card key={e.id} style={{ marginBottom: spacing.sm }} onPress={() => setTab('student_diary')}>
-                  <Subtitle>{e.chapterTitle}</Subtitle>
-                  <Caption>{`${e.subject} · ${e.facultyName} · ${formatDate(e.lessonDate)}`}</Caption>
-                  <Body numberOfLines={2}>{e.conceptsTaught}</Body>
-                </Card>
-              ))
-            )}
-
-            <SectionTitle>Announcements</SectionTitle>
-            {d.announcements.length === 0 ? (
-              <Caption>No announcements.</Caption>
-            ) : (
-              d.announcements.map((a) => (
-                <Card key={a.id} style={{ marginBottom: spacing.sm }}>
-                  <View style={styles.row}>
-                    <Subtitle style={{ flex: 1 }}>{a.title}</Subtitle>
-                    {a.priority === 'URGENT' ? <Badge label="URGENT" variant="error" /> : null}
-                  </View>
-                  <Body numberOfLines={3}>{a.content}</Body>
-                  <Caption>{formatDate(a.date)}</Caption>
+                <Card key={e.id} style={{ marginBottom: 10, padding: 14 }} onPress={() => setTab('student_diary')}>
+                  <Text style={{ fontFamily: typography.fonts.ui, fontSize: 14, fontWeight: '700', color: colors.textPrimary }}>
+                    {e.chapterTitle}
+                  </Text>
+                  <Text style={{ fontFamily: typography.fonts.ui, fontSize: 12, color: colors.textMuted, marginTop: 2 }}>
+                    {`${e.subject} · ${e.facultyName} · ${formatDate(e.lessonDate)}`}
+                  </Text>
+                  {e.content ? (
+                    <Text numberOfLines={2} style={{ fontFamily: typography.fonts.ui, fontSize: 12, lineHeight: 17, color: colors.textSecondary, marginTop: 6 }}>
+                      {e.content}
+                    </Text>
+                  ) : null}
                 </Card>
               ))
             )}
@@ -116,9 +139,3 @@ export const DashboardScreen: React.FC = () => {
     </Screen>
   );
 };
-
-const styles = StyleSheet.create({
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  kpi: { flexGrow: 1, flexBasis: '45%' },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-});
