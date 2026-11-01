@@ -1,5 +1,5 @@
-import React, { useRef, useEffect } from 'react';
-import { View, StyleSheet, Text, Animated, Pressable } from 'react-native';
+import React from 'react';
+import { View, StyleSheet, Text, Pressable } from 'react-native';
 import { useTheme } from '../../../theme/ThemeContext';
 
 interface AuthBannerProps {
@@ -9,30 +9,7 @@ interface AuthBannerProps {
 }
 
 export const AuthBanner: React.FC<AuthBannerProps> = ({ type, message, onDismiss }) => {
-  const { colors, radii, typography, isDark } = useTheme();
-  const opacityAnim = useRef(new Animated.Value(0)).current;
-  const translateYAnim = useRef(new Animated.Value(-8)).current;
-
-  useEffect(() => {
-    if (message) {
-      Animated.parallel([
-        Animated.timing(opacityAnim, {
-          toValue: 1,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-        Animated.spring(translateYAnim, {
-          toValue: 0,
-          friction: 7,
-          tension: 40,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      opacityAnim.setValue(0);
-      translateYAnim.setValue(-8);
-    }
-  }, [message]);
+  const { colors, radii, typography } = useTheme();
 
   if (!message) return null;
 
@@ -40,73 +17,59 @@ export const AuthBanner: React.FC<AuthBannerProps> = ({ type, message, onDismiss
   const bg = isError ? colors.stickyPinkBg : colors.stickyMintBg;
   const border = isError ? colors.stickyPinkBorder : colors.stickyMintBorder;
   const textColor = isError ? colors.stickyPinkText : colors.stickyMintText;
-  const tagText = isError ? 'Dhayan dein' : 'Badhai ho!';
 
   return (
-    <Animated.View
+    <View
       style={[
         styles.container,
         {
           backgroundColor: bg,
           borderColor: border,
           borderRadius: radii.md,
-          opacity: opacityAnim,
-          transform: [{ translateY: translateYAnim }],
         },
       ]}
       accessibilityRole="alert"
     >
-      <View style={styles.iconTag}>
-        <Text style={[styles.tagLabel, { color: textColor, fontFamily: typography.fonts.ui }]}>
-          {tagText}
-        </Text>
-      </View>
+      <View style={[styles.dot, { backgroundColor: isError ? colors.error : colors.success }]} />
       <Text style={[styles.message, { color: textColor, fontFamily: typography.fonts.ui }]}>
         {message}
       </Text>
       {onDismiss && (
-        <Pressable onPress={onDismiss} hitSlop={8} style={styles.dismissBtn}>
+        <Pressable onPress={onDismiss} hitSlop={10} style={styles.dismissBtn}>
           <Text style={[styles.dismissText, { color: textColor }]}>✕</Text>
         </Pressable>
       )}
-    </Animated.View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    borderWidth: 1.2,
+    borderWidth: 1,
     width: '100%',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     marginBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
   },
-  iconTag: {
-    paddingVertical: 2,
-    paddingHorizontal: 6,
-    borderRadius: 4,
-    backgroundColor: 'rgba(0,0,0,0.04)',
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     marginRight: 8,
-  },
-  tagLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
   },
   message: {
     flex: 1,
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 12,
+    lineHeight: 17,
     fontWeight: '600',
   },
   dismissBtn: {
     paddingLeft: 8,
   },
   dismissText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
   },
 });

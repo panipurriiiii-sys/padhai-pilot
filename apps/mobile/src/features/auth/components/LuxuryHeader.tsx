@@ -8,20 +8,11 @@ export interface LuxuryHeaderProps {
 }
 
 export const LuxuryHeader: React.FC<LuxuryHeaderProps> = ({ onBack, showBack }) => {
-  const { colors, typography, isDark } = useTheme();
+  const { colors, typography } = useTheme();
 
   return (
     <View style={styles.container}>
-      <View style={styles.brandRow}>
-        <View style={[styles.logoIcon, { backgroundColor: colors.primary }]}>
-          <Text style={[styles.logoLetter, { fontFamily: typography.fonts.display }]}>P</Text>
-        </View>
-        <Text style={[styles.brandTitle, { color: colors.textPrimary, fontFamily: typography.fonts.display }]}>
-          PadhaiPilot
-        </Text>
-      </View>
-
-      <View style={styles.rightAction}>
+      <View style={styles.leftContainer}>
         {showBack && onBack ? (
           <Pressable
             onPress={onBack}
@@ -34,13 +25,13 @@ export const LuxuryHeader: React.FC<LuxuryHeaderProps> = ({ onBack, showBack }) 
               ← Back
             </Text>
           </Pressable>
-        ) : (
-          <View style={[styles.sessionBadge, { backgroundColor: colors.surfaceSubtle, borderColor: colors.border }]}>
-            <Text style={[styles.sessionText, { color: colors.textMuted, fontFamily: typography.fonts.ui }]}>
-              2026–27
-            </Text>
-          </View>
-        )}
+        ) : null}
+      </View>
+
+      <View style={[styles.sessionBadge, { backgroundColor: colors.surfaceSubtle, borderColor: colors.border }]}>
+        <Text style={[styles.sessionText, { color: colors.textMuted, fontFamily: typography.fonts.ui }]}>
+          Session 2026–27
+        </Text>
       </View>
     </View>
   );
@@ -52,34 +43,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 14,
+    paddingVertical: 12,
     marginBottom: 16,
   },
-  brandRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  logoIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: 'center',
+  leftContainer: {
+    minHeight: 32,
     justifyContent: 'center',
-    marginRight: 10,
-  },
-  logoLetter: {
-    color: '#FFFFFF',
-    fontWeight: '900',
-    fontSize: 18,
-  },
-  brandTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    letterSpacing: -0.3,
-  },
-  rightAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
   },
   backPill: {
     paddingVertical: 5,

@@ -1,6 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, Pressable } from 'react-native';
-import { Caption } from '../../../components/common/Typography';
+import { View, StyleSheet, Text, Pressable } from 'react-native';
 import { useTheme } from '../../../theme/ThemeContext';
 
 interface AuthFooterToggleProps {
@@ -9,24 +8,24 @@ interface AuthFooterToggleProps {
 }
 
 export const AuthFooterToggle: React.FC<AuthFooterToggleProps> = ({ mode, onToggle }) => {
-  const { colors, spacing } = useTheme();
+  const { colors, typography } = useTheme();
 
   return (
-    <View style={[styles.container, { marginTop: spacing.xl, marginBottom: spacing.lg }]}>
-      <Caption style={{ color: colors.textSecondary }}>
+    <View style={styles.container}>
+      <Text style={[styles.prompt, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
         {mode === 'SIGN_IN'
           ? "Don't have an account yet? "
           : 'Already have an active account? '}
-      </Caption>
+      </Text>
       <Pressable
         onPress={onToggle}
-        hitSlop={8}
+        hitSlop={10}
         accessibilityRole="button"
-        accessibilityLabel={mode === 'SIGN_IN' ? 'Switch to Register' : 'Switch to Sign In'}
+        accessibilityLabel={mode === 'SIGN_IN' ? 'Create new account' : 'Sign in to account'}
       >
-        <Caption style={{ color: colors.primary, fontWeight: '700' }}>
-          {mode === 'SIGN_IN' ? 'Register here' : 'Sign In'}
-        </Caption>
+        <Text style={[styles.action, { color: colors.primary, fontFamily: typography.fonts.ui }]}>
+          {mode === 'SIGN_IN' ? 'Create account' : 'Sign in'}
+        </Text>
       </Pressable>
     </View>
   );
@@ -37,6 +36,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 22,
+    marginBottom: 16,
+  },
+  prompt: {
+    fontSize: 12,
+  },
+  action: {
+    fontSize: 12,
+    fontWeight: '700',
   },
 });
-

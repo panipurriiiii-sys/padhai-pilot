@@ -34,7 +34,7 @@ describe('Auth & Onboarding Screens', () => {
     });
     expect(tree).toBeDefined();
     const str = JSON.stringify(tree?.toJSON());
-    expect(str).toContain('PADHAI PILOT SUITE');
+    expect(str).toContain('SMART LEARNING');
     expect(str).toContain('Precision Academic Hub');
   });
 
@@ -52,6 +52,6 @@ describe('Auth & Onboarding Screens', () => {
     });
     expect(tree).toBeDefined();
     const str = JSON.stringify(tree?.toJSON());
-    expect(str).toContain('PADHAI PILOT SUITE');
+    expect(str).toContain('SMART LEARNING');
   });
 });

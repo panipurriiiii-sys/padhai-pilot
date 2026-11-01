@@ -11,7 +11,7 @@ const ONBOARDING_SLIDES: OnboardingSlideData[] = [
   {
     id: 'welcome',
     artType: 'hub',
-    badge: 'PADHAI PILOT SUITE',
+    badge: 'SMART LEARNING',
     title: 'Precision Academic Hub',
     subtitle: 'Streamlined tuition & batch tracking',
     description:
