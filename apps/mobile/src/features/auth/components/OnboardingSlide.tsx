@@ -1,16 +1,12 @@
 import React, { useRef, useEffect } from 'react';
-import { View, StyleSheet, Text, Animated, Dimensions } from 'react-native';
-import { Illustration } from '@padhai-pilot/assets/native';
+import { View, StyleSheet, Text, Animated } from 'react-native';
 import { useTheme } from '../../../theme/ThemeContext';
 import { paperShadow } from '../../../theme/shadows';
+import { HeroHubArt, RosterBatchArt, FinanceLedgerArt } from './LuxuryAuthArt';
 
 export interface OnboardingSlideData {
   id: string;
-  illustrationName:
-    | 'brand/logo-mark'
-    | 'onboarding/get-started'
-    | 'education/classroom'
-    | 'dashboard/fees-payments';
+  artType: 'hub' | 'roster' | 'finance';
   badge: string;
   title: string;
   subtitle: string;
@@ -25,32 +21,44 @@ interface OnboardingSlideProps {
 export const OnboardingSlide: React.FC<OnboardingSlideProps> = ({ slide, isActive }) => {
   const { colors, radii, typography, isDark } = useTheme();
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const floatAnim = useRef(new Animated.Value(10)).current;
+  const floatAnim = useRef(new Animated.Value(8)).current;
 
   useEffect(() => {
     if (isActive) {
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 300,
+          duration: 280,
           useNativeDriver: true,
         }),
         Animated.spring(floatAnim, {
           toValue: 0,
-          friction: 7,
+          friction: 8,
           tension: 40,
           useNativeDriver: true,
         }),
       ]).start();
     } else {
       fadeAnim.setValue(0);
-      floatAnim.setValue(10);
+      floatAnim.setValue(8);
     }
   }, [isActive]);
 
+  const renderArt = () => {
+    switch (slide.artType) {
+      case 'roster':
+        return <RosterBatchArt size={230} />;
+      case 'finance':
+        return <FinanceLedgerArt size={230} />;
+      case 'hub':
+      default:
+        return <HeroHubArt size={230} />;
+    }
+  };
+
   return (
     <View style={styles.container}>
-      {/* Visual Canvas Card */}
+      {/* Floating Illustrated Canvas */}
       <Animated.View
         style={[
           styles.artworkCard,
@@ -64,22 +72,11 @@ export const OnboardingSlide: React.FC<OnboardingSlideProps> = ({ slide, isActiv
           paperShadow(isDark, 'lift'),
         ]}
       >
-        {!isDark && (
-          <View
-            style={[
-              styles.tapeStrip,
-              {
-                borderColor: colors.border,
-              },
-            ]}
-          />
-        )}
-        <View style={styles.illustrationWrap}>
-          <Illustration name={slide.illustrationName} size={150} animate="draw" />
-        </View>
+        {!isDark && <View style={[styles.tapeStrip, { borderColor: colors.border }]} />}
+        <View style={styles.illustrationWrap}>{renderArt()}</View>
       </Animated.View>
 
-      {/* Slide Text Content */}
+      {/* Slide Text */}
       <View style={styles.textContainer}>
         <View
           style={[
@@ -139,18 +136,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   artworkCard: {
-    width: 260,
-    height: 190,
+    width: 270,
+    height: 195,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
     position: 'relative',
-    marginTop: 8,
+    marginTop: 6,
   },
   tapeStrip: {
     position: 'absolute',
     top: -9,
-    width: 70,
+    width: 72,
     height: 18,
     backgroundColor: 'rgba(238, 233, 226, 0.75)',
     borderRadius: 2,
@@ -164,13 +161,13 @@ const styles = StyleSheet.create({
   textContainer: {
     alignItems: 'center',
     width: '100%',
-    marginTop: 24,
+    marginTop: 22,
   },
   badgeWrap: {
     paddingVertical: 5,
     paddingHorizontal: 12,
     borderWidth: 1,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   badgeText: {
     fontSize: 11,
@@ -178,7 +175,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
   title: {
-    fontSize: 26,
+    fontSize: 25,
     fontWeight: '700',
     textAlign: 'center',
     letterSpacing: -0.4,

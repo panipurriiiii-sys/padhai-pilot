@@ -10,30 +10,30 @@ import { LuxuryHeader } from '../components/LuxuryHeader';
 const ONBOARDING_SLIDES: OnboardingSlideData[] = [
   {
     id: 'welcome',
-    illustrationName: 'brand/logo-mark',
+    artType: 'hub',
     badge: 'PADHAI PILOT SUITE',
     title: 'Precision Academic Hub',
     subtitle: 'Streamlined tuition & batch tracking',
     description:
-      'Manage rosters, daily attendance, fees, schedules, and leaves with seamless zero-friction clarity.',
+      'Manage student rosters, real-time attendance, lesson plans, and results with calm, fluid clarity.',
   },
   {
     id: 'batches',
-    illustrationName: 'education/classroom',
+    artType: 'roster',
     badge: 'BATCHES & CURRICULUM',
     title: 'Effortless Roster Sync',
     subtitle: 'Shared codes and instant access',
     description:
-      'Enroll with 6-character batch codes, inspect lesson diaries, access attachments, and monitor homework.',
+      'Quick student enrollment via batch codes, homework attachments, and interactive student diaries.',
   },
   {
     id: 'finance',
-    illustrationName: 'dashboard/fees-payments',
+    artType: 'finance',
     badge: 'FEE LEDGER & AUDIT',
     title: 'Transparent Records',
     subtitle: 'Receipts & automated balance alerts',
     description:
-      'Detailed receipt breakdowns, salary tracking for faculty, and real-time payment status.',
+      'Verified payment receipts, faculty salary tracking, and real-time fee balance notifications.',
   },
 ];
 

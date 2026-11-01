@@ -106,8 +106,9 @@ export function Sidebar({
         ]
       : [
           {
-            title: 'My Leaves & Pay',
+            title: 'My Batches & Pay',
             items: [
+              { id: 'studentFees' as NavTab, label: 'Batch Fees', icon: IndianRupee },
               { id: 'facultyLeave' as NavTab, label: 'My Leaves', icon: CalendarDays },
               { id: 'facultySalary' as NavTab, label: 'My Pay Slips', icon: CreditCard },
             ],

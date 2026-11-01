@@ -261,6 +261,11 @@ function TeacherApp() {
     setAnnouncements((prev) => [newAnn, ...prev]);
   };
 
+  const handleDeleteAnnouncement = async (id: string) => {
+    await teacherApi.deleteBroadcast(id);
+    setAnnouncements((prev) => prev.filter((a) => a.id !== id));
+  };
+
   const handleQuickAttendance = (batchId: string) => {
     setSelectedBatchId(batchId);
     setCurrentTab('attendance');
@@ -438,6 +443,7 @@ function TeacherApp() {
               batches={batches}
               announcements={announcements}
               onCreateAnnouncement={handleCreateAnnouncement}
+              onDeleteAnnouncement={handleDeleteAnnouncement}
             />
           )}
 

@@ -145,6 +145,11 @@ function StudentPortal() {
   const [studyTasks, setStudyTasks] = useState<StudyTask[]>([]);
   const [documents, setDocuments] = useState<OfficialDocument[]>([]);
   const [profileData, setProfileData] = useState<StudentProfileData | null>(null);
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordUpdating, setPasswordUpdating] = useState(false);
+  const [passwordNotice, setPasswordNotice] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
   const [analytics, setAnalytics] = useState<StudentAnalyticsSummary | null>(null);
   const [sessionNotice, setSessionNotice] = useState<string | null>(null);
 
@@ -432,6 +437,35 @@ function StudentPortal() {
   };
 
   // Invitation Verification & Join
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordNotice(null);
+    if (!oldPassword || !newPassword) {
+      setPasswordNotice({ type: 'error', msg: 'Please provide both current and new password.' });
+      return;
+    }
+    if (newPassword.length < 8) {
+      setPasswordNotice({ type: 'error', msg: 'New password must be at least 8 characters long.' });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordNotice({ type: 'error', msg: 'New passwords do not match.' });
+      return;
+    }
+    setPasswordUpdating(true);
+    try {
+      await studentApi.changePassword(oldPassword, newPassword);
+      setPasswordNotice({ type: 'success', msg: 'Password updated successfully.' });
+      setOldPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err: any) {
+      setPasswordNotice({ type: 'error', msg: err?.message || 'Failed to update password.' });
+    } finally {
+      setPasswordUpdating(false);
+    }
+  };
+
   const handleVerifyInvite = async () => {
     if (!inviteCodeInput.trim()) return;
     setIsValidatingInvite(true);
