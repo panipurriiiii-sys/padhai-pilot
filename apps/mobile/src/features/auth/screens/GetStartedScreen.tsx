@@ -9,31 +9,31 @@ import { LuxuryHeader } from '../components/LuxuryHeader';
 
 const ONBOARDING_SLIDES: OnboardingSlideData[] = [
   {
-    id: 'welcome',
-    artType: 'hub',
-    badge: 'SMART LEARNING',
-    title: 'Precision Academic Hub',
-    subtitle: 'Streamlined tuition & batch tracking',
+    id: 'study',
+    artType: 'study',
+    badge: 'STUDY ZONE',
+    title: 'Focus & Master Your Goals',
+    subtitle: 'Lofi academic sanctuary',
     description:
-      'Manage student rosters, real-time attendance, lesson plans, and results with calm, fluid clarity.',
+      'Stay in the zone with organized batch notes, homework trackers, and interactive study routines.',
   },
   {
-    id: 'batches',
-    artType: 'roster',
-    badge: 'BATCHES & CURRICULUM',
-    title: 'Effortless Roster Sync',
-    subtitle: 'Shared codes and instant access',
+    id: 'classroom',
+    artType: 'classroom',
+    badge: 'TEAM & FACULTY',
+    title: 'Learn Alongside Your Batch',
+    subtitle: 'Direct mentorship & live updates',
     description:
-      'Quick student enrollment via batch codes, homework attachments, and interactive student diaries.',
+      'Seamless attendance marking, lecture timetables, and instant faculty announcements in real time.',
   },
   {
-    id: 'finance',
-    artType: 'finance',
-    badge: 'FEE LEDGER & AUDIT',
-    title: 'Transparent Records',
-    subtitle: 'Receipts & automated balance alerts',
+    id: 'milestone',
+    artType: 'milestone',
+    badge: 'LEVEL UP',
+    title: 'Celebrate Every Milestone',
+    subtitle: 'Report cards & progress streaks',
     description:
-      'Verified payment receipts, faculty salary tracking, and real-time fee balance notifications.',
+      'Track your test scores, fee receipts, and performance streaks as you conquer every examination.',
   },
 ];
 
@@ -78,7 +78,7 @@ export const GetStartedScreen: React.FC<GetStartedScreenProps> = ({
 
         <View style={[styles.actionRow, { marginTop: spacing.md }]}>
           <Button
-            title={activeIndex === ONBOARDING_SLIDES.length - 1 ? 'Get Started →' : 'Continue →'}
+            title={activeIndex === ONBOARDING_SLIDES.length - 1 ? 'Start Journey →' : 'Continue →'}
             variant="primary"
             size="lg"
             onPress={handleNext}

@@ -2,11 +2,11 @@ import React, { useRef, useEffect } from 'react';
 import { View, StyleSheet, Text, Animated } from 'react-native';
 import { useTheme } from '../../../theme/ThemeContext';
 import { paperShadow } from '../../../theme/shadows';
-import { HeroHubArt, RosterBatchArt, FinanceLedgerArt } from './LuxuryAuthArt';
+import { AnimeStudySceneArt, AnimeClassroomArt, AnimeMilestoneArt } from './LuxuryAuthArt';
 
 export interface OnboardingSlideData {
   id: string;
-  artType: 'hub' | 'roster' | 'finance';
+  artType: 'study' | 'classroom' | 'milestone';
   badge: string;
   title: string;
   subtitle: string;
@@ -46,19 +46,19 @@ export const OnboardingSlide: React.FC<OnboardingSlideProps> = ({ slide, isActiv
 
   const renderArt = () => {
     switch (slide.artType) {
-      case 'roster':
-        return <RosterBatchArt size={230} />;
-      case 'finance':
-        return <FinanceLedgerArt size={230} />;
-      case 'hub':
+      case 'classroom':
+        return <AnimeClassroomArt size={230} />;
+      case 'milestone':
+        return <AnimeMilestoneArt size={230} />;
+      case 'study':
       default:
-        return <HeroHubArt size={230} />;
+        return <AnimeStudySceneArt size={230} />;
     }
   };
 
   return (
     <View style={styles.container}>
-      {/* Floating Illustrated Canvas */}
+      {/* Floating Anime Scene Card */}
       <Animated.View
         style={[
           styles.artworkCard,
