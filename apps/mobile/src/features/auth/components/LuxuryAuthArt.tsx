@@ -198,3 +198,4 @@ export const FinanceLedgerArt: React.FC<ArtProps> = ({ size = 220 }) => (
     </G>
   </Svg>
 );
+
