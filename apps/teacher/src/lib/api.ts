@@ -766,6 +766,15 @@ export const teacherApi = {
     return await request<FeeSummaryOverview>('/tuition/fees/summary');
   },
 
+  async getEffectiveFeatures(instituteId?: string): Promise<any> {
+    const q = instituteId ? `?instituteId=${instituteId}` : '';
+    return await request<any>(`/features/institute/${instituteId || 'current'}${q}`);
+  },
+
+  async getFeatureRegistry(): Promise<any> {
+    return await request<any>('/features/registry');
+  },
+
   async dispatchFeeReminder(dto: DispatchFeeReminderDto): Promise<{ success: boolean; message: string; reminderId: string }> {
     return await request<{ success: boolean; message: string; reminderId: string }>('/tuition/fees/remind', {
       method: 'POST',

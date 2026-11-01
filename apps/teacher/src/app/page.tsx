@@ -22,6 +22,7 @@ import { StudyMaterialView } from '../components/StudyMaterialView';
 import { BatchFeesView } from '../components/BatchFeesView';
 import { StudentLeavesView } from '../components/StudentLeavesView';
 import { TuitionBrandingView } from '../components/TuitionBrandingView';
+import { SubscriptionView } from '../components/SubscriptionView';
 import { LoadError } from '../components/LoadError';
 import { AuthModal } from '../components/AuthModal';
 import { AuthWelcomeScreen } from '../components/AuthWelcomeScreen';

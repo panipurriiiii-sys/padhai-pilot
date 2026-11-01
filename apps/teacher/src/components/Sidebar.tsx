@@ -23,6 +23,7 @@ import {
   IndianRupee,
   Shield,
   FileCheck2,
+  Sparkles,
 } from 'lucide-react';
 
 export type NavTab =
@@ -45,6 +46,7 @@ export type NavTab =
   | 'studentLeaves'
   | 'tuitionBranding'
   | 'reports'
+  | 'subscription'
   | 'settings';
 
 interface SidebarProps {
@@ -101,6 +103,7 @@ export function Sidebar({
               { id: 'facultySalary' as NavTab, label: 'Salary & Payroll', icon: CreditCard, badge: 'Ledger' },
               { id: 'facultyLeave' as NavTab, label: 'Leave Applications', icon: CalendarDays },
               { id: 'studentFees' as NavTab, label: 'Batch Fees', icon: IndianRupee },
+              { id: 'subscription' as NavTab, label: 'Plans & Billing', icon: Sparkles, badge: 'Plan' },
             ],
           },
         ]

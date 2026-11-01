@@ -20,6 +20,7 @@ export function AnnouncementsView({
   batches,
   announcements,
   onCreateAnnouncement,
+  onDeleteAnnouncement,
 }: AnnouncementsViewProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
