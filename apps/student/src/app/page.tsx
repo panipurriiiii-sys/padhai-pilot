@@ -47,6 +47,7 @@ import {
   CheckSquare,
   Square,
   RefreshCw,
+  Menu,
 } from 'lucide-react';
 import {
   StudentAssessmentResult,
@@ -58,6 +59,7 @@ import {
 import {
   studentApi,
   clearAuthToken,
+  getAuthToken,
   TeachingDiaryEntry,
   TimetableDay,
   AssignmentItem,
@@ -126,7 +128,13 @@ const TAB_RESOURCES: Record<string, string[]> = {
 };
 
 function StudentPortal() {
-  const [student, setStudent] = useState<UserSession | null>(null);
+  const [student, setStudent] = useState<UserSession | null>(() => {
+    if (typeof window !== "undefined") {
+      return studentApi.getStudentSession();
+    }
+    return null;
+  });
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<PortalTab>('OVERVIEW');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -335,43 +343,55 @@ function StudentPortal() {
   };
 
   useEffect(() => {
-    const sharedCode = new URLSearchParams(window.location.search).get('code');
+    const sharedCode = new URLSearchParams(window.location.search).get("code");
     if (sharedCode) {
       setRegInviteCode(sharedCode.trim().toUpperCase());
       setInviteCodeInput(sharedCode.trim().toUpperCase());
     }
     const onUnauthorized = () => {
       setStudent(null);
-      setSessionNotice('Your session expired. Please sign in again.');
+      clearAuthToken();
+      setSessionNotice("Your session expired. Please sign in again.");
     };
-    window.addEventListener('pp:unauthorized', onUnauthorized);
+    window.addEventListener("pp:unauthorized", onUnauthorized);
 
-    const session = studentApi.getStudentSession();
-    if (!session) {
+    const token = getAuthToken();
+    if (!token) {
+      setStudent(null);
       setIsLoading(false);
-      return () => window.removeEventListener('pp:unauthorized', onUnauthorized);
+      return () => window.removeEventListener("pp:unauthorized", onUnauthorized);
     }
-    // Never trust the cached session alone: confirm the token is still valid.
+
+    // Always verify stored token with server on refresh
     studentApi
-      .verifySession()
-      .then((verified) => {
-        if (verified) {
-          setStudent(verified);
+      .getCurrentUser()
+      .then((auth) => {
+        if (auth && auth.user) {
+          setStudent(auth.user);
           return loadAllStudentData();
+        } else {
+          clearAuthToken();
+          setStudent(null);
         }
-        setIsLoading(false);
       })
-      .catch((err: { status?: number }) => {
+      .catch((err: any) => {
+        console.warn("Session verification check:", err);
         if (err?.status === 401) {
           clearAuthToken();
-          setIsLoading(false);
-          return;
+          setStudent(null);
+        } else {
+          const cached = studentApi.getStudentSession();
+          if (cached) {
+            setStudent(cached);
+            return loadAllStudentData();
+          }
         }
-        // Server unreachable: keep the cached identity; each resource shows its own error + Retry.
-        setStudent(session);
-        return loadAllStudentData();
+      })
+      .finally(() => {
+        setIsLoading(false);
       });
-    return () => window.removeEventListener('pp:unauthorized', onUnauthorized);
+
+    return () => window.removeEventListener("pp:unauthorized", onUnauthorized);
   }, []);
 
   const blockingErrors = (TAB_RESOURCES[activeTab] ?? []).filter((k) => loadErrors[k]);
@@ -700,6 +720,19 @@ function StudentPortal() {
   // --------------------------------------------------------------------------
   // AUTHENTICATION SCREEN (When user is not signed in)
   // --------------------------------------------------------------------------
+  if (isLoading && !student) {
+    return (
+      <main className="min-h-screen bg-[var(--bg-desk)] flex flex-col items-center justify-center text-[var(--ink-primary)] font-['Raleway']">
+        <div className="flex items-center gap-3">
+          <Loader2 className="w-6 h-6 animate-spin text-[var(--brand-electric)]" />
+          <span className="font-['Playfair_Display'] text-xl font-bold">
+            PadhaiPilot <span className="text-sm font-['Raleway'] font-normal text-[var(--ink-muted)]">Student Vault</span>
+          </span>
+        </div>
+      </main>
+    );
+  }
+
   if (!student) {
     return (
       <main className="min-h-screen bg-[var(--bg-desk)] text-[var(--ink-primary)] flex items-center justify-center p-4 sm:p-6 font-['Raleway']">
@@ -920,7 +953,7 @@ function StudentPortal() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-['Playfair_Display'] font-bold text-base tracking-tight text-[var(--ink-primary)]">
+                <span className="font-['Playfair_Display'] font-bold text-sm sm:text-base tracking-tight text-[var(--ink-primary)] truncate max-w-[140px] sm:max-w-xs">
                   {student.instituteName || 'Institute'}
                 </span>
                 <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[rgba(22,119,255,0.12)] text-[var(--brand-electric)] border border-[rgba(22,119,255,0.25)]">
@@ -935,6 +968,16 @@ function StudentPortal() {
 
           {/* Right Action Bar */}
           <div className="flex items-center gap-2.5">
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="md:hidden p-2 rounded-xl bg-[var(--bg-paper-warm)] border border-[var(--border-paper)] hover:bg-[var(--bg-surface-subtle)] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] transition"
+              title="All Sections"
+              aria-label="Open mobile menu"
+            >
+              <Menu className="w-4 h-4" />
+            </button>
+
             {/* Notification Bell */}
             <button
               onClick={() => setShowNotifications(true)}
@@ -1008,7 +1051,7 @@ function StudentPortal() {
       </header>
 
       {/* MAIN CONTENT AREA */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-6 pb-24 md:pb-8">
         {isLoading ? (
           <div className="py-24 text-center space-y-3">
             <Loader2 className="w-8 h-8 text-[var(--brand-electric)] animate-spin mx-auto" />
@@ -2782,9 +2825,144 @@ function StudentPortal() {
           </form>
         </div>
       )}
+      {/* MOBILE BOTTOM NAVIGATION BAR */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[var(--bg-paper)]/95 backdrop-blur-md border-t border-[var(--border-paper)] py-1 px-2 flex items-center justify-around shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+        {[
+          { id: "OVERVIEW" as PortalTab, label: "Overview", icon: Layers },
+          { id: "DIARY" as PortalTab, label: "Diary", icon: BookOpen },
+          { id: "ASSIGNMENTS" as PortalTab, label: "Homework", icon: FileCheck },
+          { id: "RESULTS" as PortalTab, label: "Results", icon: Award },
+        ].map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => {
+                setActiveTab(tab.id);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              className={`flex flex-col items-center gap-1 py-1 px-3 rounded-lg text-[10px] font-['Raleway'] font-semibold transition ${
+                isActive ? "text-[var(--brand-electric)]" : "text-[var(--ink-muted)] hover:text-[var(--ink-primary)]"
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
+        <button
+          onClick={() => setMobileMenuOpen(true)}
+          className="flex flex-col items-center gap-1 py-1 px-3 rounded-lg text-[10px] font-['Raleway'] font-semibold text-[var(--ink-muted)] hover:text-[var(--ink-primary)] transition"
+        >
+          <Menu className="w-4 h-4" />
+          <span>More</span>
+        </button>
+      </nav>
+
+      {/* MOBILE SLIDE-OVER DRAWER FOR ALL 14 SECTIONS */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+
+          {/* Drawer Panel */}
+          <div className="relative w-72 max-w-[85vw] h-full bg-[var(--bg-paper)] border-r border-[var(--border-paper)] shadow-2xl flex flex-col z-10 animate-in slide-in-from-left duration-200">
+            {/* Drawer Header */}
+            <div className="p-4 border-b border-[var(--border-paper)] bg-[var(--bg-paper-warm)] flex items-center justify-between">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-[var(--bg-paper)] border border-[var(--border-paper)] flex items-center justify-center text-[var(--brand-electric)] shrink-0 shadow-inner">
+                  <GraduationCap className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <span className="font-['Playfair_Display'] font-bold text-sm tracking-tight text-[var(--ink-primary)] truncate block">
+                    {student.instituteName || "Institute"}
+                  </span>
+                  <p className="text-[10px] font-['Raleway'] text-[var(--ink-muted)] truncate">
+                    {student.fullName}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-1.5 rounded-lg text-[var(--ink-muted)] hover:text-[var(--ink-primary)] hover:bg-[var(--bg-paper)] transition"
+                aria-label="Close menu"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Student Info Pill in Drawer */}
+            <div className="px-4 py-2 border-b border-[var(--border-paper)] bg-[var(--bg-paper)]">
+              <span className="text-[11px] font-['Raleway'] text-[var(--brand-electric)] font-semibold truncate block">
+                {profileData?.batchName || "Enrolled Batch"}{profileData?.rollNumber ? ` • Roll: ${profileData.rollNumber}` : ""}
+              </span>
+            </div>
+
+            {/* Links List */}
+            <nav className="flex-1 px-3 py-3 space-y-1 overflow-y-auto">
+              {[
+                { id: "OVERVIEW", label: "Overview", icon: Layers },
+                { id: "DIARY", label: "Daily Diary", icon: BookOpen },
+                { id: "MATERIALS", label: "Study Vault", icon: FileText },
+                { id: "TIMETABLE", label: "Timetable", icon: Calendar },
+                { id: "ATTENDANCE", label: "Attendance", icon: CheckCircle2 },
+                { id: "ASSIGNMENTS", label: "Homework", icon: FileCheck },
+                { id: "TESTS", label: "Online Tests", icon: Clock },
+                { id: "RESULTS", label: "Exam Results", icon: Award },
+                { id: "FEES", label: "Fees & Dues", icon: CreditCard },
+                { id: "LEAVES", label: "Leave Requests", icon: Calendar },
+                { id: "QUERIES", label: "Faculty Doubts", icon: MessageSquare },
+                { id: "PLANNER", label: "Study Planner", icon: ListTodo },
+                { id: "DOCUMENTS", label: "Documents & Certificates", icon: FileBadge },
+                { id: "PROFILE", label: "Profile & Settings", icon: User },
+              ].map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => {
+                      setActiveTab(tab.id as PortalTab);
+                      setMobileMenuOpen(false);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-['Raleway'] transition text-left ${
+                      isActive
+                        ? "bg-[var(--brand-electric)] text-white font-bold shadow-sm"
+                        : "text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:bg-[var(--bg-paper-warm)]"
+                    }`}
+                  >
+                    <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-white" : "text-[var(--ink-muted)]"}`} />
+                    <span className="flex-1 truncate">{tab.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Drawer Footer with Sign Out */}
+            <div className="p-3 border-t border-[var(--border-paper)] bg-[var(--bg-paper-warm)]">
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  handleLogout();
+                }}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-[var(--status-danger-bg)] text-[var(--status-danger)] font-semibold text-xs transition"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Sign Out</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
 
 /** Shared motion + toast context (reduced-motion aware). */
 export default function StudentPortalRoot() {

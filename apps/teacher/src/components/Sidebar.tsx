@@ -24,6 +24,7 @@ import {
   Shield,
   FileCheck2,
   Sparkles,
+  X,
 } from 'lucide-react';
 
 export type NavTab =
@@ -56,6 +57,8 @@ interface SidebarProps {
   instituteName?: string;
   userRole?: string;
   onOpenAuthModal: () => void;
+  isOpenMobile?: boolean;
+  onCloseMobile?: () => void;
 }
 
 export function Sidebar({
@@ -65,6 +68,8 @@ export function Sidebar({
   instituteName = '',
   userRole = 'TEACHER',
   onOpenAuthModal,
+  isOpenMobile = false,
+  onCloseMobile,
 }: SidebarProps) {
   // Contextually filter sections by user role (Tuition Owner vs Faculty Member)
   const isOwner = userRole === 'TUITION_OWNER' || userRole === 'INSTITUTE_ADMIN';
@@ -128,7 +133,8 @@ export function Sidebar({
   ];
 
   return (
-    <aside className="w-64 h-screen sticky top-0 flex flex-col bg-[var(--bg-surface-subtle)] border-r border-[var(--border-paper)] shadow-[2px_0_12px_rgba(60,52,40,0.03)] select-none z-30 shrink-0">
+    <>
+    <aside className="hidden md:flex w-64 h-screen sticky top-0 flex-col bg-[var(--bg-surface-subtle)] border-r border-[var(--border-paper)] shadow-[2px_0_12px_rgba(60,52,40,0.03)] select-none z-30 shrink-0">
       {/* Brand & Studio Header */}
       <div className="p-4 border-b border-[var(--border-paper)] bg-[var(--bg-paper-warm)]">
         <div className="flex items-center gap-3 mb-2">
@@ -222,5 +228,125 @@ export function Sidebar({
         </button>
       </div>
     </aside>
+
+      {/* Mobile Slide-Over Navigation Drawer */}
+      {isOpenMobile && (
+        <div className="fixed inset-0 z-50 md:hidden flex">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+            onClick={onCloseMobile}
+          />
+
+          {/* Drawer Panel */}
+          <div className="relative w-72 max-w-[85vw] h-full bg-[var(--bg-surface-subtle)] border-r border-[var(--border-paper)] shadow-2xl flex flex-col z-10 animate-in slide-in-from-left duration-200">
+            {/* Header */}
+            <div className="p-4 border-b border-[var(--border-paper)] bg-[var(--bg-paper-warm)] flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-[var(--brand-electric)] flex items-center justify-center text-white font-['Playfair_Display'] font-bold text-sm shadow-[0_2px_8px_rgba(22,119,255,0.35)]">
+                  P
+                </div>
+                <div>
+                  <span className="font-['Playfair_Display'] font-bold text-sm tracking-tight text-[var(--ink-primary)] block">
+                    PadhaiPilot
+                  </span>
+                  <p className="text-[9px] font-['Raleway'] font-bold text-[var(--brand-electric)] uppercase tracking-widest">
+                    Teacher Portal
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={onCloseMobile}
+                className="p-1.5 rounded-lg text-[var(--ink-muted)] hover:text-[var(--ink-primary)] hover:bg-[var(--bg-paper)] transition"
+                aria-label="Close menu"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Institute Info Tag */}
+            <div className="p-3 border-b border-[var(--border-paper)] bg-[var(--bg-paper)]">
+              <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-[var(--bg-paper-warm)] border border-[var(--border-paper)] text-xs">
+                <Building2 className="w-3.5 h-3.5 text-[var(--brand-electric)] shrink-0" />
+                <span className="truncate font-['Raleway'] font-semibold text-[var(--ink-secondary)] text-[11px]">
+                  {instituteName}
+                </span>
+              </div>
+            </div>
+
+            {/* Navigation Links Grouped */}
+            <nav className="flex-1 px-3 py-2 space-y-4 overflow-y-auto">
+              {sections.map((section, sIdx) => (
+                <div key={sIdx} className="space-y-1">
+                  <div className="px-3 pt-1 pb-1 text-[10px] font-['Raleway'] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
+                    {section.title}
+                  </div>
+                  {section.items.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = currentTab === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => {
+                          onSelectTab(item.id);
+                          onCloseMobile?.();
+                        }}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-['Raleway'] transition-all text-left ${
+                          isActive
+                            ? 'bg-[var(--bg-paper)] text-[var(--ink-primary)] font-bold shadow-sm border border-[var(--border-paper)]'
+                            : 'text-[var(--ink-muted)] hover:text-[var(--ink-primary)] hover:bg-[var(--bg-secondary)]'
+                        }`}
+                      >
+                        <Icon
+                          className={`w-3.5 h-3.5 transition-colors shrink-0 ${
+                            isActive ? 'text-[var(--brand-electric)]' : 'text-[var(--ink-faint)]'
+                          }`}
+                        />
+                        <span className="flex-1 truncate">{item.label}</span>
+                        {item.badge && (
+                          <span
+                            className={`text-[9px] font-['Inter'] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wider ${
+                              isActive
+                                ? 'bg-blue-50 text-[var(--brand-electric)] border border-blue-200'
+                                : 'bg-[var(--bg-muted)] text-[var(--ink-muted)]'
+                            }`}
+                          >
+                            {item.badge}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
+            </nav>
+
+            {/* Faculty Pass Footer */}
+            <div className="p-3 border-t border-[var(--border-paper)] bg-[var(--bg-paper-warm)]">
+              <button
+                onClick={() => {
+                  onOpenAuthModal();
+                  onCloseMobile?.();
+                }}
+                className="w-full flex items-center gap-2.5 p-2 rounded-xl bg-[var(--bg-paper)] border border-[var(--border-paper)] text-left shadow-2xs group"
+              >
+                <div className="w-8 h-8 rounded-lg bg-[var(--brand-electric)] text-white font-['Playfair_Display'] font-bold flex items-center justify-center text-xs shrink-0 shadow-sm">
+                  {teacherName.charAt(0)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-['Raleway'] font-bold text-xs text-[var(--ink-primary)] truncate group-hover:text-[var(--brand-electric)] transition-colors">
+                    {teacherName}
+                  </p>
+                  <p className="font-['Inter'] text-[10px] text-[var(--ink-muted)] truncate">
+                    {isOwner ? 'Tuition Owner / Administrator' : 'Faculty Member'}
+                  </p>
+                </div>
+                <LogIn className="w-3.5 h-3.5 text-[var(--ink-faint)] shrink-0" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

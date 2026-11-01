@@ -42,7 +42,7 @@ import type {
   UserSession,
   TeacherAnalyticsSummary,
 } from '@padhai-pilot/shared';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Menu, LayoutDashboard, NotebookPen, CalendarCheck, Users } from 'lucide-react';
 import { MotionProvider, ToastProvider } from '@padhai-pilot/ui';
 
 type ResourceKey = 'dashboard' | 'batches' | 'invitations' | 'assignments' | 'tests' | 'lessonPlans' | 'timetable' | 'announcements' | 'reports' | 'analytics';
@@ -80,6 +80,7 @@ function TeacherApp() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sessionNotice, setSessionNotice] = useState<string | null>(null);
   const [showGetStarted, setShowGetStarted] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -347,8 +348,32 @@ function TeacherApp() {
   }
 
   return (
-    <div className="min-h-screen ak-desk-surface flex relative text-[var(--ink-primary)]">
-      {/* Primary Sidebar */}
+    <div className="min-h-screen ak-desk-surface flex flex-col md:flex-row relative text-[var(--ink-primary)]">
+      {/* Mobile Top Header */}
+      <div className="md:hidden sticky top-0 z-40 bg-[var(--bg-paper)]/95 backdrop-blur-md border-b border-[var(--border-paper)] px-4 py-2.5 flex items-center justify-between w-full">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-[var(--brand-electric)] flex items-center justify-center text-white font-['Playfair_Display'] font-bold text-sm shadow-sm shrink-0">
+            P
+          </div>
+          <div className="min-w-0">
+            <h1 className="font-['Playfair_Display'] font-bold text-sm text-[var(--ink-primary)] truncate">
+              {user?.instituteName || 'Teacher Portal'}
+            </h1>
+            <p className="font-['Raleway'] text-[10px] text-[var(--brand-electric)] font-semibold truncate capitalize">
+              {currentTab.replace(/([A-Z])/g, ' $1').trim()}
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => setMobileMenuOpen(true)}
+          className="p-2 rounded-xl bg-[var(--bg-paper-warm)] border border-[var(--border-paper)] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] transition"
+          aria-label="Open navigation menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* Primary Sidebar & Mobile Drawer */}
       <Sidebar
         currentTab={currentTab}
         onSelectTab={setCurrentTab}
@@ -356,10 +381,13 @@ function TeacherApp() {
         instituteName={user?.instituteName}
         userRole={user?.role}
         onOpenAuthModal={() => setShowAuthModal(true)}
+        isOpenMobile={mobileMenuOpen}
+        onCloseMobile={() => setMobileMenuOpen(false)}
       />
 
+
       {/* Main View Area */}
-      <main className="flex-1 min-w-0 p-6 md:p-10 overflow-y-auto">
+      <main className="flex-1 min-w-0 p-3 sm:p-6 md:p-10 pb-24 md:pb-10 overflow-y-auto">
         <div className="max-w-6xl mx-auto">
           {blockingErrors.length > 0 ? (
             <LoadError
@@ -517,6 +545,42 @@ function TeacherApp() {
       </main>
 
 
+
+      
+      {/* Mobile Bottom Navigation Bar */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[var(--bg-paper)]/95 backdrop-blur-md border-t border-[var(--border-paper)] py-1 px-2 flex items-center justify-around shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+        {[
+          { id: 'dashboard' as NavTab, label: 'Overview', icon: LayoutDashboard },
+          { id: 'teachingDiary' as NavTab, label: 'Diary', icon: NotebookPen },
+          { id: 'attendance' as NavTab, label: 'Attendance', icon: CalendarCheck },
+          { id: 'batches' as NavTab, label: 'Batches', icon: Users },
+        ].map((tab) => {
+          const Icon = tab.icon;
+          const isActive = currentTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => {
+                setCurrentTab(tab.id);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className={`flex flex-col items-center gap-1 py-1 px-3 rounded-lg text-[10px] font-['Raleway'] font-semibold transition ${
+                isActive ? 'text-[var(--brand-electric)]' : 'text-[var(--ink-muted)] hover:text-[var(--ink-primary)]'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
+        <button
+          onClick={() => setMobileMenuOpen(true)}
+          className="flex flex-col items-center gap-1 py-1 px-3 rounded-lg text-[10px] font-['Raleway'] font-semibold text-[var(--ink-muted)] hover:text-[var(--ink-primary)] transition"
+        >
+          <Menu className="w-4 h-4" />
+          <span>More</span>
+        </button>
+      </nav>
 
       {/* Authentication & Profile Modal */}
       <AuthModal
