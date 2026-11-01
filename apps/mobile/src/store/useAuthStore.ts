@@ -14,7 +14,7 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
 
-  login: (payload: LoginPayload) => Promise<void>;
+  login: (payloadOrEmail: LoginPayload | string, maybePassword?: string) => Promise<void>;
   registerStudent: (payload: StudentRegisterPayload) => Promise<void>;
   registerTeacher: (payload: TeacherRegisterPayload) => Promise<void>;
   forgotPassword: (email: string) => Promise<{ success: boolean; message: string; resetToken?: string }>;
@@ -34,9 +34,13 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoading: false,
   error: null,
 
-  login: async (payload: LoginPayload) => {
+  login: async (payloadOrEmail: LoginPayload | string, maybePassword?: string) => {
     set({ isLoading: true, error: null });
     try {
+      const payload: LoginPayload =
+        typeof payloadOrEmail === 'string'
+          ? { email: payloadOrEmail, password: maybePassword }
+          : payloadOrEmail;
       const session = await authService.login(payload);
       set({ session, isAuthenticated: true, isLoading: false, error: null });
     } catch (err: unknown) {

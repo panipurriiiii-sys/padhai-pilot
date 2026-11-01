@@ -31,6 +31,7 @@ interface RegisterFormProps {
   subjectError?: string | null;
   onSubmit: () => void;
   isLoading: boolean;
+  onFocusField?: (field: 'name' | 'email' | 'pwd' | 'phone' | 'extra') => void;
 }
 
 export const RegisterForm: React.FC<RegisterFormProps> = ({
@@ -54,8 +55,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
   subjectError,
   onSubmit,
   isLoading,
+  onFocusField,
 }) => {
-  const { colors, radii, typography } = useTheme();
+  const { colors, typography, isDark } = useTheme();
   const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
@@ -64,6 +66,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
   const pwdInputRef = useRef<TextInput>(null);
   const phoneInputRef = useRef<TextInput>(null);
   const extraInputRef = useRef<TextInput>(null);
+
+  const fieldBg = isDark ? colors.surfaceSubtle : '#FFFFFF';
 
   return (
     <View style={styles.container}>
@@ -76,9 +80,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           style={[
             styles.inputWrapper,
             {
-              backgroundColor: colors.surfaceSubtle,
-              borderColor: nameError ? colors.error : focusedField === 'name' ? colors.primary : colors.borderStrong,
-              borderRadius: radii.lg,
+              backgroundColor: fieldBg,
+              borderColor: nameError ? colors.error : focusedField === 'name' ? colors.primary : colors.borderSubtle,
+              borderRadius: 14,
             },
             focusedField === 'name' && styles.focusedGlow,
           ]}
@@ -97,7 +101,10 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             placeholderTextColor={colors.textFaint}
             value={fullName}
             onChangeText={setFullName}
-            onFocus={() => setFocusedField('name')}
+            onFocus={() => {
+              setFocusedField('name');
+              onFocusField?.('name');
+            }}
             onBlur={() => setFocusedField(null)}
             autoCapitalize="words"
             autoCorrect={false}
@@ -122,9 +129,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           style={[
             styles.inputWrapper,
             {
-              backgroundColor: colors.surfaceSubtle,
-              borderColor: emailError ? colors.error : focusedField === 'email' ? colors.primary : colors.borderStrong,
-              borderRadius: radii.lg,
+              backgroundColor: fieldBg,
+              borderColor: emailError ? colors.error : focusedField === 'email' ? colors.primary : colors.borderSubtle,
+              borderRadius: 14,
             },
             focusedField === 'email' && styles.focusedGlow,
           ]}
@@ -143,7 +150,10 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             placeholderTextColor={colors.textFaint}
             value={email}
             onChangeText={setEmail}
-            onFocus={() => setFocusedField('email')}
+            onFocus={() => {
+              setFocusedField('email');
+              onFocusField?.('email');
+            }}
             onBlur={() => setFocusedField(null)}
             autoCapitalize="none"
             autoCorrect={false}
@@ -169,9 +179,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           style={[
             styles.inputWrapper,
             {
-              backgroundColor: colors.surfaceSubtle,
-              borderColor: passwordError ? colors.error : focusedField === 'pwd' ? colors.primary : colors.borderStrong,
-              borderRadius: radii.lg,
+              backgroundColor: fieldBg,
+              borderColor: passwordError ? colors.error : focusedField === 'pwd' ? colors.primary : colors.borderSubtle,
+              borderRadius: 14,
             },
             focusedField === 'pwd' && styles.focusedGlow,
           ]}
@@ -190,7 +200,10 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             placeholderTextColor={colors.textFaint}
             value={password}
             onChangeText={setPassword}
-            onFocus={() => setFocusedField('pwd')}
+            onFocus={() => {
+              setFocusedField('pwd');
+              onFocusField?.('pwd');
+            }}
             onBlur={() => setFocusedField(null)}
             secureTextEntry={!showPassword}
             autoCapitalize="none"
@@ -234,9 +247,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           style={[
             styles.inputWrapper,
             {
-              backgroundColor: colors.surfaceSubtle,
-              borderColor: focusedField === 'phone' ? colors.primary : colors.borderStrong,
-              borderRadius: radii.lg,
+              backgroundColor: fieldBg,
+              borderColor: focusedField === 'phone' ? colors.primary : colors.borderSubtle,
+              borderRadius: 14,
             },
             focusedField === 'phone' && styles.focusedGlow,
           ]}
@@ -255,7 +268,10 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             placeholderTextColor={colors.textFaint}
             value={phone}
             onChangeText={setPhone}
-            onFocus={() => setFocusedField('phone')}
+            onFocus={() => {
+              setFocusedField('phone');
+              onFocusField?.('phone');
+            }}
             onBlur={() => setFocusedField(null)}
             keyboardType="phone-pad"
             returnKeyType="next"
@@ -275,9 +291,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             style={[
               styles.inputWrapper,
               {
-                backgroundColor: colors.surfaceSubtle,
-                borderColor: codeError ? colors.error : focusedField === 'code' ? colors.primary : colors.borderStrong,
-                borderRadius: radii.lg,
+                backgroundColor: fieldBg,
+                borderColor: codeError ? colors.error : focusedField === 'code' ? colors.primary : colors.borderSubtle,
+                borderRadius: 14,
               },
               focusedField === 'code' && styles.focusedGlow,
             ]}
@@ -296,7 +312,10 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               placeholderTextColor={colors.textFaint}
               value={invitationCode}
               onChangeText={setInvitationCode}
-              onFocus={() => setFocusedField('code')}
+              onFocus={() => {
+                setFocusedField('code');
+                onFocusField?.('extra');
+              }}
               onBlur={() => setFocusedField(null)}
               autoCapitalize="characters"
               autoCorrect={false}
@@ -324,9 +343,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             style={[
               styles.inputWrapper,
               {
-                backgroundColor: colors.surfaceSubtle,
-                borderColor: subjectError ? colors.error : focusedField === 'subject' ? colors.primary : colors.borderStrong,
-                borderRadius: radii.lg,
+                backgroundColor: fieldBg,
+                borderColor: subjectError ? colors.error : focusedField === 'subject' ? colors.primary : colors.borderSubtle,
+                borderRadius: 14,
               },
               focusedField === 'subject' && styles.focusedGlow,
             ]}
@@ -345,7 +364,10 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               placeholderTextColor={colors.textFaint}
               value={subject}
               onChangeText={setSubject}
-              onFocus={() => setFocusedField('subject')}
+              onFocus={() => {
+                setFocusedField('subject');
+                onFocusField?.('extra');
+              }}
               onBlur={() => setFocusedField(null)}
               autoCapitalize="words"
               autoCorrect={false}
@@ -370,7 +392,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           styles.submitBtn,
           {
             backgroundColor: colors.primary,
-            borderRadius: radii.lg,
+            borderRadius: 14,
             opacity: isLoading ? 0.7 : pressed ? 0.92 : 1,
             transform: [{ scale: pressed ? 0.985 : 1 }],
           },
@@ -406,15 +428,15 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1.2,
-    paddingHorizontal: 12,
-    height: 48,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    height: 50,
   },
   focusedGlow: {
     shadowColor: '#1677FF',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
+    shadowOpacity: 0.16,
+    shadowRadius: 5,
     elevation: 2,
   },
   inputIconContainer: {
@@ -445,20 +467,20 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   submitBtn: {
-    height: 48,
+    height: 50,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 10,
     shadowColor: '#1677FF',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 4,
+    shadowOpacity: 0.28,
+    shadowRadius: 8,
+    elevation: 3,
   },
   submitText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
     letterSpacing: 0.3,
   },
