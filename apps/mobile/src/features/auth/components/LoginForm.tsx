@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Text, TextInput, Pressable, Platform } from 'react-native';
+import { View, StyleSheet, Text, TextInput, Pressable } from 'react-native';
 import { useTheme } from '../../../theme/ThemeContext';
+import { MailIcon, LockIcon } from './AuthFieldIcons';
 
 interface LoginFormProps {
   email: string;
@@ -25,7 +26,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   onForgotPassword,
   isLoading,
 }) => {
-  const { colors, radii, typography, isDark } = useTheme();
+  const { colors, radii, typography } = useTheme();
   const [showPassword, setShowPassword] = useState(false);
   const [emailFocused, setEmailFocused] = useState(false);
   const [pwdFocused, setPwdFocused] = useState(false);
@@ -61,9 +62,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           ]}
         >
           <View style={styles.inputIconContainer}>
-            <Text style={[styles.inputIcon, { color: emailFocused ? colors.primary : colors.textMuted }]}>
-              ✉
-            </Text>
+            <MailIcon color={emailFocused ? colors.primary : colors.textMuted} size={16} />
           </View>
           <TextInput
             style={[styles.input, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}
@@ -109,9 +108,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           ]}
         >
           <View style={styles.inputIconContainer}>
-            <Text style={[styles.inputIcon, { color: pwdFocused ? colors.primary : colors.textMuted }]}>
-              🔒
-            </Text>
+            <LockIcon color={pwdFocused ? colors.primary : colors.textMuted} size={16} />
           </View>
           <TextInput
             style={[styles.input, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}
@@ -201,12 +198,10 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   inputIconContainer: {
-    marginRight: 8,
-    width: 20,
+    marginRight: 10,
+    width: 18,
     alignItems: 'center',
-  },
-  inputIcon: {
-    fontSize: 14,
+    justifyContent: 'center',
   },
   input: {
     flex: 1,

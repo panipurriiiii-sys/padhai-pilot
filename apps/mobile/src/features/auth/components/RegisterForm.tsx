@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, StyleSheet, Text, TextInput, Pressable } from 'react-native';
 import { useTheme } from '../../../theme/ThemeContext';
 import { AuthRole } from './RoleSelector';
+import { UserIcon, MailIcon, LockIcon, TagIcon, BookIcon } from './AuthFieldIcons';
 
 interface RegisterFormProps {
   activeRole: AuthRole;
@@ -71,9 +72,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           ]}
         >
           <View style={styles.inputIconContainer}>
-            <Text style={[styles.inputIcon, { color: focusedField === 'name' ? colors.primary : colors.textMuted }]}>
-              👤
-            </Text>
+            <UserIcon color={focusedField === 'name' ? colors.primary : colors.textMuted} size={16} />
           </View>
           <TextInput
             style={[styles.input, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}
@@ -110,9 +109,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           ]}
         >
           <View style={styles.inputIconContainer}>
-            <Text style={[styles.inputIcon, { color: focusedField === 'email' ? colors.primary : colors.textMuted }]}>
-              ✉
-            </Text>
+            <MailIcon color={focusedField === 'email' ? colors.primary : colors.textMuted} size={16} />
           </View>
           <TextInput
             style={[styles.input, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}
@@ -150,9 +147,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           ]}
         >
           <View style={styles.inputIconContainer}>
-            <Text style={[styles.inputIcon, { color: focusedField === 'password' ? colors.primary : colors.textMuted }]}>
-              🔒
-            </Text>
+            <LockIcon color={focusedField === 'password' ? colors.primary : colors.textMuted} size={16} />
           </View>
           <TextInput
             style={[styles.input, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}
@@ -196,9 +191,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             ]}
           >
             <View style={styles.inputIconContainer}>
-              <Text style={[styles.inputIcon, { color: focusedField === 'code' ? colors.primary : colors.textMuted }]}>
-                🏷
-              </Text>
+              <TagIcon color={focusedField === 'code' ? colors.primary : colors.textMuted} size={16} />
             </View>
             <TextInput
               style={[styles.input, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}
@@ -229,9 +222,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             ]}
           >
             <View style={styles.inputIconContainer}>
-              <Text style={[styles.inputIcon, { color: focusedField === 'subject' ? colors.primary : colors.textMuted }]}>
-                📚
-              </Text>
+              <BookIcon color={focusedField === 'subject' ? colors.primary : colors.textMuted} size={16} />
             </View>
             <TextInput
               style={[styles.input, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}
@@ -296,12 +287,10 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   inputIconContainer: {
-    marginRight: 8,
-    width: 20,
+    marginRight: 10,
+    width: 18,
     alignItems: 'center',
-  },
-  inputIcon: {
-    fontSize: 14,
+    justifyContent: 'center',
   },
   input: {
     flex: 1,
