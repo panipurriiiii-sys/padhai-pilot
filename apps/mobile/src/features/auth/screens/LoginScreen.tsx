@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,7 +6,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Keyboard,
 } from 'react-native';
 import { ScreenContainer } from '../../../components/common/ScreenContainer';
 import { useAuthStore } from '../../../store/useAuthStore';
@@ -14,6 +13,7 @@ import { useNavigationStore } from '../../../store/useNavigationStore';
 import { useTheme } from '../../../theme/ThemeContext';
 
 import { LuxuryHeader } from '../components/LuxuryHeader';
+import { LuxuryCard } from '../components/LuxuryCard';
 import { SegmentedToggle } from '../components/SegmentedToggle';
 import { AuthBanner } from '../components/AuthBanner';
 import { LoginForm } from '../components/LoginForm';
@@ -38,9 +38,6 @@ export const LoginScreen: React.FC = () => {
   } = useAuthStore();
   const { setTab } = useNavigationStore();
 
-  const scrollViewRef = useRef<ScrollView>(null);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-
   const [viewMode, setViewMode] = useState<AuthViewMode>('ONBOARDING');
   const [activeRole, setActiveRole] = useState<AuthRole>('STUDENT');
 
@@ -58,35 +55,6 @@ export const LoginScreen: React.FC = () => {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [bannerError, setBannerError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-
-  // Dynamic keyboard height listener to guarantee inputs never get hidden
-  useEffect(() => {
-    const showSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      (e) => {
-        setKeyboardHeight(e.endCoordinates.height);
-      }
-    );
-    const hideSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => {
-        setKeyboardHeight(0);
-      }
-    );
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
-
-  const handleFieldFocus = (yOffset: number) => {
-    setTimeout(() => {
-      scrollViewRef.current?.scrollTo({
-        y: yOffset,
-        animated: true,
-      });
-    }, 120);
-  };
 
   const clearValidation = () => {
     setNameError(null);
@@ -223,159 +191,146 @@ export const LoginScreen: React.FC = () => {
         style={styles.keyboardView}
       >
         <ScrollView
-          ref={scrollViewRef}
           contentContainerStyle={[
             styles.scrollContent,
-            {
-              paddingHorizontal: spacing.lg,
-              paddingBottom: keyboardHeight > 0 ? keyboardHeight + 120 : 60,
-            },
+            { paddingHorizontal: spacing.lg, paddingBottom: 60 },
           ]}
           keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets={true}
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
-          {/* Top Header */}
-          <LuxuryHeader
-            showBack={viewMode !== 'SIGN_IN'}
-            onBack={() => {
-              clearValidation();
-              if (viewMode === 'FORGOT_PASSWORD') {
-                setViewMode('SIGN_IN');
-              } else {
-                setViewMode('ONBOARDING');
-              }
-            }}
-          />
-
-          {/* Clean Open Form Flow (Not Boxy, No Heavy Enclosing Cards) */}
-          <View style={styles.formContainer}>
-            {/* Title Section */}
-            <View style={styles.titleSection}>
-              <Text style={[styles.mainTitle, { color: colors.textPrimary, fontFamily: typography.fonts.display }]}>
-                {viewMode === 'SIGN_IN' && 'Welcome back'}
-                {viewMode === 'REGISTER' && 'Create your account'}
-                {viewMode === 'FORGOT_PASSWORD' && 'Reset password'}
-              </Text>
-              <Text style={[styles.mainSubtitle, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
-                {viewMode === 'SIGN_IN' && 'Enter your credentials to access your academic portal.'}
-                {viewMode === 'REGISTER' && 'Join your batch to access attendance, tests, and homework.'}
-                {viewMode === 'FORGOT_PASSWORD' && 'Enter your registered email to receive a reset code.'}
-              </Text>
-            </View>
-
-            {/* Segmented Switcher for Login / Register */}
-            {(viewMode === 'SIGN_IN' || viewMode === 'REGISTER') && (
-              <SegmentedToggle
-                options={[
-                  { key: 'SIGN_IN', label: 'Sign In' },
-                  { key: 'REGISTER', label: 'Create Account' },
-                ]}
-                activeKey={viewMode}
-                onSelect={(k) => {
-                  clearValidation();
-                  setViewMode(k);
-                }}
-              />
-            )}
-
-            {/* Role Switcher in Register Mode */}
-            {viewMode === 'REGISTER' && (
-              <SegmentedToggle
-                options={[
-                  { key: 'STUDENT', label: 'Student' },
-                  { key: 'TEACHER', label: 'Teacher / Faculty' },
-                ]}
-                activeKey={activeRole}
-                onSelect={(r) => {
-                  clearValidation();
-                  setActiveRole(r);
-                }}
-              />
-            )}
-
-            {/* Status Alerts */}
-            <AuthBanner type="error" message={displayedBanner} onDismiss={() => setBannerError(null)} />
-            <AuthBanner type="success" message={successMsg} onDismiss={() => setSuccessMsg(null)} />
-
-            {/* Form Views */}
-            {viewMode === 'SIGN_IN' && (
-              <LoginForm
-                email={email}
-                setEmail={setEmail}
-                emailError={emailError}
-                password={password}
-                setPassword={setPassword}
-                passwordError={passwordError}
-                onSubmit={handleSignIn}
-                onForgotPassword={() => {
-                  clearValidation();
-                  setViewMode('FORGOT_PASSWORD');
-                }}
-                isLoading={isLoading}
-                onFocusField={(field) => {
-                  if (field === 'email') handleFieldFocus(40);
-                  if (field === 'password') handleFieldFocus(120);
-                }}
-              />
-            )}
-
-            {viewMode === 'REGISTER' && (
-              <RegisterForm
-                activeRole={activeRole}
-                fullName={fullName}
-                setFullName={setFullName}
-                nameError={nameError}
-                email={email}
-                setEmail={setEmail}
-                emailError={emailError}
-                password={password}
-                setPassword={setPassword}
-                passwordError={passwordError}
-                phone={phone}
-                setPhone={setPhone}
-                invitationCode={invitationCode}
-                setInvitationCode={setInvitationCode}
-                subject={subject}
-                setSubject={setSubject}
-                onSubmit={handleRegister}
-                isLoading={isLoading}
-                onFocusField={(field) => {
-                  if (field === 'name') handleFieldFocus(60);
-                  if (field === 'email') handleFieldFocus(140);
-                  if (field === 'pwd') handleFieldFocus(220);
-                  if (field === 'phone') handleFieldFocus(300);
-                  if (field === 'extra') handleFieldFocus(380);
-                }}
-              />
-            )}
-
-            {viewMode === 'FORGOT_PASSWORD' && (
-              <ForgotPasswordForm
-                email={email}
-                setEmail={setEmail}
-                emailError={emailError}
-                onSubmit={handleForgotPassword}
-                onBackToLogin={() => {
-                  clearValidation();
+          <View style={styles.innerContent}>
+            {/* Top Header */}
+            <LuxuryHeader
+              showBack={viewMode !== 'SIGN_IN'}
+              onBack={() => {
+                clearValidation();
+                if (viewMode === 'FORGOT_PASSWORD') {
                   setViewMode('SIGN_IN');
+                } else {
+                  setViewMode('ONBOARDING');
+                }
+              }}
+            />
+
+            {/* Elevated Auth Card */}
+            <LuxuryCard>
+              {/* Card Title & Subtitle */}
+              <View style={styles.titleSection}>
+                <Text style={[styles.mainTitle, { color: colors.textPrimary, fontFamily: typography.fonts.display }]}>
+                  {viewMode === 'SIGN_IN' && 'Sign in to your account'}
+                  {viewMode === 'REGISTER' && 'Create your account'}
+                  {viewMode === 'FORGOT_PASSWORD' && 'Reset your password'}
+                </Text>
+                <Text style={[styles.mainSubtitle, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
+                  {viewMode === 'SIGN_IN' && 'Enter your details to access your portal.'}
+                  {viewMode === 'REGISTER' && 'Sign up to manage batches, attendance, and tests.'}
+                  {viewMode === 'FORGOT_PASSWORD' && 'Enter your email to receive a password reset code.'}
+                </Text>
+              </View>
+
+              {/* Segmented Switcher for Login / Register */}
+              {(viewMode === 'SIGN_IN' || viewMode === 'REGISTER') && (
+                <SegmentedToggle
+                  options={[
+                    { key: 'SIGN_IN', label: 'Sign In' },
+                    { key: 'REGISTER', label: 'Create Account' },
+                  ]}
+                  activeKey={viewMode}
+                  onSelect={(k) => {
+                    clearValidation();
+                    setViewMode(k);
+                  }}
+                />
+              )}
+
+              {/* Role Switcher in Register Mode */}
+              {viewMode === 'REGISTER' && (
+                <SegmentedToggle
+                  options={[
+                    { key: 'STUDENT', label: 'Student' },
+                    { key: 'TEACHER', label: 'Teacher / Faculty' },
+                  ]}
+                  activeKey={activeRole}
+                  onSelect={(r) => {
+                    clearValidation();
+                    setActiveRole(r);
+                  }}
+                />
+              )}
+
+              {/* Status Alerts */}
+              <AuthBanner type="error" message={displayedBanner} onDismiss={() => setBannerError(null)} />
+              <AuthBanner type="success" message={successMsg} onDismiss={() => setSuccessMsg(null)} />
+
+              {/* Form Views */}
+              {viewMode === 'SIGN_IN' && (
+                <LoginForm
+                  email={email}
+                  setEmail={setEmail}
+                  emailError={emailError}
+                  password={password}
+                  setPassword={setPassword}
+                  passwordError={passwordError}
+                  onSubmit={handleSignIn}
+                  onForgotPassword={() => {
+                    clearValidation();
+                    setViewMode('FORGOT_PASSWORD');
+                  }}
+                  isLoading={isLoading}
+                />
+              )}
+
+              {viewMode === 'REGISTER' && (
+                <RegisterForm
+                  activeRole={activeRole}
+                  fullName={fullName}
+                  setFullName={setFullName}
+                  nameError={nameError}
+                  email={email}
+                  setEmail={setEmail}
+                  emailError={emailError}
+                  password={password}
+                  setPassword={setPassword}
+                  passwordError={passwordError}
+                  phone={phone}
+                  setPhone={setPhone}
+                  invitationCode={invitationCode}
+                  setInvitationCode={setInvitationCode}
+                  subject={subject}
+                  setSubject={setSubject}
+                  onSubmit={handleRegister}
+                  isLoading={isLoading}
+                />
+              )}
+
+              {viewMode === 'FORGOT_PASSWORD' && (
+                <ForgotPasswordForm
+                  email={email}
+                  setEmail={setEmail}
+                  emailError={emailError}
+                  onSubmit={handleForgotPassword}
+                  onBackToLogin={() => {
+                    clearValidation();
+                    setViewMode('SIGN_IN');
+                  }}
+                  isLoading={isLoading}
+                />
+              )}
+            </LuxuryCard>
+
+            {/* Bottom Footer switch link */}
+            {viewMode !== 'FORGOT_PASSWORD' && (
+              <AuthFooterToggle
+                mode={viewMode === 'SIGN_IN' ? 'SIGN_IN' : 'REGISTER'}
+                onToggle={() => {
+                  clearValidation();
+                  setViewMode(viewMode === 'SIGN_IN' ? 'REGISTER' : 'SIGN_IN');
                 }}
-                isLoading={isLoading}
-                onFocusField={() => handleFieldFocus(60)}
               />
             )}
           </View>
-
-          {/* Bottom Footer switch link */}
-          {viewMode !== 'FORGOT_PASSWORD' && (
-            <AuthFooterToggle
-              mode={viewMode === 'SIGN_IN' ? 'SIGN_IN' : 'REGISTER'}
-              onToggle={() => {
-                clearValidation();
-                setViewMode(viewMode === 'SIGN_IN' ? 'REGISTER' : 'SIGN_IN');
-              }}
-            />
-          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </ScreenContainer>
@@ -388,27 +343,27 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingTop: 10,
+    paddingTop: 8,
   },
-  formContainer: {
+  innerContent: {
     width: '100%',
-    paddingVertical: 8,
+    alignItems: 'center',
+    paddingVertical: 12,
   },
   titleSection: {
-    marginBottom: 24,
-    alignItems: 'flex-start',
+    marginBottom: 20,
+    alignItems: 'center',
   },
   mainTitle: {
-    fontSize: 26,
-    lineHeight: 32,
+    fontSize: 22,
     fontWeight: '700',
-    letterSpacing: -0.5,
-    marginBottom: 6,
-    textAlign: 'left',
+    letterSpacing: -0.3,
+    marginBottom: 4,
+    textAlign: 'center',
   },
   mainSubtitle: {
-    fontSize: 13,
-    lineHeight: 18,
-    textAlign: 'left',
+    fontSize: 12,
+    lineHeight: 16,
+    textAlign: 'center',
   },
 });

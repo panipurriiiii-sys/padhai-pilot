@@ -11,7 +11,6 @@ interface ForgotPasswordFormProps {
   onSubmit: () => void;
   onBackToLogin: () => void;
   isLoading: boolean;
-  onFocusField?: (field: 'email') => void;
 }
 
 export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
@@ -21,13 +20,12 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
   onSubmit,
   onBackToLogin,
   isLoading,
-  onFocusField,
 }) => {
   const { colors, typography, spacing, isDark } = useTheme();
   const [emailFocused, setEmailFocused] = useState(false);
   const emailInputRef = useRef<TextInput>(null);
 
-  const fieldBg = isDark ? colors.surfaceSubtle : '#FFFFFF';
+  const fieldBg = isDark ? colors.surfaceSubtle : '#F8FAFC';
 
   return (
     <View style={styles.container}>
@@ -45,7 +43,6 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
             {
               backgroundColor: fieldBg,
               borderColor: emailError ? colors.error : emailFocused ? colors.primary : colors.borderSubtle,
-              borderRadius: 14,
             },
             emailFocused && styles.focusedGlow,
           ]}
@@ -64,10 +61,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
             placeholderTextColor={colors.textFaint}
             value={email}
             onChangeText={setEmail}
-            onFocus={() => {
-              setEmailFocused(true);
-              onFocusField?.('email');
-            }}
+            onFocus={() => setEmailFocused(true)}
             onBlur={() => setEmailFocused(false)}
             autoCapitalize="none"
             autoCorrect={false}
@@ -125,8 +119,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
+    borderRadius: 14,
     paddingHorizontal: 14,
-    height: 50,
+    height: 48,
   },
   focusedGlow: {
     shadowColor: '#1677FF',

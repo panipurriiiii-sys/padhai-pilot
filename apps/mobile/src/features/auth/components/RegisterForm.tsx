@@ -31,7 +31,6 @@ interface RegisterFormProps {
   subjectError?: string | null;
   onSubmit: () => void;
   isLoading: boolean;
-  onFocusField?: (field: 'name' | 'email' | 'pwd' | 'phone' | 'extra') => void;
 }
 
 export const RegisterForm: React.FC<RegisterFormProps> = ({
@@ -55,7 +54,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
   subjectError,
   onSubmit,
   isLoading,
-  onFocusField,
 }) => {
   const { colors, typography, isDark } = useTheme();
   const [showPassword, setShowPassword] = useState(false);
@@ -67,7 +65,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
   const phoneInputRef = useRef<TextInput>(null);
   const extraInputRef = useRef<TextInput>(null);
 
-  const fieldBg = isDark ? colors.surfaceSubtle : '#FFFFFF';
+  const fieldBg = isDark ? colors.surfaceSubtle : '#F8FAFC';
 
   return (
     <View style={styles.container}>
@@ -82,7 +80,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             {
               backgroundColor: fieldBg,
               borderColor: nameError ? colors.error : focusedField === 'name' ? colors.primary : colors.borderSubtle,
-              borderRadius: 14,
             },
             focusedField === 'name' && styles.focusedGlow,
           ]}
@@ -101,10 +98,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             placeholderTextColor={colors.textFaint}
             value={fullName}
             onChangeText={setFullName}
-            onFocus={() => {
-              setFocusedField('name');
-              onFocusField?.('name');
-            }}
+            onFocus={() => setFocusedField('name')}
             onBlur={() => setFocusedField(null)}
             autoCapitalize="words"
             autoCorrect={false}
@@ -131,7 +125,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             {
               backgroundColor: fieldBg,
               borderColor: emailError ? colors.error : focusedField === 'email' ? colors.primary : colors.borderSubtle,
-              borderRadius: 14,
             },
             focusedField === 'email' && styles.focusedGlow,
           ]}
@@ -150,10 +143,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             placeholderTextColor={colors.textFaint}
             value={email}
             onChangeText={setEmail}
-            onFocus={() => {
-              setFocusedField('email');
-              onFocusField?.('email');
-            }}
+            onFocus={() => setFocusedField('email')}
             onBlur={() => setFocusedField(null)}
             autoCapitalize="none"
             autoCorrect={false}
@@ -181,7 +171,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             {
               backgroundColor: fieldBg,
               borderColor: passwordError ? colors.error : focusedField === 'pwd' ? colors.primary : colors.borderSubtle,
-              borderRadius: 14,
             },
             focusedField === 'pwd' && styles.focusedGlow,
           ]}
@@ -200,10 +189,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             placeholderTextColor={colors.textFaint}
             value={password}
             onChangeText={setPassword}
-            onFocus={() => {
-              setFocusedField('pwd');
-              onFocusField?.('pwd');
-            }}
+            onFocus={() => setFocusedField('pwd')}
             onBlur={() => setFocusedField(null)}
             secureTextEntry={!showPassword}
             autoCapitalize="none"
@@ -249,7 +235,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             {
               backgroundColor: fieldBg,
               borderColor: focusedField === 'phone' ? colors.primary : colors.borderSubtle,
-              borderRadius: 14,
             },
             focusedField === 'phone' && styles.focusedGlow,
           ]}
@@ -268,10 +253,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             placeholderTextColor={colors.textFaint}
             value={phone}
             onChangeText={setPhone}
-            onFocus={() => {
-              setFocusedField('phone');
-              onFocusField?.('phone');
-            }}
+            onFocus={() => setFocusedField('phone')}
             onBlur={() => setFocusedField(null)}
             keyboardType="phone-pad"
             returnKeyType="next"
@@ -293,7 +275,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               {
                 backgroundColor: fieldBg,
                 borderColor: codeError ? colors.error : focusedField === 'code' ? colors.primary : colors.borderSubtle,
-                borderRadius: 14,
               },
               focusedField === 'code' && styles.focusedGlow,
             ]}
@@ -312,10 +293,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               placeholderTextColor={colors.textFaint}
               value={invitationCode}
               onChangeText={setInvitationCode}
-              onFocus={() => {
-                setFocusedField('code');
-                onFocusField?.('extra');
-              }}
+              onFocus={() => setFocusedField('code')}
               onBlur={() => setFocusedField(null)}
               autoCapitalize="characters"
               autoCorrect={false}
@@ -345,7 +323,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               {
                 backgroundColor: fieldBg,
                 borderColor: subjectError ? colors.error : focusedField === 'subject' ? colors.primary : colors.borderSubtle,
-                borderRadius: 14,
               },
               focusedField === 'subject' && styles.focusedGlow,
             ]}
@@ -364,10 +341,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               placeholderTextColor={colors.textFaint}
               value={subject}
               onChangeText={setSubject}
-              onFocus={() => {
-                setFocusedField('subject');
-                onFocusField?.('extra');
-              }}
+              onFocus={() => setFocusedField('subject')}
               onBlur={() => setFocusedField(null)}
               autoCapitalize="words"
               autoCorrect={false}
@@ -392,7 +366,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           styles.submitBtn,
           {
             backgroundColor: colors.primary,
-            borderRadius: 14,
             opacity: isLoading ? 0.7 : pressed ? 0.92 : 1,
             transform: [{ scale: pressed ? 0.985 : 1 }],
           },
@@ -429,8 +402,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
+    borderRadius: 14,
     paddingHorizontal: 14,
-    height: 50,
+    height: 48,
   },
   focusedGlow: {
     shadowColor: '#1677FF',
@@ -467,7 +441,8 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   submitBtn: {
-    height: 50,
+    height: 48,
+    borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

@@ -19,7 +19,6 @@ interface LoginFormProps {
   onSubmit: () => void;
   onForgotPassword: () => void;
   isLoading: boolean;
-  onFocusField?: (field: 'email' | 'password') => void;
 }
 
 export const LoginForm: React.FC<LoginFormProps> = ({
@@ -32,9 +31,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   onSubmit,
   onForgotPassword,
   isLoading,
-  onFocusField,
 }) => {
-  const { colors, radii, typography, isDark } = useTheme();
+  const { colors, typography, isDark } = useTheme();
   const [showPassword, setShowPassword] = useState(false);
   const [emailFocused, setEmailFocused] = useState(false);
   const [pwdFocused, setPwdFocused] = useState(false);
@@ -54,6 +52,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     ? colors.primary
     : colors.borderSubtle;
 
+  const fieldBg = isDark ? colors.surfaceSubtle : '#F8FAFC';
+
   return (
     <View style={styles.container}>
       {/* Email Address */}
@@ -65,9 +65,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           style={[
             styles.inputWrapper,
             {
-              backgroundColor: isDark ? colors.surfaceSubtle : '#FFFFFF',
+              backgroundColor: fieldBg,
               borderColor: emailBorder,
-              borderRadius: 14,
             },
             emailFocused && styles.focusedGlow,
           ]}
@@ -92,10 +91,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             placeholderTextColor={colors.textFaint}
             value={email}
             onChangeText={setEmail}
-            onFocus={() => {
-              setEmailFocused(true);
-              onFocusField?.('email');
-            }}
+            onFocus={() => setEmailFocused(true)}
             onBlur={() => setEmailFocused(false)}
             autoCapitalize="none"
             autoCorrect={false}
@@ -130,9 +126,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           style={[
             styles.inputWrapper,
             {
-              backgroundColor: isDark ? colors.surfaceSubtle : '#FFFFFF',
+              backgroundColor: fieldBg,
               borderColor: pwdBorder,
-              borderRadius: 14,
             },
             pwdFocused && styles.focusedGlow,
           ]}
@@ -157,10 +152,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             placeholderTextColor={colors.textFaint}
             value={password}
             onChangeText={setPassword}
-            onFocus={() => {
-              setPwdFocused(true);
-              onFocusField?.('password');
-            }}
+            onFocus={() => setPwdFocused(true)}
             onBlur={() => setPwdFocused(false)}
             secureTextEntry={!showPassword}
             autoCapitalize="none"
@@ -205,7 +197,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           styles.submitBtn,
           {
             backgroundColor: colors.primary,
-            borderRadius: 14,
             opacity: isLoading ? 0.7 : pressed ? 0.92 : 1,
             transform: [{ scale: pressed ? 0.985 : 1 }],
           },
@@ -248,8 +239,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
+    borderRadius: 14,
     paddingHorizontal: 14,
-    height: 50,
+    height: 48,
   },
   focusedGlow: {
     shadowColor: '#1677FF',
@@ -282,11 +274,12 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   submitBtn: {
-    height: 50,
+    height: 48,
+    borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 10,
+    marginTop: 8,
     shadowColor: '#1677FF',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.28,
