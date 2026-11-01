@@ -71,3 +71,4 @@ export async function prefetchAppData(queryClient: QueryClient, role?: string): 
     // Non-blocking background prefetch
   }
 }
+

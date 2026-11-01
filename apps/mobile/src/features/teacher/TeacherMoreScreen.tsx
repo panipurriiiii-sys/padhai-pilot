@@ -357,17 +357,28 @@ const DAYS: WeekDay[] = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY',
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 const Timetable: React.FC = () => {
-  const { spacing } = useTheme();
+  const { spacing, colors } = useTheme();
   const [batchId, setBatchId] = useState<string>();
   const batches = useBatches();
+  const batchMutations = useBatchMutations();
   const q = useTeacherTimetable(batchId);
   const { create, update, remove } = useTimetableMutations();
   const [editId, setEditId] = useState<string | null>(null);
   const [subject, setSubject] = useState('');
-  const [day, setDay] = useState<WeekDay>('MONDAY');
+  const [selectedDays, setSelectedDays] = useState<WeekDay[]>(['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY']);
+  const [singleDay, setSingleDay] = useState<WeekDay>('MONDAY');
   const [start, setStart] = useState('16:00');
   const [end, setEnd] = useState('17:00');
   const [room, setRoom] = useState('');
+  const [savingMulti, setSavingMulti] = useState(false);
+  const [showPhotoSection, setShowPhotoSection] = useState(false);
+  const [photoUrlInput, setPhotoUrlInput] = useState('');
+
+  const selectedBatch = batches.data?.find((x) => x.id === batchId);
+  const timetableImageUrl = selectedBatch?.schedule?.startsWith('TIMETABLE_IMAGE:')
+    ? selectedBatch.schedule.replace('TIMETABLE_IMAGE:', '')
+    : (selectedBatch?.schedule?.startsWith('http') ? selectedBatch.schedule : null);
+
   useEffect(() => {
     if (batchId) {
       const b = batches.data?.find((x) => x.id === batchId);
@@ -375,8 +386,19 @@ const Timetable: React.FC = () => {
       if (b?.room && !room) setRoom(b.room);
     }
   }, [batchId, batches.data]);
-  const valid = !!batchId && !!subject.trim() && HHMM.test(start) && HHMM.test(end) && end > start;
-  const reset = () => { setEditId(null); setSubject(''); setRoom(''); };
+
+  const toggleDay = (d: WeekDay) => {
+    setSelectedDays((prev) => (prev.includes(d) ? (prev.length > 1 ? prev.filter((x) => x !== d) : prev) : [...prev, d]));
+  };
+
+  const valid = !!batchId && !!subject.trim() && HHMM.test(start) && HHMM.test(end) && end > start && (editId ? true : selectedDays.length > 0);
+
+  const reset = () => {
+    setEditId(null);
+    setSubject('');
+    setRoom('');
+  };
+
   const conflictText = (e: unknown) => {
     const payload = (e as { errorPayload?: TimetableConflictError })?.errorPayload;
     if (payload?.conflicts?.length) {
@@ -386,30 +408,201 @@ const Timetable: React.FC = () => {
     }
     return errorMessage(e);
   };
-  const submit = () => {
-    const data = { subject: subject.trim(), dayOfWeek: day, startTime: start, endTime: end, room: room.trim() || undefined };
-    const opts = { onSuccess: reset, onError: (e: unknown) => Alert.alert('Could not save slot', conflictText(e)) };
-    if (editId) update.mutate({ slotId: editId, data }, opts);
-    else create.mutate({ batchId: batchId as string, data }, opts);
+
+  const submit = async () => {
+    if (editId) {
+      const data = { subject: subject.trim(), dayOfWeek: singleDay, startTime: start, endTime: end, room: room.trim() || undefined };
+      update.mutate(
+        { slotId: editId, data },
+        {
+          onSuccess: reset,
+          onError: (e: unknown) => Alert.alert('Could not save slot', conflictText(e)),
+        }
+      );
+    } else {
+      if (!batchId || selectedDays.length === 0) return;
+      setSavingMulti(true);
+      const errors: string[] = [];
+      let successCount = 0;
+      for (const d of selectedDays) {
+        try {
+          await create.mutateAsync({
+            batchId,
+            data: { subject: subject.trim(), dayOfWeek: d, startTime: start, endTime: end, room: room.trim() || undefined },
+          });
+          successCount++;
+        } catch (e: unknown) {
+          errors.push(`${d.slice(0, 3)}: ${conflictText(e)}`);
+        }
+      }
+      setSavingMulti(false);
+      if (errors.length > 0) {
+        Alert.alert(
+          successCount > 0 ? `Saved ${successCount} slot(s)` : 'Could not add slot(s)',
+          errors.join('\n')
+        );
+      } else {
+        Alert.alert('Saved', `Added slots for ${selectedDays.length} day(s)`);
+        reset();
+      }
+    }
   };
+
+  const savePhoto = (url: string) => {
+    if (!batchId) return;
+    const cleanUrl = url.trim();
+    if (!cleanUrl) return;
+    batchMutations.update.mutate(
+      { batchId, data: { schedule: `TIMETABLE_IMAGE:${cleanUrl}` } },
+      {
+        onSuccess: () => {
+          setPhotoUrlInput('');
+          Alert.alert('Saved', 'Timetable photo attached to batch schedule.');
+        },
+        onError: (e) => Alert.alert('Error', errorMessage(e)),
+      }
+    );
+  };
+
+  const removePhoto = () => {
+    if (!batchId) return;
+    Alert.alert('Remove timetable image?', 'This will clear the attached timetable photo for this batch.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: () =>
+          batchMutations.update.mutate(
+            { batchId, data: { schedule: '' } },
+            {
+              onSuccess: () => Alert.alert('Removed', 'Timetable photo removed.'),
+              onError: (e) => Alert.alert('Error', errorMessage(e)),
+            }
+          ),
+      },
+    ]);
+  };
+
   return (
     <>
       <BatchPicker value={batchId} onChange={setBatchId} />
+
+      {batchId ? (
+        <Card style={{ marginBottom: 16 }}>
+          <View style={[styles.between, { alignItems: 'center' }]}>
+            <View style={{ flex: 1, paddingRight: 8 }}>
+              <Subtitle>Timetable Photo Mode</Subtitle>
+              <Caption>
+                {timetableImageUrl ? 'Photo timetable active for this batch' : 'Attach photo or sheet instead of individual slots'}
+              </Caption>
+            </View>
+            <Button
+              size="sm"
+              variant="outline"
+              title={showPhotoSection ? 'Hide' : (timetableImageUrl ? 'View Photo' : 'Attach Photo')}
+              onPress={() => setShowPhotoSection(!showPhotoSection)}
+            />
+          </View>
+          {showPhotoSection && (
+            <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
+              {timetableImageUrl ? (
+                <View style={{ alignItems: 'center', marginBottom: 8 }}>
+                  <Image
+                    source={{ uri: timetableImageUrl }}
+                    style={{ width: '100%', height: 180, borderRadius: 8, marginBottom: 8 }}
+                    resizeMode="contain"
+                  />
+                  <Caption style={{ marginBottom: 8 }} numberOfLines={1}>
+                    {timetableImageUrl}
+                  </Caption>
+                  <Button size="sm" variant="outline" title="Remove Photo" onPress={removePhoto} />
+                </View>
+              ) : (
+                <View>
+                  <Input
+                    label="Image URL (CDN or Link)"
+                    value={photoUrlInput}
+                    onChangeText={setPhotoUrlInput}
+                    placeholder="https://..."
+                    autoCapitalize="none"
+                  />
+                  <Button
+                    size="sm"
+                    title="Attach Photo Timetable"
+                    disabled={!photoUrlInput.trim()}
+                    loading={batchMutations.update.isPending}
+                    onPress={() => savePhoto(photoUrlInput)}
+                  />
+                </View>
+              )}
+            </View>
+          )}
+        </Card>
+      ) : null}
+
       <Card style={{ marginBottom: 16 }}>
         <Subtitle>{editId ? 'Edit slot' : 'New weekly slot'}</Subtitle>
         <Input label="Subject" value={subject} onChangeText={setSubject} />
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: spacing.md }}>
-          {DAYS.map((d) => (
-            <Button key={d} size="sm" variant={day === d ? 'primary' : 'outline'} title={d.slice(0, 3)} onPress={() => setDay(d)} />
-          ))}
-        </View>
+        
+        {!editId ? (
+          <>
+            <Caption style={{ marginBottom: 6 }}>Easy Mode: Quick Select Days</Caption>
+            <View style={{ flexDirection: 'row', gap: 6, marginBottom: 10 }}>
+              <Button
+                size="sm"
+                variant="outline"
+                title="Mon–Fri"
+                onPress={() => setSelectedDays(['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'])}
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                title="Mon–Sat"
+                onPress={() => setSelectedDays(['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'])}
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                title="All 7 Days"
+                onPress={() => setSelectedDays([...DAYS])}
+              />
+            </View>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: spacing.md }}>
+              {DAYS.map((d) => {
+                const selected = selectedDays.includes(d);
+                return (
+                  <Button
+                    key={d}
+                    size="sm"
+                    variant={selected ? 'primary' : 'outline'}
+                    title={d.slice(0, 3)}
+                    onPress={() => toggleDay(d)}
+                  />
+                );
+              })}
+            </View>
+          </>
+        ) : (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: spacing.md }}>
+            {DAYS.map((d) => (
+              <Button
+                key={d}
+                size="sm"
+                variant={singleDay === d ? 'primary' : 'outline'}
+                title={d.slice(0, 3)}
+                onPress={() => setSingleDay(d)}
+              />
+            ))}
+          </View>
+        )}
+
         <Input label="Start (HH:mm)" value={start} onChangeText={setStart} autoCapitalize="none" />
         <Input label="End (HH:mm)" value={end} onChangeText={setEnd} autoCapitalize="none" />
         <Input label="Room" value={room} onChangeText={setRoom} />
         <Button
-          title={editId ? 'Save slot' : 'Add slot'}
+          title={editId ? 'Save slot' : (selectedDays.length > 1 ? `Add slot to ${selectedDays.length} days` : 'Add slot')}
           disabled={!valid}
-          loading={create.isPending || update.isPending}
+          loading={create.isPending || update.isPending || savingMulti}
           onPress={submit}
         />
         {editId ? <Button title="Cancel edit" variant="ghost" size="sm" onPress={reset} /> : null}
@@ -429,8 +622,13 @@ const Timetable: React.FC = () => {
                     size="sm"
                     variant="outline"
                     onPress={() => {
-                      setBatchId(s.batchId); setEditId(s.id); setSubject(s.subject); setDay(s.dayOfWeek);
-                      setStart(s.startTime); setEnd(s.endTime); setRoom(s.room ?? '');
+                      setBatchId(s.batchId);
+                      setEditId(s.id);
+                      setSubject(s.subject);
+                      setSingleDay(s.dayOfWeek);
+                      setStart(s.startTime);
+                      setEnd(s.endTime);
+                      setRoom(s.room ?? '');
                     }}
                   />
                   <Button
