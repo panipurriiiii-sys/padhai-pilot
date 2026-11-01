@@ -17,11 +17,11 @@ export const LuxuryHeader: React.FC<LuxuryHeaderProps> = ({ onBack, showBack }) 
           <Pressable
             onPress={onBack}
             hitSlop={12}
-            style={[styles.backPill, { borderColor: colors.border, backgroundColor: colors.surfaceSubtle }]}
+            style={[styles.backPill, { borderColor: colors.border, backgroundColor: colors.surface }]}
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
-            <Text style={[styles.backText, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
+            <Text style={[styles.backText, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}>
               ← Back
             </Text>
           </Pressable>
@@ -29,6 +29,7 @@ export const LuxuryHeader: React.FC<LuxuryHeaderProps> = ({ onBack, showBack }) 
       </View>
 
       <View style={[styles.sessionBadge, { backgroundColor: colors.surfaceSubtle, borderColor: colors.border }]}>
+        <View style={styles.activeDot} />
         <Text style={[styles.sessionText, { color: colors.textMuted, fontFamily: typography.fonts.ui }]}>
           Session 2026–27
         </Text>
@@ -43,28 +44,42 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
-    marginBottom: 16,
+    paddingVertical: 14,
+    marginBottom: 14,
   },
   leftContainer: {
     minHeight: 32,
     justifyContent: 'center',
   },
   backPill: {
-    paddingVertical: 5,
-    paddingHorizontal: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
     borderRadius: 16,
     borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   backText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   sessionBadge: {
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: 14,
     borderWidth: 1,
+  },
+  activeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#10B981',
+    marginRight: 6,
   },
   sessionText: {
     fontSize: 11,

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, Text, TextInput, Pressable } from 'react-native';
-import { Button } from '../../../components/common/Button';
 import { useTheme } from '../../../theme/ThemeContext';
 import { AuthRole } from './RoleSelector';
 
@@ -8,16 +7,21 @@ interface RegisterFormProps {
   activeRole: AuthRole;
   fullName: string;
   setFullName: (val: string) => void;
+  nameError?: string | null;
   email: string;
   setEmail: (val: string) => void;
+  emailError?: string | null;
   password: string;
   setPassword: (val: string) => void;
+  passwordError?: string | null;
   phone: string;
   setPhone: (val: string) => void;
   invitationCode: string;
   setInvitationCode: (val: string) => void;
+  codeError?: string | null;
   subject: string;
   setSubject: (val: string) => void;
+  subjectError?: string | null;
   onSubmit: () => void;
   isLoading: boolean;
 }
@@ -26,16 +30,21 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
   activeRole,
   fullName,
   setFullName,
+  nameError,
   email,
   setEmail,
+  emailError,
   password,
   setPassword,
+  passwordError,
   phone,
   setPhone,
   invitationCode,
   setInvitationCode,
+  codeError,
   subject,
   setSubject,
+  subjectError,
   onSubmit,
   isLoading,
 }) => {
@@ -48,21 +57,27 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
       {/* Full Name */}
       <View style={styles.fieldGroup}>
         <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
-          FULL NAME
+          Full Name
         </Text>
         <View
           style={[
             styles.inputWrapper,
             {
-              backgroundColor: colors.surface,
-              borderColor: focusedField === 'name' ? colors.primary : colors.borderStrong,
-              borderRadius: radii.md,
+              backgroundColor: colors.surfaceSubtle,
+              borderColor: nameError ? colors.error : focusedField === 'name' ? colors.primary : colors.borderStrong,
+              borderRadius: radii.lg,
             },
+            focusedField === 'name' && styles.focusedGlow,
           ]}
         >
+          <View style={styles.inputIconContainer}>
+            <Text style={[styles.inputIcon, { color: focusedField === 'name' ? colors.primary : colors.textMuted }]}>
+              👤
+            </Text>
+          </View>
           <TextInput
             style={[styles.input, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}
-            placeholder={activeRole === 'STUDENT' ? 'Rohan Verma' : 'Dr. Ramesh Sharma'}
+            placeholder={activeRole === 'STUDENT' ? 'e.g. Alok Verma' : 'e.g. Dr. Rajesh Gupta'}
             placeholderTextColor={colors.textFaint}
             value={fullName}
             onChangeText={setFullName}
@@ -71,26 +86,37 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             autoCapitalize="words"
           />
         </View>
+        {nameError ? (
+          <Text style={[styles.errorHelper, { color: colors.error, fontFamily: typography.fonts.ui }]}>
+            {nameError}
+          </Text>
+        ) : null}
       </View>
 
-      {/* Email */}
+      {/* Email Address */}
       <View style={styles.fieldGroup}>
         <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
-          EMAIL ADDRESS
+          Email Address
         </Text>
         <View
           style={[
             styles.inputWrapper,
             {
-              backgroundColor: colors.surface,
-              borderColor: focusedField === 'email' ? colors.primary : colors.borderStrong,
-              borderRadius: radii.md,
+              backgroundColor: colors.surfaceSubtle,
+              borderColor: emailError ? colors.error : focusedField === 'email' ? colors.primary : colors.borderStrong,
+              borderRadius: radii.lg,
             },
+            focusedField === 'email' && styles.focusedGlow,
           ]}
         >
+          <View style={styles.inputIconContainer}>
+            <Text style={[styles.inputIcon, { color: focusedField === 'email' ? colors.primary : colors.textMuted }]}>
+              ✉
+            </Text>
+          </View>
           <TextInput
             style={[styles.input, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}
-            placeholder="rohan@tuition.edu"
+            placeholder="name@example.com"
             placeholderTextColor={colors.textFaint}
             value={email}
             onChangeText={setEmail}
@@ -100,26 +126,37 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             keyboardType="email-address"
           />
         </View>
+        {emailError ? (
+          <Text style={[styles.errorHelper, { color: colors.error, fontFamily: typography.fonts.ui }]}>
+            {emailError}
+          </Text>
+        ) : null}
       </View>
 
       {/* Password */}
       <View style={styles.fieldGroup}>
         <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
-          PASSWORD (MIN 6 CHARACTERS)
+          Password (min 6 characters)
         </Text>
         <View
           style={[
             styles.inputWrapper,
             {
-              backgroundColor: colors.surface,
-              borderColor: focusedField === 'password' ? colors.primary : colors.borderStrong,
-              borderRadius: radii.md,
+              backgroundColor: colors.surfaceSubtle,
+              borderColor: passwordError ? colors.error : focusedField === 'password' ? colors.primary : colors.borderStrong,
+              borderRadius: radii.lg,
             },
+            focusedField === 'password' && styles.focusedGlow,
           ]}
         >
+          <View style={styles.inputIconContainer}>
+            <Text style={[styles.inputIcon, { color: focusedField === 'password' ? colors.primary : colors.textMuted }]}>
+              🔒
+            </Text>
+          </View>
           <TextInput
             style={[styles.input, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}
-            placeholder="••••••••••••"
+            placeholder="••••••••"
             placeholderTextColor={colors.textFaint}
             value={password}
             onChangeText={setPassword}
@@ -128,33 +165,44 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             secureTextEntry={!showPassword}
             autoCapitalize="none"
           />
-          <Pressable onPress={() => setShowPassword(!showPassword)} hitSlop={8} style={styles.eyeBtn}>
+          <Pressable onPress={() => setShowPassword(!showPassword)} hitSlop={12} style={styles.eyeBtn}>
             <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: '700' }}>
               {showPassword ? 'HIDE' : 'SHOW'}
             </Text>
           </Pressable>
         </View>
+        {passwordError ? (
+          <Text style={[styles.errorHelper, { color: colors.error, fontFamily: typography.fonts.ui }]}>
+            {passwordError}
+          </Text>
+        ) : null}
       </View>
 
-      {/* Role specific inputs */}
+      {/* Role-specific Fields */}
       {activeRole === 'STUDENT' ? (
         <View style={styles.fieldGroup}>
           <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
-            ENROLLMENT CODE (OPTIONAL)
+            Batch Enrollment Code
           </Text>
           <View
             style={[
               styles.inputWrapper,
               {
-                backgroundColor: colors.surface,
-                borderColor: focusedField === 'code' ? colors.primary : colors.borderStrong,
-                borderRadius: radii.md,
+                backgroundColor: colors.surfaceSubtle,
+                borderColor: codeError ? colors.error : focusedField === 'code' ? colors.primary : colors.borderStrong,
+                borderRadius: radii.lg,
               },
+              focusedField === 'code' && styles.focusedGlow,
             ]}
           >
+            <View style={styles.inputIconContainer}>
+              <Text style={[styles.inputIcon, { color: focusedField === 'code' ? colors.primary : colors.textMuted }]}>
+                🏷
+              </Text>
+            </View>
             <TextInput
               style={[styles.input, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}
-              placeholder="e.g. BATCH-X"
+              placeholder="e.g. BATCH-2026-X"
               placeholderTextColor={colors.textFaint}
               value={invitationCode}
               onChangeText={setInvitationCode}
@@ -167,18 +215,24 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
       ) : (
         <View style={styles.fieldGroup}>
           <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: typography.fonts.ui }]}>
-            TEACHING SUBJECT
+            Teaching Subject
           </Text>
           <View
             style={[
               styles.inputWrapper,
               {
-                backgroundColor: colors.surface,
-                borderColor: focusedField === 'subject' ? colors.primary : colors.borderStrong,
-                borderRadius: radii.md,
+                backgroundColor: colors.surfaceSubtle,
+                borderColor: subjectError ? colors.error : focusedField === 'subject' ? colors.primary : colors.borderStrong,
+                borderRadius: radii.lg,
               },
+              focusedField === 'subject' && styles.focusedGlow,
             ]}
           >
+            <View style={styles.inputIconContainer}>
+              <Text style={[styles.inputIcon, { color: focusedField === 'subject' ? colors.primary : colors.textMuted }]}>
+                📚
+              </Text>
+            </View>
             <TextInput
               style={[styles.input, { color: colors.textPrimary, fontFamily: typography.fonts.ui }]}
               placeholder="e.g. Mathematics / Physics"
@@ -192,14 +246,25 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
         </View>
       )}
 
-      <Button
-        title={`Create ${activeRole === 'STUDENT' ? 'Student' : 'Faculty'} Account →`}
-        variant="primary"
-        size="lg"
+      {/* Submit Button */}
+      <Pressable
         onPress={onSubmit}
-        loading={isLoading}
-        style={styles.submitBtn}
-      />
+        disabled={isLoading}
+        style={({ pressed }) => [
+          styles.submitBtn,
+          {
+            backgroundColor: colors.primary,
+            borderRadius: radii.lg,
+            opacity: pressed || isLoading ? 0.9 : 1,
+            transform: [{ scale: pressed ? 0.985 : 1 }],
+          },
+        ]}
+      >
+        <Text style={[styles.submitText, { fontFamily: typography.fonts.ui }]}>
+          {isLoading ? 'Creating Account...' : `Create ${activeRole === 'STUDENT' ? 'Student' : 'Faculty'} Account`}
+        </Text>
+        {!isLoading && <Text style={styles.submitArrow}>→</Text>}
+      </Pressable>
     </View>
   );
 };
@@ -212,17 +277,31 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   fieldLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
-    letterSpacing: 0.5,
     marginBottom: 6,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1.2,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     height: 48,
+  },
+  focusedGlow: {
+    shadowColor: '#1677FF',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  inputIconContainer: {
+    marginRight: 8,
+    width: 20,
+    alignItems: 'center',
+  },
+  inputIcon: {
+    fontSize: 14,
   },
   input: {
     flex: 1,
@@ -231,8 +310,35 @@ const styles = StyleSheet.create({
   },
   eyeBtn: {
     paddingLeft: 8,
+    paddingVertical: 6,
+  },
+  errorHelper: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 4,
   },
   submitBtn: {
+    height: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 8,
+    shadowColor: '#1677FF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  submitText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  submitArrow: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    marginLeft: 6,
   },
 });
