@@ -20,23 +20,40 @@ import {
   useTeacherAssignments,
   useTeacherTimetable,
   useTimetableMutations,
+  useTeacherTests,
+  useToggleTestResults,
+  useLessonPlans,
+  useLessonPlanMutations,
 } from '../../hooks/useTeacherData';
 import type { TimetableConflictError, WeekDay } from '@padhai-pilot/shared';
 import { StudentLeaveReview } from '../leave/StudentLeavePanels';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useNavigationStore } from '../../store/useNavigationStore';
 import { useTheme } from '../../theme/ThemeContext';
 import { errorMessage, formatDate, formatInr, todayIso } from '../../lib/format';
 
-type View_ = 'menu' | 'homework' | 'announcements' | 'timetable' | 'leave' | 'studentLeave' | 'salary' | 'profile';
+type View_ =
+  | 'menu'
+  | 'homework'
+  | 'tests'
+  | 'lessonPlans'
+  | 'announcements'
+  | 'timetable'
+  | 'studentLeave'
+  | 'leave'
+  | 'salary'
+  | 'profile';
 
-const MENU: Array<{ key: Exclude<View_, 'menu'>; label: string; hint: string }> = [
-  { key: 'homework', label: 'Homework & grading', hint: 'Create assignments, grade submissions' },
-  { key: 'announcements', label: 'Announcements', hint: 'Message your batches' },
-  { key: 'timetable', label: 'Timetable', hint: 'Your weekly schedule' },
-  { key: 'studentLeave', label: 'Student leave', hint: 'Approve or reject requests' },
-  { key: 'leave', label: 'My leave', hint: 'Apply and track decisions' },
-  { key: 'salary', label: 'My salary statements', hint: 'Visible only to you' },
-  { key: 'profile', label: 'Account', hint: 'Sign out' },
+const MENU: Array<{ key: View_; label: string; hint: string }> = [
+  { key: 'homework', label: 'Homework & Grading', hint: 'Create assignments, grade student submissions' },
+  { key: 'tests', label: 'Tests & Quizzes', hint: 'Classroom tests, durations & release results' },
+  { key: 'lessonPlans', label: 'Curriculum & Lesson Plans', hint: 'Weekly chapter syllabus & completion' },
+  { key: 'announcements', label: 'Noticeboard', hint: 'Broadcast announcements to your batches' },
+  { key: 'timetable', label: 'Weekly Timetable', hint: 'Schedule slots, room allocations & days' },
+  { key: 'studentLeave', label: 'Student Leave Requests', hint: 'Approve or reject student leave' },
+  { key: 'leave', label: 'My Leave', hint: 'Apply for leave & track approval' },
+  { key: 'salary', label: 'Salary Slips', hint: 'Monthly salary statements & breakdown' },
+  { key: 'profile', label: 'Account & Sign Out', hint: 'Faculty profile and session details' },
 ];
 
 const Grading: React.FC<{ assignmentId: string }> = ({ assignmentId }) => {
@@ -114,7 +131,7 @@ const Homework: React.FC = () => {
             create.mutate(
               { batchId: batchId as string, title: title.trim(), subject: subject.trim(), instructions: instructions.trim(), dueDate: due, attachmentUrl: attachment.trim() || undefined },
               {
-                onSuccess: () => { setTitle(''); setInstructions(''); },
+                onSuccess: () => { setTitle(''); setInstructions(''); Alert.alert('Published', 'Assignment is visible to students.'); },
                 onError: (e) => Alert.alert('Could not create', errorMessage(e)),
               },
             )
@@ -128,6 +145,141 @@ const Homework: React.FC = () => {
               <Subtitle>{a.title}</Subtitle>
               <Caption>{`${a.batchName ?? ''} · due ${formatDate(a.dueDate)} · ${a.submissionCount}/${a.totalStudents} submitted`}</Caption>
               {open === a.id ? <Grading assignmentId={a.id} /> : null}
+            </Card>
+          ))
+        }
+      </QueryBoundary>
+    </>
+  );
+};
+
+const Tests: React.FC = () => {
+  const q = useTeacherTests();
+  const toggleResults = useToggleTestResults();
+
+  return (
+    <QueryBoundary
+      query={q}
+      isEmpty={(t) => t.length === 0}
+      emptyTitle="No tests found"
+      emptyDescription="Tests and quizzes created on the portal will appear here."
+    >
+      {(tests) =>
+        tests.map((t) => (
+          <Card key={t.id} style={{ marginBottom: 10 }}>
+            <View style={styles.between}>
+              <Subtitle style={{ flex: 1 }}>{t.title}</Subtitle>
+              <Badge
+                label={t.isResultsReleased ? 'Results Out' : t.status}
+                variant={t.isResultsReleased ? 'success' : 'neutral'}
+              />
+            </View>
+            <Caption>{`${t.batchName ?? 'Batch'} · ${t.subject} · ${t.questions?.length ?? 0} questions · ${t.totalMarks ?? 0} marks`}</Caption>
+            <View style={[styles.between, { marginTop: 8 }]}>
+              <Caption>{`Duration: ${t.durationMinutes ?? 45} mins`}</Caption>
+              <Button
+                title={t.isResultsReleased ? 'Hide Results' : 'Release Results'}
+                size="sm"
+                variant={t.isResultsReleased ? 'outline' : 'primary'}
+                loading={toggleResults.isPending}
+                onPress={() =>
+                  toggleResults.mutate(t.id, {
+                    onSuccess: () =>
+                      Alert.alert(
+                        'Updated',
+                        t.isResultsReleased ? 'Results hidden.' : 'Results released to students!',
+                      ),
+                    onError: (e) => Alert.alert('Error', errorMessage(e)),
+                  })
+                }
+              />
+            </View>
+          </Card>
+        ))
+      }
+    </QueryBoundary>
+  );
+};
+
+const LessonPlans: React.FC = () => {
+  const [batchId, setBatchId] = useState<string>();
+  const [title, setTitle] = useState('');
+  const [topic, setTopic] = useState('');
+  const [subject, setSubject] = useState('');
+  const [weekNumber, setWeekNumber] = useState('1');
+  const [content, setContent] = useState('');
+  const q = useLessonPlans();
+  const { create, toggle } = useLessonPlanMutations();
+
+  const valid = !!batchId && title.trim() && topic.trim() && subject.trim() && Number(weekNumber) > 0;
+
+  const submit = () => {
+    create.mutate(
+      {
+        batchId: batchId as string,
+        title: title.trim(),
+        topic: topic.trim(),
+        subject: subject.trim(),
+        weekNumber: Number(weekNumber),
+        content: content.trim(),
+      },
+      {
+        onSuccess: () => {
+          setTitle('');
+          setTopic('');
+          setContent('');
+          Alert.alert('Created', 'Lesson plan added to curriculum.');
+        },
+        onError: (e) => Alert.alert('Error', errorMessage(e)),
+      },
+    );
+  };
+
+  return (
+    <>
+      <Card style={{ marginBottom: 16 }}>
+        <Subtitle>New Lesson Plan</Subtitle>
+        <BatchPicker value={batchId} onChange={setBatchId} />
+        <Input label="Title" value={title} onChangeText={setTitle} placeholder="e.g. Unit 3 Trigonometry" />
+        <Input label="Topic" value={topic} onChangeText={setTopic} placeholder="e.g. Heights and Distances" />
+        <Input label="Subject" value={subject} onChangeText={setSubject} placeholder="e.g. Mathematics" />
+        <Input label="Week Number" value={weekNumber} onChangeText={setWeekNumber} keyboardType="number-pad" />
+        <Input label="Content & Milestones" value={content} onChangeText={setContent} multiline placeholder="Lesson objectives and topics..." />
+        <Button
+          title="Save Lesson Plan"
+          disabled={!valid}
+          loading={create.isPending}
+          onPress={submit}
+        />
+      </Card>
+
+      <QueryBoundary
+        query={q}
+        isEmpty={(p) => p.length === 0}
+        emptyTitle="No lesson plans"
+        emptyDescription="Add weekly lesson plans to track syllabus progress."
+      >
+        {(plans) =>
+          plans.map((p) => (
+            <Card key={p.id} style={{ marginBottom: 8 }}>
+              <View style={styles.between}>
+                <Subtitle>{`Week ${p.weekNumber}: ${p.title}`}</Subtitle>
+                <Badge
+                  label={p.isCompleted ? 'Completed' : 'Planned'}
+                  variant={p.isCompleted ? 'success' : 'neutral'}
+                />
+              </View>
+              <Caption>{`${p.subject} · ${p.topic}`}</Caption>
+              {p.content ? <Body numberOfLines={3} style={{ marginTop: 4 }}>{p.content}</Body> : null}
+              <View style={[styles.between, { marginTop: 8 }]}>
+                <Button
+                  title={p.isCompleted ? 'Mark Incomplete' : 'Mark Completed'}
+                  size="sm"
+                  variant={p.isCompleted ? 'outline' : 'secondary'}
+                  loading={toggle.isPending}
+                  onPress={() => toggle.mutate(p.id)}
+                />
+              </View>
             </Card>
           ))
         }
@@ -155,7 +307,7 @@ const Announcements: React.FC = () => {
           onPress={() =>
             create.mutate(
               { batchId, title: title.trim(), content: content.trim() },
-              { onSuccess: () => { setTitle(''); setContent(''); }, onError: (e) => Alert.alert('Could not post', errorMessage(e)) },
+              { onSuccess: () => { setTitle(''); setContent(''); Alert.alert('Posted', 'Announcement broadcasted to batch.'); }, onError: (e) => Alert.alert('Could not post', errorMessage(e)) },
             )
           }
         />
@@ -288,7 +440,7 @@ const Leave: React.FC = () => {
           onPress={() =>
             apply.mutate(
               { leaveType: 'CASUAL', startDate: start, endDate: end, totalDays: days, reason: reason.trim() },
-              { onSuccess: () => setReason(''), onError: (e) => Alert.alert('Could not apply', errorMessage(e)) },
+              { onSuccess: () => { setReason(''); Alert.alert('Applied', 'Leave application submitted.'); }, onError: (e) => Alert.alert('Could not apply', errorMessage(e)) },
             )
           }
         />
@@ -335,22 +487,45 @@ const Salary: React.FC = () => {
 export const TeacherMoreScreen: React.FC = () => {
   const { spacing } = useTheme();
   const { session, logout } = useAuthStore();
+  const { setTab } = useNavigationStore();
   const [view, setView] = useState<View_>('menu');
   const current = MENU.find((m) => m.key === view);
 
   return (
-    <Screen eyebrow="MORE" title={current?.label ?? 'More'} subtitle={current?.hint}>
+    <Screen eyebrow="MORE" title={current?.label ?? 'More Options'} subtitle={current?.hint ?? 'Faculty tools & management'}>
       {view === 'menu' ? (
-        MENU.map((m) => (
-          <Card key={m.key} style={{ marginBottom: spacing.sm }} onPress={() => setView(m.key)}>
-            <Subtitle>{m.label}</Subtitle>
-            <Caption>{m.hint}</Caption>
+        <>
+          {/* Quick link to Batches & Students */}
+          <Card style={{ marginBottom: spacing.sm, borderWidth: 1.5, borderColor: '#1677FF' }} onPress={() => setTab('teacher_classes')}>
+            <View style={styles.between}>
+              <Subtitle style={{ color: '#1677FF' }}>Batches & Students Roster →</Subtitle>
+              <Badge label="Core" variant="info" />
+            </View>
+            <Caption>View batches, student roster, generate invitation codes & fee status</Caption>
           </Card>
-        ))
+
+          {/* Quick link to Bulk Marks */}
+          <Card style={{ marginBottom: spacing.sm, borderWidth: 1, borderColor: '#10B981' }} onPress={() => setTab('teacher_marks')}>
+            <View style={styles.between}>
+              <Subtitle style={{ color: '#10B981' }}>Bulk Marks Entry →</Subtitle>
+              <Badge label="Grading" variant="success" />
+            </View>
+            <Caption>Score assessments and publish results to students</Caption>
+          </Card>
+
+          {MENU.map((m) => (
+            <Card key={m.key} style={{ marginBottom: spacing.sm }} onPress={() => setView(m.key)}>
+              <Subtitle>{m.label}</Subtitle>
+              <Caption>{m.hint}</Caption>
+            </Card>
+          ))}
+        </>
       ) : (
         <>
-          <Button title="‹ Back" variant="ghost" size="sm" onPress={() => setView('menu')} style={{ alignSelf: 'flex-start', marginBottom: spacing.sm }} />
+          <Button title="‹ Back to Menu" variant="ghost" size="sm" onPress={() => setView('menu')} style={{ alignSelf: 'flex-start', marginBottom: spacing.sm }} />
           {view === 'homework' ? <Homework /> : null}
+          {view === 'tests' ? <Tests /> : null}
+          {view === 'lessonPlans' ? <LessonPlans /> : null}
           {view === 'announcements' ? <Announcements /> : null}
           {view === 'timetable' ? <Timetable /> : null}
           {view === 'leave' ? <Leave /> : null}
@@ -368,8 +543,8 @@ export const TeacherMoreScreen: React.FC = () => {
           ) : null}
         </>
       )}
-      {view === 'menu' ? <SectionTitle>Account</SectionTitle> : null}
-      {view === 'menu' ? <Caption>{session?.user?.email}</Caption> : null}
+      {view === 'menu' ? <SectionTitle>Logged In As</SectionTitle> : null}
+      {view === 'menu' ? <Caption>{`${session?.user?.fullName ?? ''} (${session?.user?.email})`}</Caption> : null}
     </Screen>
   );
 };

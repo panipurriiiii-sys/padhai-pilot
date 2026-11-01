@@ -27,10 +27,11 @@ export const TeacherDashboardScreen: React.FC = () => {
       refreshing={query.isRefetching}
       onRefresh={() => query.refetch()}
     >
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 }}>
-        <Button title="Daily Diary" icon="book-open" onPress={() => setTab('teacher_learning')} />
-        <Button title="Mark Attendance" icon="calendar-check" variant="secondary" onPress={() => setTab('teacher_attendance')} />
-        <Button title="New Assignment" icon="plus" variant="subtle" onPress={() => setTab('teacher_more')} />
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+        <Button title="Mark Attendance" icon="calendar-check" variant="primary" size="sm" onPress={() => setTab('teacher_attendance')} />
+        <Button title="Daily Diary" icon="book-open" variant="secondary" size="sm" onPress={() => setTab('teacher_learning')} />
+        <Button title="Enter Marks" icon="file-spreadsheet" variant="outline" size="sm" onPress={() => setTab('teacher_marks')} />
+        <Button title="Batches & Roster" icon="users" variant="outline" size="sm" onPress={() => setTab('teacher_classes')} />
       </View>
 
       <QueryBoundary query={query}>
@@ -46,7 +47,14 @@ export const TeacherDashboardScreen: React.FC = () => {
                 tone={d.pendingAttendanceCount > 0 ? 'amber' : 'emerald'}
                 onPress={() => setTab('teacher_attendance')}
               />
-              <KpiCard label="Submissions to Grade" value={String(d.pendingReviewsCount)} caption="Awaiting teacher review" icon="file-check" tone="teal" onPress={() => setTab('teacher_more')} />
+              <KpiCard
+                label="Submissions to Grade"
+                value={String(d.pendingReviewsCount)}
+                caption="Awaiting teacher review"
+                icon="file-check"
+                tone="teal"
+                onPress={() => setTab('teacher_more')}
+              />
               <KpiCard
                 label="Total Students"
                 value={String(d.totalStudentsCount)}
@@ -68,15 +76,16 @@ export const TeacherDashboardScreen: React.FC = () => {
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontFamily: typography.fonts.ui, fontSize: 14, fontWeight: '700', color: colors.textPrimary }}>{slot.subject}</Text>
                       <Text style={{ fontFamily: typography.fonts.ui, fontSize: 12, color: colors.textMuted }}>
-                        {`${slot.batchName}${slot.room ? ` · ${slot.room}` : ''}`}
+                        {`${slot.batchName}${slot.room ? ` · Room ${slot.room}` : ''}`}
                       </Text>
                     </View>
+                    <Badge label="Tap to Mark" variant="info" />
                   </View>
                 </Card>
               ))
             )}
 
-            <SectionHeader title="Noticeboard" icon="megaphone" />
+            <SectionHeader title="Noticeboard" icon="megaphone" action="Post Notice" onAction={() => setTab('teacher_more')} />
             {d.recentAnnouncements.length === 0 ? (
               <EmptyPaper message="No announcements yet." />
             ) : (

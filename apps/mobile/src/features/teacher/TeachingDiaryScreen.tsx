@@ -64,6 +64,46 @@ const DiaryForm: React.FC = () => {
   );
 };
 
+const DiaryHistory: React.FC = () => {
+  const q = useDiaries();
+  return (
+    <>
+      <SectionTitle>Past Diary Entries</SectionTitle>
+      <QueryBoundary
+        query={q}
+        isEmpty={(d) => d.length === 0}
+        emptyTitle="No diary entries yet"
+        emptyDescription="Published lessons and drafts will appear here."
+      >
+        {(entries) =>
+          entries.map((e) => (
+            <Card key={e.id} style={{ marginBottom: 10 }}>
+              <View style={styles.between}>
+                <Subtitle style={{ flex: 1 }}>{e.chapterTitle || e.subject}</Subtitle>
+                <Badge
+                  label={e.status}
+                  variant={e.status === 'PUBLISHED' ? 'success' : 'neutral'}
+                />
+              </View>
+              <Caption>{`${e.batchName ?? 'Batch'} · ${e.subject} · ${formatDate(e.lessonDate)}`}</Caption>
+              {e.conceptsTaught ? (
+                <Body numberOfLines={3} style={{ marginTop: 4 }}>
+                  {`Concepts: ${e.conceptsTaught}`}
+                </Body>
+              ) : null}
+              {e.homeworkAssigned ? (
+                <Caption style={{ marginTop: 4 }}>
+                  {`Homework: ${e.homeworkAssigned}`}
+                </Caption>
+              ) : null}
+            </Card>
+          ))
+        }
+      </QueryBoundary>
+    </>
+  );
+};
+
 const CATEGORIES: StudyMaterialCategory[] = ['CHAPTER_NOTES', 'WORKSHEET', 'FORMULA_SHEET', 'HANDOUT', 'REVISION_GUIDE', 'PRACTICE_PAPER'];
 
 const MaterialForm: React.FC = () => {
@@ -98,7 +138,7 @@ const MaterialForm: React.FC = () => {
             { batchId: batchId as string, title: title.trim(), subject: subject.trim(), category, fileUrl: link.trim(), status: 'PUBLISHED', isStudentVisible: true },
             {
               onSuccess: () => { setTitle(''); setLink(''); Alert.alert('Published', 'Students in this batch can now open it.'); },
-              onError: (e) => Alert.alert('Could not publish', errorMessage(e)),
+              onError: (e) => Alert.alert('Could not save', errorMessage(e)),
             },
           )
         }
@@ -107,67 +147,74 @@ const MaterialForm: React.FC = () => {
   );
 };
 
+const MaterialsList: React.FC = () => {
+  const q = useTeacherMaterials();
+  return (
+    <>
+      <SectionTitle>Shared Study Materials</SectionTitle>
+      <QueryBoundary
+        query={q}
+        isEmpty={(m) => m.length === 0}
+        emptyTitle="No materials uploaded"
+        emptyDescription="Documents shared with your batches will appear here."
+      >
+        {(materials) =>
+          materials.map((m) => (
+            <Card key={m.id} style={{ marginBottom: 10 }}>
+              <View style={styles.between}>
+                <Subtitle style={{ flex: 1 }}>{m.title}</Subtitle>
+                <Badge label={m.category.replace(/_/g, ' ')} variant="neutral" />
+              </View>
+              <Caption>{`${m.batchName ?? 'Batch'} · ${m.subject} · ${formatDate(m.createdAt)}`}</Caption>
+              {m.fileUrl ? (
+                <Button
+                  title="Open Document ↗"
+                  size="sm"
+                  variant="outline"
+                  onPress={() => openUrl(m.fileUrl)}
+                  style={{ alignSelf: 'flex-start', marginTop: 8 }}
+                />
+              ) : null}
+            </Card>
+          ))
+        }
+      </QueryBoundary>
+    </>
+  );
+};
+
 export const TeachingDiaryScreen: React.FC = () => {
   const [tab, setTab] = useState<Tab>('diary');
-  const diaries = useDiaries();
-  const materials = useTeacherMaterials();
-  const active = tab === 'diary' ? diaries : materials;
-
   return (
     <Screen
-      eyebrow="VAULT"
-      title={tab === 'diary' ? 'Teaching diary' : 'Notes & materials'}
-      subtitle="Drafts stay private until you publish to the batch"
-      refreshing={active.isRefetching}
-      onRefresh={() => active.refetch()}
+      eyebrow="TEACHING"
+      title="Lesson diary & materials"
+      subtitle="Record what you taught each day, or share materials with your batches"
     >
       <Segmented
         value={tab}
         onChange={setTab}
         options={[
-          { key: 'diary', label: 'Diary' },
-          { key: 'materials', label: 'Materials' },
+          { key: 'diary', label: 'Daily diary' },
+          { key: 'materials', label: 'Study material' },
         ]}
       />
-      {tab === 'diary' ? <DiaryForm /> : <MaterialForm />}
-
-      <SectionTitle>{tab === 'diary' ? 'Recent entries' : 'Shared files'}</SectionTitle>
       {tab === 'diary' ? (
-        <QueryBoundary query={diaries} isEmpty={(d) => d.length === 0} emptyTitle="No entries yet" emptyDescription="Log today's lesson above.">
-          {(items) =>
-            items.slice(0, 15).map((e) => (
-              <Card key={e.id} style={{ marginBottom: 8 }}>
-                <View style={styles.between}>
-                  <Subtitle style={{ flex: 1 }}>{e.chapterTitle}</Subtitle>
-                  <Badge label={e.status} variant={e.status === 'PUBLISHED' ? 'success' : 'warning'} />
-                </View>
-                <Caption>{`${e.subject} · ${e.batchName} · ${formatDate(e.lessonDate)}`}</Caption>
-                <Body numberOfLines={2}>{e.conceptsTaught}</Body>
-              </Card>
-            ))
-          }
-        </QueryBoundary>
+        <>
+          <DiaryForm />
+          <DiaryHistory />
+        </>
       ) : (
-        <QueryBoundary query={materials} isEmpty={(d) => d.length === 0} emptyTitle="No materials yet" emptyDescription="Share notes or worksheets above.">
-          {(items) =>
-            items.slice(0, 15).map((m) => (
-              <Card key={m.id} style={{ marginBottom: 8 }}>
-                <View style={styles.between}>
-                  <Subtitle style={{ flex: 1 }}>{m.title}</Subtitle>
-                  <Badge label={m.status} variant={m.status === 'PUBLISHED' ? 'success' : 'warning'} />
-                </View>
-                <Caption>{`${m.subject} · ${m.batchName} · ${m.downloadCount} downloads`}</Caption>
-                {m.fileUrl ? <Button title="Open" variant="secondary" size="sm" style={{ marginTop: 8 }} onPress={() => openUrl(m.fileUrl)} /> : null}
-              </Card>
-            ))
-          }
-        </QueryBoundary>
+        <>
+          <MaterialForm />
+          <MaterialsList />
+        </>
       )}
     </Screen>
   );
 };
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: 8 },
+  row: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
 });

@@ -19,10 +19,10 @@ interface TabItem {
 // Same destinations and icons as the Teacher Portal sidebar, condensed to five thumb-reachable tabs.
 const TEACHER_TABS: TabItem[] = [
   { key: 'teacher_dashboard', label: 'Overview', icon: 'layout-dashboard' },
-  { key: 'teacher_learning', label: 'Diary', icon: 'notebook-pen', also: ['teacher_diary', 'teacher_materials'] },
+  { key: 'teacher_classes', label: 'Batches', icon: 'users' },
   { key: 'teacher_attendance', label: 'Attendance', icon: 'calendar-check' },
-  { key: 'teacher_marks', label: 'Marks', icon: 'file-spreadsheet' },
-  { key: 'teacher_more', label: 'More', icon: 'layers', also: ['teacher_profile', 'teacher_classes'] },
+  { key: 'teacher_learning', label: 'Diary', icon: 'notebook-pen', also: ['teacher_diary', 'teacher_materials'] },
+  { key: 'teacher_more', label: 'More', icon: 'layers', also: ['teacher_profile', 'teacher_marks'] },
 ];
 
 const STUDENT_TABS: TabItem[] = [
