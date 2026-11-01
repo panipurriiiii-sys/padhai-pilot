@@ -49,7 +49,7 @@ describe('invitation code lifecycle', () => {
 
   // KNOWN BUG (api-core): GET /teacher/batches/:id/students 500s - TeacherService selects User.rollNumber, which the schema
   // does not have. it.fails flips red as soon as it is fixed: then change it to it().
-  it.fails('roll numbers stay unique per batch after joins (needs the roster endpoint)', async () => {
+  it('roll numbers stay unique per batch after joins (needs the roster endpoint)', async () => {
     const roster = await call('GET', `/teacher/batches/${batchA1.id}/students`, { token: t.ownerA });
     expect(roster.status).toBe(200);
     const rolls = rosterOf(roster).map((s: any) => s.rollNumber);

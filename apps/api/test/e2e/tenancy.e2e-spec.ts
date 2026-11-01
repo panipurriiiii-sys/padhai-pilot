@@ -67,7 +67,7 @@ describe('cross-tenant isolation (institute A vs institute B)', () => {
 
   // KNOWN SECURITY BUG (api-finance-docs): POST /tuition/fees/record accepts any studentId, including a student of another
   // institute (currently 201). it.fails -> it() once TuitionService verifies the student belongs to the caller's institute.
-  it.fails("owner A cannot create a fee record for B's student", async () => {
+  it("owner A cannot create a fee record for B's student", async () => {
     const create = await call('POST', '/tuition/fees/record', {
       token: t.ownerA,
       body: { studentId: studentBId, feeTitle: 'Cross tenant', totalAmount: 100, dueDate: '2027-01-01T00:00:00.000Z' },

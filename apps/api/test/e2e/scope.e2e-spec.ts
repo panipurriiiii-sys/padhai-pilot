@@ -84,14 +84,14 @@ describe('faculty only reach assigned batches', () => {
   });
 
   // KNOWN BUG (api-core): roster 500s (TeacherService selects User.rollNumber, absent from the schema). it.fails -> it() once fixed.
-  it.fails('faculty1 CAN read the roster of their own batch', async () => {
+  it('faculty1 CAN read the roster of their own batch', async () => {
     const roster = await call('GET', `/teacher/batches/${batchA1.id}/students`, { token: t.faculty1 });
     expect(roster.status).toBe(200);
     expect(rosterOf(roster).length).toBe(5);
   });
 
   // KNOWN BUG (api-core): attendance GET 500s (TeacherService selects User.rollNumber). it.fails -> it() once fixed.
-  it.fails('faculty1 CAN read attendance of their own batch (production 403 regression)', async () => {
+  it('faculty1 CAN read attendance of their own batch (production 403 regression)', async () => {
     const att = await call('GET', `/teacher/attendance/${batchA1.id}/2026-10-20`, { token: t.faculty1 });
     expect(att.status).toBe(200);
   });

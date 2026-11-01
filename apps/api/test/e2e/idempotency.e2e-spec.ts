@@ -38,7 +38,7 @@ describe('duplicate submissions are idempotent', () => {
   });
 
   // KNOWN BUG (api-core): GET /teacher/assignments/:id/submissions 500s (selects User.rollNumber, absent from the schema).
-  it.fails('teacher can list submissions, one per student', async () => {
+  it('teacher can list submissions, one per student', async () => {
     const asgs = await call('GET', '/teacher/assignments', { token: t.ownerA });
     const id = (asgs.body.items ?? asgs.body)[0].id;
     const subs = await call('GET', `/teacher/assignments/${id}/submissions`, { token: t.ownerA });
@@ -57,7 +57,7 @@ describe('duplicate submissions are idempotent', () => {
   });
 
   // KNOWN GAP (api-core): batch codes are not unique per institute; a double click creates two batches.
-  it.fails('creating a batch twice with the same code does not create a duplicate', async () => {
+  it('creating a batch twice with the same code does not create a duplicate', async () => {
     const code = `IDEMP-${Date.now() % 1000000}`;
     const body = { name: 'Idem Batch', subject: 'Maths', code };
     await call('POST', '/teacher/batches', { token: t.ownerA, body });
