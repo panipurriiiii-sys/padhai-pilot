@@ -410,7 +410,7 @@ export default function AdminPlatformOwnerDashboard() {
                   value={authEmail}
                   onChange={(e) => setAuthEmail(e.target.value)}
                   className="w-full bg-paper-warm border border-border-paper rounded-xl pl-10 pr-3 py-2.5 text-xs text-on-brand placeholder-ink-faint focus:outline-none focus:border-border-focus font-data"
-                  placeholder="super@padhaipilot.com"
+                  placeholder="aditya@gmail.com"
                   required
                 />
               </div>

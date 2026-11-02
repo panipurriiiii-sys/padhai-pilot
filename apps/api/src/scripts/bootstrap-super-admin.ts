@@ -28,23 +28,44 @@ async function main() {
     datasources: { db: { url: process.env.DIRECT_URL || process.env.DATABASE_URL } },
   });
   try {
-    if (await prisma.user.findFirst({ where: { role: 'SUPER_ADMIN' }, select: { id: true } })) {
-      throw new Error('A SUPER_ADMIN already exists. Refusing to create another.');
-    }
-    if (await prisma.user.findUnique({ where: { email }, select: { id: true } })) {
-      throw new Error('A user with that email already exists.');
-    }
-    const user = await prisma.user.create({
-      data: {
-        email,
-        fullName,
-        passwordHash: await hashPassword(password),
-        role: 'SUPER_ADMIN',
-        isEmailVerified: true,
-      },
+    const existingSuperAdmin = await prisma.user.findFirst({
+      where: { role: 'SUPER_ADMIN' },
       select: { id: true, email: true },
     });
-    console.log(`SUPER_ADMIN created: ${user.email} (${user.id})`);
+    if (existingSuperAdmin && existingSuperAdmin.email !== email && process.env.ALLOW_UPDATE !== 'true') {
+      throw new Error(`A SUPER_ADMIN already exists (${existingSuperAdmin.email}). Refusing to overwrite without ALLOW_UPDATE=true.`);
+    }
+
+    const existingUser = await prisma.user.findUnique({ where: { email }, select: { id: true, role: true } });
+    let user;
+    if (existingUser) {
+      user = await prisma.user.update({
+        where: { id: existingUser.id },
+        data: {
+          fullName,
+          passwordHash: await hashPassword(password),
+          role: 'SUPER_ADMIN',
+          isEmailVerified: true,
+          isActive: true,
+          tokenVersion: { increment: 1 },
+        },
+        select: { id: true, email: true, role: true },
+      });
+      console.log(`SUPER_ADMIN updated/promoted: ${user.email} (${user.id})`);
+    } else {
+      user = await prisma.user.create({
+        data: {
+          email,
+          fullName,
+          passwordHash: await hashPassword(password),
+          role: 'SUPER_ADMIN',
+          isEmailVerified: true,
+          isActive: true,
+        },
+        select: { id: true, email: true, role: true },
+      });
+      console.log(`SUPER_ADMIN created: ${user.email} (${user.id})`);
+    }
   } finally {
     await prisma.$disconnect();
   }
