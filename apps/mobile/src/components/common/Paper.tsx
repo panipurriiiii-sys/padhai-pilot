@@ -220,7 +220,12 @@ const STAMPS: Record<StampKind, { bg: string; border: string; fg: string; label:
 /** Attendance rubber stamp */
 export const Stamp: React.FC<{ kind: StampKind; active: boolean; onPress: () => void }> = memo(({ kind, active, onPress }) => {
   const { colors, typography } = useTheme();
-  const s = STAMPS[kind];
+  const base = STAMPS[kind];
+  const s =
+    kind === 'P' ? { ...base, bg: colors.stickyMintBg, fg: colors.stickyMintText }
+    : kind === 'A' ? { ...base, bg: colors.stickyPinkBg, fg: colors.stickyPinkText }
+    : kind === 'L' ? { ...base, bg: colors.stickyYellowBg, fg: colors.stickyYellowText }
+    : { ...base, bg: colors.stickyBlueBg, fg: colors.stickyBlueText };
   return (
     <Pressable
       accessibilityRole="button"

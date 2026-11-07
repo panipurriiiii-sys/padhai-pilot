@@ -1,15 +1,8 @@
 import { apiClient } from '../services/api/client';
 
-declare const require: ((moduleName: string) => any) | undefined;
+declare const require: (moduleName: string) => any;
 
 export const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
-const load = (name: string) => {
-  try {
-    return typeof require === 'function' ? require(name) : null;
-  } catch {
-    return null;
-  }
-};
 
 export interface UploadedMedia {
   url: string;
@@ -24,8 +17,15 @@ export interface UploadedMedia {
  * https media link to attach to an assignment or material.
  */
 export async function pickAndUploadMedia(): Promise<UploadedMedia | null> {
-  const picker = load('@react-native-documents/picker');
-  const blob = load('react-native-blob-util');
+  let picker: any = null;
+  let blob: any = null;
+  try {
+    // Literal requires (Metro needs static module names); lazy so a missing native module never crashes startup.
+    picker = require('@react-native-documents/picker');
+    blob = require('react-native-blob-util');
+  } catch {
+    // handled below
+  }
   const fs = (blob?.default ?? blob)?.fs;
   if (!picker?.pick || !fs) throw new Error('File picking is not available on this build. Paste an https link instead.');
   let file: { uri: string; name?: string | null; type?: string | null; size?: number | null };

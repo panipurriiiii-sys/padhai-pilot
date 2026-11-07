@@ -8,7 +8,7 @@ import { Badge } from '../../../components/common/Badge';
 import { Button } from '../../../components/common/Button';
 import { Input } from '../../../components/common/Input';
 import { Body, Caption, StatValue, Subtitle } from '../../../components/common/Typography';
-import { useAttendanceData, useCorrectionRequest, useResultsData } from '../../../hooks/useStudentData';
+import { useAttendanceData, useCorrectionRequest, useProfileData, useResultsData } from '../../../hooks/useStudentData';
 import { useNavigationStore } from '../../../store/useNavigationStore';
 import { useTheme } from '../../../theme/ThemeContext';
 import { StudentInsights } from '../../student/StudentInsights';
@@ -30,6 +30,7 @@ export const ResultsScreen: React.FC = () => {
   const [date, setDate] = useState(todayIso());
   const [reason, setReason] = useState('');
   const studentId = useAuthStore((s) => s.session?.user?.id) ?? '';
+  const profile = useProfileData();
   const active = tab === 'results' ? results : tab === 'attendance' ? attendance : null;
 
   const submitCorrection = () =>
@@ -64,7 +65,7 @@ export const ResultsScreen: React.FC = () => {
 
       {tab === 'insights' ? <StudentInsights /> : tab === 'results' ? (
         <>
-        <Button title="Download report card (PDF)" variant="outline" size="sm" style={{ alignSelf: 'flex-start', marginTop: spacing.sm, marginBottom: spacing.sm }} onPress={() => void openPdf(documentPaths.reportCard(studentId), 'report-card')} />
+        <Button title="Download report card (PDF)" variant="outline" size="sm" style={{ alignSelf: 'flex-start', marginTop: spacing.sm, marginBottom: spacing.sm }} disabled={!profile.data?.batchId} onPress={() => void openPdf(documentPaths.reportCard(studentId, profile.data?.batchId), 'report-card')} />
         <QueryBoundary
           query={results}
           isEmpty={(r) => r.length === 0}

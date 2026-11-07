@@ -38,6 +38,7 @@ import { useBackToMenu } from '../../hooks/useBackToMenu';
 import { openPdf } from '../../lib/pdf';
 import { openUrl } from '../../lib/links';
 import { pickAndUploadMedia } from '../../lib/mediaUpload';
+import { AppearanceCard } from '../../components/common/AppearanceCard';
 import { InstituteHeader } from '../../components/common/InstituteHeader';
 import { documentPaths } from '../../services/api/financeService';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -884,6 +885,7 @@ export const TeacherMoreScreen: React.FC = () => {
                 <Caption>{session?.user?.email}</Caption>
                 <Caption>{`${session?.user?.instituteName ?? ''} · ${session?.user?.role ?? ''}`}</Caption>
               </Card>
+              <AppearanceCard />
               <Button title="Sign out" variant="outline" onPress={logout} />
             </>
           ) : null}

@@ -11,6 +11,7 @@ import { IconChip, Tone } from '../../components/common/Paper';
 import { Body, Caption, Subtitle } from '../../components/common/Typography';
 import { FeesScreen } from './FeesScreen';
 import { useBackToMenu } from '../../hooks/useBackToMenu';
+import { AppearanceCard } from '../../components/common/AppearanceCard';
 import { InstituteHeader } from '../../components/common/InstituteHeader';
 import { StudentLeaveApply } from '../leave/StudentLeavePanels';
 import {
@@ -263,6 +264,7 @@ const Profile: React.FC = () => {
           }
         />
       </Card>
+      <AppearanceCard />
       <Button title="Sign Out" variant="outline" onPress={logout} />
     </>
   );
