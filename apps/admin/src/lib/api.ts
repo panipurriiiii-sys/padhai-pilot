@@ -16,7 +16,7 @@ export interface InstituteSummary {
   name: string;
   subdomain: string;
   plan: SubscriptionPlan;
-  status: 'ACTIVE' | 'SUSPENDED' | 'TRIAL';
+  status: InstituteStatus;
   ownerName: string;
   ownerEmail: string;
   ownerPhone?: string;
@@ -102,6 +102,38 @@ export class ApiError extends Error {
   }
 }
 
+export type InstituteStatus = 'ACTIVE' | 'SUSPENDED' | 'TRIAL' | 'ARCHIVED';
+
+export interface FeatureFlagState {
+  key: FeatureKey;
+  isGloballyEnabled: boolean;
+  isEmergencyDisabled: boolean;
+  disabledReason?: string | null;
+  updatedBy?: string | null;
+  updatedAt: string;
+}
+
+export interface PlanEntitlementRow {
+  plan: SubscriptionPlan;
+  featureKey: FeatureKey;
+  isIncluded: boolean;
+  quotaLimit: number | null;
+}
+
+export interface FeatureControlState {
+  flags: FeatureFlagState[];
+  planEntitlements: PlanEntitlementRow[];
+}
+
+export interface InstituteConfigInput {
+  customDomain?: string;
+  isWhiteLabel?: boolean;
+  isDedicatedDb?: boolean;
+  themePrimaryColor?: string;
+  maxStudentsLimit?: number;
+  maxTeachersLimit?: number;
+}
+
 class AdminApiClient {
   private getHeaders(): HeadersInit {
     const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null;
@@ -112,18 +144,12 @@ class AdminApiClient {
     };
   }
 
-  // Auth & Token management
   setToken(token: string) {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('admin_token', token);
-    }
+    if (typeof window !== 'undefined') localStorage.setItem('admin_token', token);
   }
 
   getToken(): string | null {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('admin_token');
-    }
-    return null;
+    return typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null;
   }
 
   clearToken() {
@@ -134,44 +160,49 @@ class AdminApiClient {
   }
 
   async login(email: string, pass: string): Promise<{ user: any; token: string }> {
-    const res = await fetch(`${getCleanApiBaseUrl()}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password: pass }),
-    });
-
+    let res: Response;
+    try {
+      res = await fetch(`${getCleanApiBaseUrl()}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: pass }),
+      });
+    } catch {
+      throw new Error('Cannot reach the server. Check your connection and try again.');
+    }
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || 'Platform Super Admin login failed.');
+      throw new Error((err as { message?: string }).message || 'Platform Super Admin login failed.');
     }
-
     const data = await res.json();
     if (data.user?.role !== 'SUPER_ADMIN') {
-      throw new Error('Access denied: Account lacks Platform Super Admin credentials.');
+      throw new Error('Access denied: this console is for Platform Super Admins only.');
     }
-
     this.setToken(data.token);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('admin_user', JSON.stringify(data.user));
-    }
+    if (typeof window !== 'undefined') localStorage.setItem('admin_user', JSON.stringify(data.user));
     return data;
   }
 
   getCurrentUser(): any | null {
-    if (typeof window !== 'undefined') {
+    if (typeof window === 'undefined') return null;
+    try {
       const stored = localStorage.getItem('admin_user');
-      if (stored) {
-        return JSON.parse(stored);
-      }
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
     }
-    return null;
   }
 
-  /** Authenticated GET. Failures throw ApiError: callers render an error state, never sample data. */
-  private async get<T>(path: string): Promise<T> {
+  /** Authenticated request. Failures throw ApiError so callers render an error state, never sample data. */
+  private async send<T>(method: string, path: string, body?: unknown): Promise<T> {
     let res: Response;
     try {
-      res = await fetch(`${getCleanApiBaseUrl()}${path}`, { headers: this.getHeaders(), cache: 'no-store' });
+      res = await fetch(`${getCleanApiBaseUrl()}${path}`, {
+        method,
+        headers: this.getHeaders(),
+        cache: 'no-store',
+        ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+      });
     } catch {
       throw new ApiError('Cannot reach the server. Check your connection and try again.', 0);
     }
@@ -185,17 +216,17 @@ class AdminApiClient {
       }
       throw new ApiError(message, res.status);
     }
-    const body = await res.json();
-    return ((body as { data?: T }).data ?? body) as T;
+    const json = await res.json();
+    return ((json as { data?: T }).data ?? json) as T;
   }
 
   /** Platform health derived only from what GET /admin/stats actually reports. */
   async getHealth(): Promise<PlatformHealth> {
-    const stats = await this.get<{
+    const stats = await this.send<{
       tenants?: { total?: number };
       users?: { totalStudents?: number; totalTeachers?: number };
       infrastructure?: { databaseStatus?: string; redisStatus?: string; uptimeSeconds?: number; environment?: string };
-    }>('/admin/stats');
+    }>('GET', '/admin/stats');
     const db = stats.infrastructure?.databaseStatus === 'CONNECTED';
     const redis = stats.infrastructure?.redisStatus === 'ACTIVE';
     return {
@@ -211,19 +242,18 @@ class AdminApiClient {
     };
   }
 
-  async getAdminAnalytics(): Promise<PlatformAdminAnalyticsSummary> {
-    return this.get<PlatformAdminAnalyticsSummary>('/analytics/admin');
+  getAdminAnalytics() {
+    return this.send<PlatformAdminAnalyticsSummary>('GET', '/analytics/admin');
   }
 
-  // --------------------------------------------------------------------------
-  // Institutes / Tenants
-  // --------------------------------------------------------------------------
-
-  async getInstitutes(): Promise<InstituteSummary[]> {
-    return this.get<InstituteSummary[]>('/admin/institutes');
+  // Institutes
+  getInstitutes() {
+    return this.send<InstituteSummary[]>('GET', '/admin/institutes');
   }
-
-  async createInstitute(data: {
+  getInstitute(id: string) {
+    return this.send<InstituteSummary>('GET', `/admin/institutes/${encodeURIComponent(id)}`);
+  }
+  createInstitute(data: {
     name: string;
     subdomain: string;
     plan: SubscriptionPlan;
@@ -231,220 +261,103 @@ class AdminApiClient {
     ownerEmail: string;
     ownerPhone?: string;
     customDomain?: string;
-  }): Promise<{ success: boolean; data: InstituteSummary; message: string }> {
-    const res = await fetch(`${getCleanApiBaseUrl()}/admin/institutes`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || 'Failed to onboard institute');
-    }
-    return res.json();
+  }) {
+    return this.send<InstituteSummary>('POST', '/admin/institutes', data);
+  }
+  updateInstituteStatus(id: string, status: InstituteStatus, reason: string) {
+    return this.send<InstituteSummary>('PUT', `/admin/institutes/${encodeURIComponent(id)}/status`, { status, reason });
+  }
+  updateInstitutePlan(id: string, plan: SubscriptionPlan, reason?: string) {
+    return this.send<InstituteSummary>('PUT', `/admin/institutes/${encodeURIComponent(id)}/plan`, { plan, reason });
+  }
+  updateInstituteConfig(id: string, config: InstituteConfigInput) {
+    return this.send<InstituteSummary>('PUT', `/admin/institutes/${encodeURIComponent(id)}/config`, config);
   }
 
-  async updateInstituteStatus(
-    instituteId: string,
-    status: 'ACTIVE' | 'SUSPENDED' | 'TRIAL',
-    reason: string,
-  ): Promise<{ success: boolean; message: string }> {
-    const res = await fetch(`${getCleanApiBaseUrl()}/admin/institutes/${instituteId}/status`, {
-      method: 'PUT',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ status, reason }),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || 'Failed to update institute status');
-    }
-    return res.json();
+  // Features
+  getFeatureRegistry() {
+    return this.send<FeatureDefinition[]>('GET', '/features/registry');
+  }
+  getFeatureControlState() {
+    return this.send<FeatureControlState>('GET', '/features/state');
+  }
+  getEffectiveFeatures(instituteId: string) {
+    return this.send<InstituteEffectiveFeatures>('GET', `/features/institute/${encodeURIComponent(instituteId)}`);
+  }
+  getFeatureAuditLogs(params: { featureKey?: string; instituteId?: string; limit?: number } = {}) {
+    const q = new URLSearchParams();
+    if (params.featureKey) q.set('featureKey', params.featureKey);
+    if (params.instituteId) q.set('instituteId', params.instituteId);
+    q.set('limit', String(params.limit ?? 100));
+    return this.send<FeatureAuditLogItem[]>('GET', `/features/audit-logs?${q}`);
+  }
+  setGlobalFlag(featureKey: FeatureKey, isGloballyEnabled: boolean, reason?: string) {
+    return this.send<unknown>('POST', '/features/global', { featureKey, isGloballyEnabled, reason });
+  }
+  emergencyKill(featureKey: FeatureKey, reason: string, confirmCode: string) {
+    return this.send<unknown>('POST', '/features/emergency-kill', { featureKey, reason, confirmCode });
+  }
+  emergencyRestore(featureKey: FeatureKey, reason: string) {
+    return this.send<unknown>('POST', '/features/emergency-restore', { featureKey, reason });
+  }
+  updatePlanEntitlement(dto: {
+    plan: SubscriptionPlan;
+    featureKey: FeatureKey;
+    isIncluded: boolean;
+    quotaLimit?: number | null;
+    reason?: string;
+  }) {
+    return this.send<unknown>('POST', '/features/plan-entitlements', dto);
+  }
+  updateInstituteFeature(dto: {
+    instituteId: string;
+    featureKey: FeatureKey;
+    isEnabled: boolean;
+    customQuota?: number | null;
+    reason?: string;
+  }) {
+    return this.send<unknown>('POST', '/features/institute-config', dto);
   }
 
-  async updateInstitutePlan(
-    instituteId: string,
-    plan: SubscriptionPlan,
-    reason?: string,
-  ): Promise<{ success: boolean; message: string }> {
-    const res = await fetch(`${getCleanApiBaseUrl()}/admin/institutes/${instituteId}/plan`, {
-      method: 'PUT',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ plan, reason }),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || 'Failed to update plan');
-    }
-    return res.json();
+  // Audit & announcements
+  getAuditLogs(limit = 200) {
+    return this.send<PlatformAuditItem[]>('GET', `/admin/audit-logs?limit=${limit}`);
   }
-
-  async updateInstituteConfig(
-    instituteId: string,
-    config: {
-      customDomain?: string;
-      isWhiteLabel?: boolean;
-      isDedicatedDb?: boolean;
-      themePrimaryColor?: string;
-      maxStudentsLimit?: number;
-      maxTeachersLimit?: number;
-    },
-  ): Promise<{ success: boolean; message: string }> {
-    const res = await fetch(`${getCleanApiBaseUrl()}/admin/institutes/${instituteId}/config`, {
-      method: 'PUT',
-      headers: this.getHeaders(),
-      body: JSON.stringify(config),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || 'Failed to update tenant configuration');
-    }
-    return res.json();
+  getAnnouncements() {
+    return this.send<PlatformAnnouncementItem[]>('GET', '/admin/announcements');
   }
-
-  // --------------------------------------------------------------------------
-  // Feature Flags & Emergency Kill Switches
-  // --------------------------------------------------------------------------
-
-  async getFeatureRegistry(): Promise<FeatureDefinition[]> {
-    return this.get<FeatureDefinition[]>('/features/registry');
-  }
-
-  async getEffectiveFeatures(instituteId: string): Promise<InstituteEffectiveFeatures> {
-    const res = await fetch(`${getCleanApiBaseUrl()}/features/institute/${instituteId}`, {
-      headers: this.getHeaders(),
-    });
-    if (!res.ok) throw new Error('Failed to load effective features');
-    const body = await res.json();
-    return body.data || body;
-  }
-
-  async toggleGlobalKillSwitch(
-    featureKey: FeatureKey,
-    enabled: boolean,
-    reason: string,
-    confirmCode?: string,
-  ): Promise<{ success: boolean; message: string }> {
-    if (!enabled) {
-      const res = await fetch(`${getCleanApiBaseUrl()}/features/emergency-kill`, {
-        method: 'POST',
-        headers: this.getHeaders(),
-        body: JSON.stringify({
-          featureKey,
-          reason,
-          confirmCode: confirmCode || 'KILL_CONFIRMED',
-        }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || 'Failed to activate emergency kill switch');
-      }
-      return res.json();
-    } else {
-      const res = await fetch(`${getCleanApiBaseUrl()}/features/emergency-restore`, {
-        method: 'POST',
-        headers: this.getHeaders(),
-        body: JSON.stringify({ featureKey, reason }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || 'Failed to restore feature');
-      }
-      return res.json();
-    }
-  }
-
-  // --------------------------------------------------------------------------
-  // Audit Logs
-  // --------------------------------------------------------------------------
-
-  async getAuditLogs(): Promise<PlatformAuditItem[]> {
-    return this.get<PlatformAuditItem[]>('/admin/audit-logs');
-  }
-
-  // --------------------------------------------------------------------------
-  // Platform Announcements
-  // --------------------------------------------------------------------------
-
-  async getAnnouncements(): Promise<PlatformAnnouncementItem[]> {
-    return this.get<PlatformAnnouncementItem[]>('/admin/announcements');
-  }
-
-  async createAnnouncement(data: {
+  createAnnouncement(data: {
     title: string;
     message: string;
     severity: 'info' | 'warning' | 'critical';
     targetAudience?: 'ALL' | 'TEACHERS' | 'STUDENTS';
-  }): Promise<{ success: boolean; message: string }> {
-    const res = await fetch(`${getCleanApiBaseUrl()}/admin/announcements`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || 'Failed to post announcement');
-    }
-    return res.json();
+    expiresAt?: string;
+  }) {
+    return this.send<PlatformAnnouncementItem>('POST', '/admin/announcements', data);
   }
 
-  // --------------------------------------------------------------------------
-  // Platform Theme Settings (Consumes /api/theme and /api/admin/theme)
-  // --------------------------------------------------------------------------
-
-  async getPublicTheme(): Promise<PublishedTheme> {
-    const res = await fetch(`${getCleanApiBaseUrl()}/theme`, { headers: { Accept: 'application/json' }, cache: 'no-store' });
-    if (!res.ok) throw new ApiError('Could not load the published theme.', res.status);
-    return (await res.json()) as PublishedTheme;
+  // Theme
+  getAdminThemeOverview() {
+    return this.send<AdminThemeOverview>('GET', '/admin/theme');
   }
-
-  async getAdminThemeOverview(): Promise<AdminThemeOverview> {
-    return this.get<AdminThemeOverview>('/admin/theme');
+  validateThemeConfig(config: PlatformThemeConfig) {
+    return this.send<ThemeValidation>('POST', '/admin/theme/validate', { config });
   }
-
-  async validateThemeConfig(config: PlatformThemeConfig): Promise<{ valid: boolean; errors?: string[]; warnings?: string[] }> {
-    try {
-      const res = await fetch(`${getCleanApiBaseUrl()}/admin/theme/validate`, {
-        method: 'POST',
-        headers: this.getHeaders(),
-        body: JSON.stringify({ config }),
-      });
-      if (res.ok) {
-        const body = await res.json();
-        return body.data || body;
-      }
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || 'Theme validation failed');
-    } catch (err: unknown) {
-      if (err instanceof Error) throw err;
-      throw new Error('Theme validation failed');
-    }
+  publishTheme(config: PlatformThemeConfig, reason?: string) {
+    return this.send<{ unchanged?: boolean; theme?: { revision: number } }>('POST', '/admin/theme/publish', { config, reason });
   }
-
-  async publishTheme(config: PlatformThemeConfig, reason?: string): Promise<{ success: boolean; data: any; message: string }> {
-    const res = await fetch(`${getCleanApiBaseUrl()}/admin/theme/publish`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ config, reason }),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || 'Failed to publish theme revision');
-    }
-    return res.json();
-  }
-
-  async restoreTheme(revision: number, reason?: string): Promise<{ success: boolean; data: any; message: string }> {
-    const res = await fetch(`${getCleanApiBaseUrl()}/admin/theme/restore/${revision}`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ reason }),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || `Failed to restore revision ${revision}`);
-    }
-    return res.json();
+  restoreTheme(revision: number, reason?: string) {
+    return this.send<{ theme?: { revision: number } }>('POST', `/admin/theme/restore/${revision}`, { reason });
   }
 }
 
 export const adminApi = new AdminApiClient();
+
+/** Shape returned by POST /admin/theme/validate (authoritative shared validator plus a preview diff). */
+export interface ThemeValidation {
+  ok: boolean;
+  errors: string[];
+  warnings: string[];
+  changes: string[];
+  contrast: { scheme: string; label: string; ratio: number; required: number; passed: boolean; level: string }[];
+}

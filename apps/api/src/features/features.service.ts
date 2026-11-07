@@ -707,6 +707,30 @@ export class FeaturesService {
     }
   }
 
+  /** Super Admin read model: stored global flags and plan entitlement rows (defaults live in the registry). */
+  async getControlState() {
+    const [flags, plans] = await Promise.all([
+      this.prisma.platformFeatureFlag.findMany(),
+      this.prisma.planEntitlement.findMany(),
+    ]);
+    return {
+      flags: flags.map((f) => ({
+        key: f.key as FeatureKey,
+        isGloballyEnabled: f.isGloballyEnabled,
+        isEmergencyDisabled: f.isEmergencyDisabled,
+        disabledReason: f.disabledReason,
+        updatedBy: f.updatedBy,
+        updatedAt: f.updatedAt.toISOString(),
+      })),
+      planEntitlements: plans.map((p) => ({
+        plan: p.plan,
+        featureKey: p.featureKey as FeatureKey,
+        isIncluded: p.isIncluded,
+        quotaLimit: p.quotaLimit,
+      })),
+    };
+  }
+
   /**
    * Fetch recent audit history
    */
