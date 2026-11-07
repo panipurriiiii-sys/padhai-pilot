@@ -189,24 +189,24 @@ const Tests: React.FC = () => {
             <View style={styles.between}>
               <Subtitle style={{ flex: 1 }}>{t.title}</Subtitle>
               <Badge
-                label={t.isResultsReleased ? 'Results Out' : t.status}
-                variant={t.isResultsReleased ? 'success' : 'neutral'}
+                label={t.resultsReleased ? 'Results Out' : t.status}
+                variant={t.resultsReleased ? 'success' : 'neutral'}
               />
             </View>
             <Caption>{`${t.batchName ?? 'Batch'} · ${t.subject} · ${t.questions?.length ?? 0} questions · ${t.totalMarks ?? 0} marks`}</Caption>
             <View style={[styles.between, { marginTop: 8 }]}>
               <Caption>{`Duration: ${t.durationMinutes ?? 45} mins`}</Caption>
               <Button
-                title={t.isResultsReleased ? 'Hide Results' : 'Release Results'}
+                title={t.resultsReleased ? 'Hide Results' : 'Release Results'}
                 size="sm"
-                variant={t.isResultsReleased ? 'outline' : 'primary'}
+                variant={t.resultsReleased ? 'outline' : 'primary'}
                 loading={toggleResults.isPending}
                 onPress={() =>
                   toggleResults.mutate(t.id, {
                     onSuccess: () =>
                       Alert.alert(
                         'Updated',
-                        t.isResultsReleased ? 'Results hidden.' : 'Results released to students!',
+                        t.resultsReleased ? 'Results hidden.' : 'Results released to students!',
                       ),
                     onError: (e) => Alert.alert('Error', errorMessage(e)),
                   })

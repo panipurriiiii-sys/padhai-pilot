@@ -89,7 +89,7 @@ const Announcements: React.FC = () => {
               {a.priority === 'URGENT' ? <Badge label="Urgent" variant="error" /> : null}
             </View>
             <Body numberOfLines={4} style={{ marginTop: spacing.xs }}>{a.content}</Body>
-            <Caption style={{ marginTop: spacing.xs }}>{`${a.authorName} · ${formatDate(a.createdAt)}`}</Caption>
+            <Caption style={{ marginTop: spacing.xs }}>{`${a.authorName ?? "Faculty"} · ${formatDate(a.date)}`}</Caption>
           </Card>
         ))
       }

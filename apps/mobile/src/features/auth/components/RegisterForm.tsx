@@ -58,11 +58,11 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
-  const nameInputRef = useRef<TextInput>(null);
-  const emailInputRef = useRef<TextInput>(null);
-  const pwdInputRef = useRef<TextInput>(null);
-  const phoneInputRef = useRef<TextInput>(null);
-  const extraInputRef = useRef<TextInput>(null);
+  const nameInputRef = useRef<React.ElementRef<typeof TextInput>>(null);
+  const emailInputRef = useRef<React.ElementRef<typeof TextInput>>(null);
+  const pwdInputRef = useRef<React.ElementRef<typeof TextInput>>(null);
+  const phoneInputRef = useRef<React.ElementRef<typeof TextInput>>(null);
+  const extraInputRef = useRef<React.ElementRef<typeof TextInput>>(null);
 
   const fieldBg = isDark ? colors.surfaceSubtle : '#F8FAFC';
 

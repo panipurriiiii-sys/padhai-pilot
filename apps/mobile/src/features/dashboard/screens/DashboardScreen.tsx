@@ -125,9 +125,9 @@ export const DashboardScreen: React.FC = () => {
                   <Text style={{ fontFamily: typography.fonts.ui, fontSize: 12, color: colors.textMuted, marginTop: 2 }}>
                     {`${e.subject} · ${e.facultyName} · ${formatDate(e.lessonDate)}`}
                   </Text>
-                  {e.content ? (
+                  {e.conceptsTaught ? (
                     <Text numberOfLines={2} style={{ fontFamily: typography.fonts.ui, fontSize: 12, lineHeight: 17, color: colors.textSecondary, marginTop: 6 }}>
-                      {e.content}
+                      {e.conceptsTaught}
                     </Text>
                   ) : null}
                 </Card>

@@ -29,7 +29,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({
 }) => {
   const { colors, typography, spacing, isDark } = useTheme();
   const [emailFocused, setEmailFocused] = useState(false);
-  const emailInputRef = useRef<TextInput>(null);
+  const emailInputRef = useRef<React.ElementRef<typeof TextInput>>(null);
 
   const fieldBg = isDark ? colors.surfaceSubtle : '#F8FAFC';
 

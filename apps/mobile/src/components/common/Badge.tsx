@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleProp, Text, View, ViewStyle } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 
-export type BadgeVariant = 'success' | 'warning' | 'error' | 'neutral' | 'primary' | 'default' | 'outline';
+export type BadgeVariant = 'success' | 'warning' | 'error' | 'neutral' | 'info' | 'primary' | 'default' | 'outline';
 
 export interface BadgeProps {
   label: string;
@@ -25,6 +25,8 @@ export const Badge: React.FC<BadgeProps> = ({ label, variant = 'neutral', style 
         return { bg: colors.stickyYellowBg, fg: colors.stickyYellowText, border: colors.stickyYellowBorder, radius: 6, upper: false, data: true };
       case 'error':
         return { bg: colors.stickyPinkBg, fg: colors.stickyPinkText, border: colors.stickyPinkBorder, radius: 999, upper: true, data: false };
+      case 'info':
+        return { bg: colors.stickyBlueBg, fg: colors.stickyBlueText, border: colors.stickyBlueBorder, radius: 6, upper: false, data: true };
       case 'outline':
         return { bg: 'transparent', fg: colors.textSecondary, border: colors.borderStrong, radius: 8, upper: true, data: true };
       case 'primary':
