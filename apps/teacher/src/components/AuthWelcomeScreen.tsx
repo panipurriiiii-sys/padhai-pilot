@@ -172,9 +172,7 @@ export function AuthWelcomeScreen({ onAuthSuccess, notice }: AuthWelcomeScreenPr
       {/* 1. TOP HEADER */}
       <header className="w-full max-w-4xl mx-auto flex items-center justify-between py-3">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-[var(--brand-electric)] flex items-center justify-center text-white font-['Playfair_Display'] font-black text-sm shadow-sm">
-            P
-          </div>
+          <img src="/logo.png" alt="PadhaiPilot" className="w-8 h-8 rounded-xl object-contain" />
           <span className="font-['Playfair_Display'] font-bold text-lg text-ink-primary tracking-tight">
             PadhaiPilot
           </span>

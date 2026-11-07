@@ -107,9 +107,7 @@ export default function HomePage() {
       <header className="sticky top-0 z-50 bg-[#FBFBF9]/90 backdrop-blur-md border-b border-[#E3DFD9] px-4 sm:px-6 py-3 sm:py-4">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 shrink-0 rounded-xl bg-[#1677FF] flex items-center justify-center text-white font-['Playfair_Display'] font-black text-lg shadow-[0_4px_12px_rgba(22,119,255,0.35)]">
-              P
-            </div>
+            <img src="/logo.png" alt="PadhaiPilot" className="w-10 h-10 rounded-xl object-contain" />
             <div>
               <span className="font-['Playfair_Display'] font-bold text-xl tracking-tight text-[#1C1917]">
                 {SITE.name}
@@ -596,9 +594,7 @@ export default function HomePage() {
       <footer className="border-t border-[#E3DFD9] py-10 sm:py-12 px-4 sm:px-6 text-xs text-[#57534E] bg-white">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left">
           <div className="flex flex-wrap items-center justify-center gap-3">
-            <div className="w-7 h-7 rounded-lg bg-[#1677FF] flex items-center justify-center text-white font-['Playfair_Display'] font-black text-xs">
-              P
-            </div>
+            <img src="/logo.png" alt="PadhaiPilot" className="w-7 h-7 rounded-xl object-contain" />
             <span className="font-['Playfair_Display'] font-bold text-base text-[#1C1917]">{SITE.name}</span>
             <span className="text-[11px] text-[#57534E] font-['Inter'] sm:ml-2">© 2026–2027 PadhaiPilot Inc.</span>
           </div>

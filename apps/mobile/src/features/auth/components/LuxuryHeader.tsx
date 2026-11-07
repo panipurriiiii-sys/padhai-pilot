@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, Text, Pressable } from 'react-native';
+import { View, StyleSheet, Text, Pressable, Image } from 'react-native';
 import { useTheme } from '../../../theme/ThemeContext';
 
 export interface LuxuryHeaderProps {
@@ -12,7 +12,8 @@ export const LuxuryHeader: React.FC<LuxuryHeaderProps> = ({ onBack, showBack }) 
 
   return (
     <View style={styles.container}>
-      <View style={styles.leftContainer}>
+            <View style={[styles.leftContainer, { flexDirection: 'row', alignItems: 'center' }]}>
+        <Image source={require('../../../../assets/images/logo.png')} style={{ width: 36, height: 36, borderRadius: 10, marginRight: 10 }} accessibilityLabel="PadhaiPilot logo" />
         {showBack && onBack ? (
           <Pressable
             onPress={onBack}

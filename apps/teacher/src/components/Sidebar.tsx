@@ -139,9 +139,7 @@ export function Sidebar({
       <div className="p-4 border-b border-[var(--border-paper)] bg-[var(--bg-paper-warm)]">
         <div className="flex items-center gap-3 mb-2">
           {/* Logo Badge in AK Electric Blue */}
-          <div className="w-9 h-9 rounded-xl bg-[var(--brand-electric)] flex items-center justify-center text-white font-['Playfair_Display'] font-bold text-base shadow-[0_2px_8px_rgba(22,119,255,0.35)]">
-            P
-          </div>
+          <img src="/logo.png" alt="PadhaiPilot" className="w-9 h-9 rounded-xl object-contain" />
           <div>
             <div className="flex items-center gap-1.5">
               <span className="font-['Playfair_Display'] font-bold text-base tracking-tight text-[var(--ink-primary)]">
@@ -243,9 +241,7 @@ export function Sidebar({
             {/* Header */}
             <div className="p-4 border-b border-[var(--border-paper)] bg-[var(--bg-paper-warm)] flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-[var(--brand-electric)] flex items-center justify-center text-white font-['Playfair_Display'] font-bold text-sm shadow-[0_2px_8px_rgba(22,119,255,0.35)]">
-                  P
-                </div>
+                <img src="/logo.png" alt="PadhaiPilot" className="w-8 h-8 rounded-xl object-contain" />
                 <div>
                   <span className="font-['Playfair_Display'] font-bold text-sm tracking-tight text-[var(--ink-primary)] block">
                     PadhaiPilot

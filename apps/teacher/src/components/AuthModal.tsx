@@ -121,9 +121,7 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
 
         {/* Brand Header */}
         <div className="mb-5 text-center">
-          <div className="w-10 h-10 rounded-xl bg-[var(--brand-electric)] mx-auto flex items-center justify-center text-white font-['Playfair_Display'] font-bold text-lg shadow-[0_2px_10px_rgba(22,119,255,0.35)] mb-2.5">
-            P
-          </div>
+          <img src="/logo.png" alt="PadhaiPilot" className="w-10 h-10 rounded-xl object-contain" />
           <h2 className="font-['Playfair_Display'] text-xl font-bold text-[var(--ink-primary)]">
             PadhaiPilot <span className="font-['Raleway'] font-normal text-xs text-[var(--ink-muted)]">Unified Auth</span>
           </h2>

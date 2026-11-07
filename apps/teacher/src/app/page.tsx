@@ -352,9 +352,7 @@ function TeacherApp() {
       {/* Mobile Top Header */}
       <div className="lg:hidden sticky top-0 z-40 bg-[var(--bg-paper)]/95 backdrop-blur-md border-b border-[var(--border-paper)] px-4 py-2.5 flex items-center justify-between w-full">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-[var(--brand-electric)] flex items-center justify-center text-white font-['Playfair_Display'] font-bold text-sm shadow-sm shrink-0">
-            P
-          </div>
+          <img src="/logo.png" alt="PadhaiPilot" className="w-8 h-8 rounded-xl object-contain" />
           <div className="min-w-0">
             <h1 className="font-['Playfair_Display'] font-bold text-sm text-[var(--ink-primary)] truncate">
               {user?.instituteName || 'Teacher Portal'}

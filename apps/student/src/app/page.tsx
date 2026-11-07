@@ -731,9 +731,7 @@ function StudentPortal() {
 
           {/* Institute Branding Header */}
           <div className="text-center mb-6">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[var(--bg-paper-warm)] border border-[var(--border-paper)] text-[var(--brand-electric)] mb-3 shadow-inner">
-              <GraduationCap className="w-6 h-6" />
-            </div>
+            <img src="/logo.png" alt="PadhaiPilot" className="w-14 h-14 mx-auto mb-3 rounded-2xl object-contain" />
             <h1 className="font-['Playfair_Display'] text-2xl font-bold tracking-tight text-[var(--ink-primary)]">
               PadhaiPilot
             </h1>

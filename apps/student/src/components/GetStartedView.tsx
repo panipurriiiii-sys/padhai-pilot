@@ -98,9 +98,7 @@ export function GetStartedView({
       {/* 3. Top Header Bar */}
       <header className="relative z-20 w-full max-w-5xl mx-auto px-6 py-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[var(--brand-electric)] flex items-center justify-center text-white font-['Playfair_Display'] font-black text-lg shadow-[0_2px_12px_rgba(22,119,255,0.45)]">
-            P
-          </div>
+          <img src="/logo.png" alt="PadhaiPilot" className="w-10 h-10 rounded-xl object-contain" />
           <span className="font-['Playfair_Display'] font-bold text-xl text-white tracking-tight drop-shadow-md">
             PadhaiPilot
           </span>

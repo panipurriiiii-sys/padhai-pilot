@@ -56,9 +56,7 @@ function Login({ onDone, denied }: { onDone: (u: User) => void; denied?: string 
     <main className="min-h-dvh flex items-center justify-center px-4 py-10">
       <form onSubmit={submit} className="paper-card w-full max-w-sm p-6 space-y-4">
         <div className="flex items-center gap-3">
-          <span className="w-11 h-11 rounded-xl bg-brand-subtle text-electric flex items-center justify-center">
-            <ShieldCheck className="w-5 h-5" />
-          </span>
+          <img src="/logo.png" alt="PadhaiPilot" className="w-11 h-11 rounded-xl object-contain" />
           <div className="min-w-0">
             <h1 className="font-display font-bold text-xl text-ink-primary">Platform Admin</h1>
             <p className="font-primary text-xs text-ink-muted">PadhaiPilot control center, Super Admin only</p>

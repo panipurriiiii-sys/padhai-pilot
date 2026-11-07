@@ -395,9 +395,7 @@ export function FacultySalaryView({
               </div>
 
               <div className="text-right">
-                <div className="w-10 h-10 rounded-xl bg-[var(--brand-electric)] text-white font-['Playfair_Display'] font-bold flex items-center justify-center text-lg ml-auto shadow-sm">
-                  P
-                </div>
+                <img src="/logo.png" alt="PadhaiPilot" className="w-10 h-10 rounded-xl object-contain ml-auto" />
                 <span className="badge-code font-['Inter'] text-[10px] mt-2 inline-block">
                   ACADEMIC YEAR {profile.academicYear}
                 </span>

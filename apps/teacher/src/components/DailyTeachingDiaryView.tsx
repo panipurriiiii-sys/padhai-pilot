@@ -414,9 +414,7 @@ export function DailyTeachingDiaryView({
                       Official Academic Record • Lesson Journal
                     </p>
                   </div>
-                  <div className="w-7 h-7 rounded-lg bg-[var(--brand-electric)] flex items-center justify-center text-white font-['Playfair_Display'] font-bold text-xs shadow-sm">
-                    P
-                  </div>
+                  <img src="/logo.png" alt="PadhaiPilot" className="w-7 h-7 rounded-xl object-contain" />
                 </div>
 
                 {/* Meta details */}
