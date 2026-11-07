@@ -10,3 +10,17 @@
   --font-primary: var(--font-primary);
   --font-data: var(--font-data);
 }
+
+/* Touch ergonomics: >=44px targets on phones/tablets, tables scroll inside their container, no page-level sideways scroll. */
+@media (max-width: 1023px) {
+  button,
+  select,
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  textarea { min-height: 44px; }
+  button:has(> svg:only-child) { min-width: 44px; }
+  input, select, textarea { font-size: 16px; } /* stops iOS zoom-on-focus */
+}
+table { max-width: 100%; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+html, body { overflow-x: clip; }

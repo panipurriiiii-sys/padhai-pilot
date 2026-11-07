@@ -9,15 +9,16 @@ import { StudentFeeBreakdownCard } from './charts';
 
 const inr = (n: number) => `Rs ${n.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 const BADGE: Record<string, string> = {
-  PENDING: 'bg-amber-50 text-amber-800 border-amber-200',
-  PARTIAL: 'bg-sky-50 text-sky-800 border-sky-200',
-  PAID: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-  OVERDUE: 'bg-rose-50 text-rose-800 border-rose-200',
-  VOID: 'bg-stone-100 text-stone-600 border-stone-200',
-  APPROVED: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-  REJECTED: 'bg-rose-50 text-rose-800 border-rose-200',
-  CANCELLED: 'bg-stone-100 text-stone-600 border-stone-200',
+  PENDING: 'is-warning',
+  PARTIAL: 'is-info',
+  PAID: 'is-success',
+  OVERDUE: 'is-danger',
+  VOID: 'is-neutral',
+  APPROVED: 'is-success',
+  REJECTED: 'is-danger',
+  CANCELLED: 'is-neutral',
 };
+const badgeCls = (status: string) => `badge-status ${BADGE[status] ?? 'is-neutral'}`;
 
 /** Fees, balance and receipts. Every fee starts PENDING and changes only when the teacher records a payment. */
 export function StudentFeesPanel() {
@@ -50,7 +51,7 @@ export function StudentFeesPanel() {
     }
   };
 
-  if (isLoading) return <div className="paper-card p-12 text-center text-xs text-[var(--ink-muted)]">Loading your fees...</div>;
+  if (isLoading) return <div role="status" className="paper-card p-12 text-center text-xs text-[var(--ink-muted)]">Loading your fees...</div>;
   if (error) return <div className="py-10 flex justify-center" role="alert"><ErrorState title="Could not load your fees" description={error} onRetry={load} /></div>;
   if (!ledger || ledger.fees.length === 0) {
     return <EmptyState art="empty-states/inbox" title="No fees yet" description="When your institute sets a fee for your batch it will appear here with its status." />;
@@ -79,10 +80,10 @@ export function StudentFeesPanel() {
 
       <StudentFeeBreakdownCard fee={{ totalFees: ledger.totalFees, paidAmount: ledger.paidAmount, balanceDue: ledger.balanceDue }} />
 
-      {docError && <p role="alert" className="text-xs text-rose-700">{docError}</p>}
+      {docError && <p role="alert" className="text-xs text-[var(--status-danger-text)]">{docError}</p>}
 
-      <div className="paper-card overflow-x-auto">
-        <table className="w-full text-xs">
+      <div className="paper-card overflow-x-auto max-w-full">
+        <table className="w-full min-w-[560px] text-xs">
           <thead>
             <tr className="text-left text-[var(--ink-muted)] border-b border-[var(--border-paper)]">
               <th className="p-3">Fee</th><th className="p-3">Due</th><th className="p-3 text-right">Amount</th><th className="p-3 text-right">Paid</th><th className="p-3 text-right">Balance</th><th className="p-3">Status</th>
@@ -96,7 +97,7 @@ export function StudentFeesPanel() {
                 <td className="p-3 text-right font-data">{inr(f.totalAmount)}</td>
                 <td className="p-3 text-right font-data">{inr(f.paidAmount)}</td>
                 <td className="p-3 text-right font-data font-bold">{inr(f.balanceDue)}</td>
-                <td className="p-3"><span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${BADGE[f.status]}`}>{f.status}</span></td>
+                <td className="p-3"><span className={badgeCls(f.status)}>{f.status}</span></td>
               </tr>
             ))}
           </tbody>
@@ -110,13 +111,13 @@ export function StudentFeesPanel() {
         ) : (
           <ul className="space-y-2">
             {ledger.receipts.map((r) => (
-              <li key={r.id} className="paper-card p-3 flex items-center justify-between gap-3 text-xs">
-                <div>
+              <li key={r.id} className="paper-card p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="min-w-0">
                   <div className="font-bold text-[var(--ink-primary)]">{r.receiptNumber} - {inr(r.amount)}</div>
                   <div className="text-[var(--ink-muted)]">{new Date(r.paidOn).toLocaleDateString()} via {r.mode.replace('_', ' ')}{r.status === 'VOIDED' ? ' (voided)' : ''}</div>
                 </div>
                 {r.status === 'ISSUED' && (
-                  <button type="button" className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5" onClick={() => openReceipt(r.id)}>
+                  <button type="button" className="btn-secondary text-xs px-3 py-2 min-h-[44px] flex items-center gap-1.5 shrink-0" onClick={() => openReceipt(r.id)}>
                     <Receipt className="w-3.5 h-3.5" /> Receipt PDF
                   </button>
                 )}
@@ -192,19 +193,19 @@ export function StudentLeavesPanel() {
         <p className="text-xs text-[var(--ink-muted)] mt-1">Apply for leave and track the decision from your teacher.</p>
       </div>
 
-      <form onSubmit={submit} className="paper-card p-5 space-y-3 max-w-xl">
-        <div className="grid grid-cols-2 gap-3">
+      <form onSubmit={submit} className="paper-card p-4 sm:p-5 space-y-3 max-w-xl">
+        <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-3">
           <label className="space-y-1 text-[11px] font-bold">From<input type="date" required min={today} className="input-paper w-full font-normal" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} /></label>
           <label className="space-y-1 text-[11px] font-bold">To<input type="date" required min={form.startDate} className="input-paper w-full font-normal" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} /></label>
         </div>
         <label className="block space-y-1 text-[11px] font-bold">Reason<textarea required minLength={5} rows={3} className="input-paper w-full font-normal" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} /></label>
-        {formError && <p role="alert" className="text-xs text-rose-700">{formError}</p>}
-        {sent && <p role="status" className="text-xs text-emerald-700">Application sent to your teacher.</p>}
-        <button className="btn-primary px-4 py-2.5 text-xs font-bold" disabled={busy}>{busy ? 'Sending...' : 'Apply for leave'}</button>
+        {formError && <p role="alert" className="text-xs text-[var(--status-danger-text)]">{formError}</p>}
+        {sent && <p role="status" className="text-xs text-[var(--status-success-text)]">Application sent to your teacher.</p>}
+        <button className="btn-primary px-4 py-2.5 min-h-[44px] w-full sm:w-auto text-xs font-bold" disabled={busy}>{busy ? 'Sending...' : 'Apply for leave'}</button>
       </form>
 
       {isLoading ? (
-        <div className="text-xs text-[var(--ink-muted)]">Loading...</div>
+        <div role="status" className="text-xs text-[var(--ink-muted)]">Loading...</div>
       ) : error ? (
         <div className="py-6 flex justify-center" role="alert"><ErrorState title="Could not load leave applications" description={error} onRetry={load} /></div>
       ) : items.length === 0 ? (
@@ -219,8 +220,8 @@ export function StudentLeavesPanel() {
                 {l.reviewerRemarks && <div className="text-[var(--ink-secondary)] mt-1">Teacher&apos;s remarks: {l.reviewerRemarks}</div>}
               </div>
               <div className="flex items-center gap-2">
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${BADGE[l.status] ?? BADGE.PENDING}`}>{l.status}</span>
-                {l.status === 'PENDING' && <button type="button" className="btn-secondary text-xs px-3 py-1" onClick={() => cancel(l.id)}>Cancel</button>}
+                <span className={badgeCls(l.status)}>{l.status}</span>
+                {l.status === 'PENDING' && <button type="button" className="btn-secondary text-xs px-3 py-2 min-h-[44px]" onClick={() => cancel(l.id)}>Cancel</button>}
               </div>
             </li>
           ))}
