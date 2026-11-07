@@ -22,7 +22,7 @@ export interface InstituteTenantRecord {
   name: string;
   subdomain: string;
   plan: SubscriptionPlan;
-  status: 'ACTIVE' | 'SUSPENDED' | 'TRIAL';
+  status: 'ACTIVE' | 'SUSPENDED' | 'TRIAL' | 'ARCHIVED';
   ownerName: string;
   ownerEmail: string;
   ownerPhone?: string;
@@ -101,7 +101,7 @@ export class AdminService {
       name: inst.name,
       subdomain: inst.subdomain || inst.slug,
       plan: inst.plan as SubscriptionPlan,
-      status: (inst.isActive ? inst.status : 'SUSPENDED') as 'ACTIVE' | 'SUSPENDED' | 'TRIAL',
+      status: (inst.isActive || inst.status === 'ARCHIVED' ? inst.status : 'SUSPENDED') as InstituteTenantRecord['status'],
       ownerName: owner?.fullName || inst.signatoryName || '',
       ownerEmail: owner?.email || inst.contactEmail || '',
       ...(inst.contactPhone ? { ownerPhone: inst.contactPhone } : {}),
@@ -216,7 +216,7 @@ export class AdminService {
     const before = await this.getInstituteById(id);
     await this.db.institute.update({
       where: { id },
-      data: { status: dto.status, isActive: dto.status !== 'SUSPENDED' },
+      data: { status: dto.status, isActive: dto.status !== 'SUSPENDED' && dto.status !== 'ARCHIVED' },
     });
     await this.recordAuditLog({
       actorId: actor.id,
@@ -225,7 +225,7 @@ export class AdminService {
       targetId: id,
       targetType: 'INSTITUTE',
       details: `Changed status from ${before.status} to ${dto.status}. Reason: ${dto.reason}`,
-      status: dto.status === 'SUSPENDED' ? 'WARNING' : 'SUCCESS',
+      status: dto.status === 'SUSPENDED' || dto.status === 'ARCHIVED' ? 'WARNING' : 'SUCCESS',
     });
     return this.getInstituteById(id);
   }

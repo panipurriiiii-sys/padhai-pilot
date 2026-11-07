@@ -84,6 +84,16 @@ export class FeaturesController {
   }
 
   /**
+   * Super Admin: stored global flags + plan entitlement rows
+   */
+  @Get('state')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN')
+  async getControlState() {
+    return { success: true, data: await this.featuresService.getControlState() };
+  }
+
+  /**
    * Super Admin: View feature flag audit trail
    */
   @Get('audit-logs')

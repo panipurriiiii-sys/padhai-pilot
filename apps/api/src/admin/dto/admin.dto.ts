@@ -45,8 +45,8 @@ export class CreateInstituteTenantDto {
 
 export class UpdateInstituteStatusDto {
   @IsString()
-  @IsIn(['ACTIVE', 'SUSPENDED', 'TRIAL'])
-  status!: 'ACTIVE' | 'SUSPENDED' | 'TRIAL';
+  @IsIn(['ACTIVE', 'SUSPENDED', 'TRIAL', 'ARCHIVED'])
+  status!: 'ACTIVE' | 'SUSPENDED' | 'TRIAL' | 'ARCHIVED';
 
   @IsString()
   @IsNotEmpty()
