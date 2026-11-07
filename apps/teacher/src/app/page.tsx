@@ -348,9 +348,9 @@ function TeacherApp() {
   }
 
   return (
-    <div className="min-h-screen ak-desk-surface flex flex-col md:flex-row relative text-[var(--ink-primary)]">
+    <div className="min-h-screen ak-desk-surface flex flex-col lg:flex-row relative text-[var(--ink-primary)]">
       {/* Mobile Top Header */}
-      <div className="md:hidden sticky top-0 z-40 bg-[var(--bg-paper)]/95 backdrop-blur-md border-b border-[var(--border-paper)] px-4 py-2.5 flex items-center justify-between w-full">
+      <div className="lg:hidden sticky top-0 z-40 bg-[var(--bg-paper)]/95 backdrop-blur-md border-b border-[var(--border-paper)] px-4 py-2.5 flex items-center justify-between w-full">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-8 h-8 rounded-lg bg-[var(--brand-electric)] flex items-center justify-center text-white font-['Playfair_Display'] font-bold text-sm shadow-sm shrink-0">
             P
@@ -387,7 +387,7 @@ function TeacherApp() {
 
 
       {/* Main View Area */}
-      <main className="flex-1 min-w-0 p-3 sm:p-6 md:p-10 pb-24 md:pb-10 overflow-y-auto">
+      <main className="flex-1 min-w-0 p-3 sm:p-6 lg:p-10 pb-24 lg:pb-10 overflow-y-auto">
         <div className="max-w-6xl mx-auto">
           {blockingErrors.length > 0 ? (
             <LoadError
@@ -488,6 +488,7 @@ function TeacherApp() {
               batches={batches}
               teacherName={user?.fullName}
               instituteName={user?.instituteName}
+              isOwner={user?.role === 'TUITION_OWNER' || user?.role === 'INSTITUTE_ADMIN'}
             />
           )}
 
@@ -508,6 +509,7 @@ function TeacherApp() {
           {currentTab === 'facultySalary' && (
             <FacultySalaryView
               instituteName={user?.instituteName}
+              isOwner={user?.role === 'TUITION_OWNER' || user?.role === 'INSTITUTE_ADMIN'}
             />
           )}
 
@@ -548,7 +550,7 @@ function TeacherApp() {
 
       
       {/* Mobile Bottom Navigation Bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[var(--bg-paper)]/95 backdrop-blur-md border-t border-[var(--border-paper)] py-1 px-2 flex items-center justify-around shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[var(--bg-paper)]/95 backdrop-blur-md border-t border-[var(--border-paper)] py-1 px-2 flex items-center justify-around shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
         {[
           { id: 'dashboard' as NavTab, label: 'Overview', icon: LayoutDashboard },
           { id: 'teachingDiary' as NavTab, label: 'Diary', icon: NotebookPen },

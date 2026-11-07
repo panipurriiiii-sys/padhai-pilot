@@ -66,7 +66,7 @@ export function FacultyLeaveView({
     try {
       const [leaveList, facList] = await Promise.all([
         teacherApi.getLeaves(),
-        teacherApi.getFaculties(),
+        isOwnerOrManager ? teacherApi.getFaculties() : Promise.resolve([]), // owner-only roster
       ]);
       setLeaves(leaveList);
       setFaculties(facList);

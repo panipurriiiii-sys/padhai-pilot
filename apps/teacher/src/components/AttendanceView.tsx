@@ -504,7 +504,7 @@ export function AttendanceView({
                 placeholder="Search candidate name or roll number..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="input-paper w-full pl-9"
+                className="input-paper w-full pl-9!"
               />
             </div>
 

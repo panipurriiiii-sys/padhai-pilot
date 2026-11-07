@@ -259,10 +259,10 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
   }, [onClose]);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" role="dialog" aria-modal="true" aria-label={title} onClick={onClose}>
-      <div className="paper-card w-full max-w-md p-6 space-y-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="paper-card w-full max-w-md p-4 sm:p-6 space-y-4 max-h-[90dvh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h2 className="font-['Playfair_Display'] text-lg font-bold text-[var(--ink-primary)]">{title}</h2>
-          <button type="button" onClick={onClose} aria-label="Close" className="text-[var(--ink-muted)] text-lg leading-none">&times;</button>
+          <button type="button" onClick={onClose} aria-label="Close" className="min-w-11 min-h-11 -mr-2 text-[var(--ink-muted)] text-2xl leading-none">&times;</button>
         </div>
         {children}
       </div>

@@ -11,6 +11,7 @@ import {
   XCircle,
   GraduationCap,
   X,
+  FileText,
 } from 'lucide-react';
 import type { BatchSummary, StudentRosterItem } from '@padhai-pilot/shared';
 import { BatchActions } from './BatchActions';
@@ -171,20 +172,54 @@ export function BatchesView({
                 placeholder="Search by name, roll no, or email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="input-paper w-full sm:w-64 pl-9"
+                className="input-paper w-full sm:w-64 pl-9!"
               />
             </div>
           </div>
 
-          {/* Data Table */}
-          <div className="overflow-x-auto">
+          {/* Mobile roster: stacked cards (no sideways scrolling on phones) */}
+          <ul className="md:hidden divide-y divide-[var(--border-paper)] font-['Raleway']">
+            {filteredStudents.length === 0 ? (
+              <li className="py-8 px-4 text-center text-xs text-[var(--ink-muted)]">
+                {searchTerm ? `No student records found matching "${searchTerm}".` : 'No students enrolled in this batch yet. Generate an invitation code to invite students.'}
+              </li>
+            ) : (
+              filteredStudents.map((std) => (
+                <li key={std.id} className="p-4 space-y-2">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-[var(--brand-electric)] shrink-0">{std.fullName.charAt(0)}</div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-[var(--ink-primary)] truncate">{std.fullName}</p>
+                      <p className="text-[11px] text-[var(--ink-secondary)] font-['Inter'] truncate">{std.email}</p>
+                    </div>
+                    <span className="font-['Inter'] text-xs font-bold text-[var(--brand-electric)]">#{std.rollNumber}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-['Inter'] font-bold text-[var(--ink-secondary)]">
+                      Attendance: {typeof std.attendanceRate === 'number' ? `${std.attendanceRate}%` : 'No data'}
+                    </span>
+                    <button
+                      type="button"
+                      className="btn-secondary text-[11px] px-3 py-1.5 inline-flex items-center gap-1 whitespace-nowrap"
+                      onClick={() => teacherApi.openReportCard(std.id, activeBatch.id).catch((e) => alert(e instanceof Error ? e.message : 'Could not generate the report card.'))}
+                    >
+                      <FileText className="w-3 h-3" /> Report card PDF
+                    </button>
+                  </div>
+                </li>
+              ))
+            )}
+          </ul>
+
+          {/* Data Table (tablet and desktop) */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="border-b border-[var(--border-paper)] text-[var(--ink-secondary)] font-bold uppercase tracking-wider text-[10px] bg-[var(--bg-paper-warm)]">
                   <th className="py-3 px-4">Roll Number</th>
                   <th className="py-3 px-4">Student Name</th>
                   <th className="py-3 px-4">Email</th>
-                  <th className="py-3 px-4 text-center">Attendance %</th>
+                  <th className="py-3 px-4 text-center whitespace-nowrap">Attendance %</th>
                   <th className="py-3 px-4 text-center">Report Card</th>
                   <th className="py-3 px-4 text-right">Status</th>
                 </tr>
@@ -204,12 +239,12 @@ export function BatchesView({
                       <td className="py-3 px-4 font-['Inter'] font-bold text-[var(--brand-electric)]">
                         {std.rollNumber}
                       </td>
-                      <td className="py-3 px-4 font-bold text-[var(--ink-primary)] flex items-center gap-2">
+                      <td className="py-3 px-4 font-bold text-[var(--ink-primary)]"><div className="flex items-center gap-2 min-w-[9rem]">
                         <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-[10px] font-bold text-[var(--brand-electric)]">
                           {std.fullName.charAt(0)}
                         </div>
                         {std.fullName}
-                      </td>
+                      </div></td>
                       <td className="py-3 px-4 text-[var(--ink-secondary)] font-['Inter']">{std.email}</td>
                       <td className="py-3 px-4 text-center font-['Inter'] font-bold">
                         <span
@@ -225,6 +260,15 @@ export function BatchesView({
                         >
                           {typeof std.attendanceRate === 'number' ? `${std.attendanceRate}%` : 'No data'}
                         </span>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <button
+                          type="button"
+                          className="btn-secondary text-[11px] px-2.5 py-1.5 min-h-11 sm:min-h-0 inline-flex items-center gap-1 whitespace-nowrap"
+                          onClick={() => teacherApi.openReportCard(std.id, activeBatch.id).catch((e) => alert(e instanceof Error ? e.message : 'Could not generate the report card.'))}
+                        >
+                          <FileText className="w-3 h-3" /> PDF
+                        </button>
                       </td>
                       <td className="py-3 px-4 text-right">
                         <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold">
@@ -243,10 +287,10 @@ export function BatchesView({
       {/* Create Batch Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl bg-[var(--bg-paper-warm)] border border-[var(--border-paper)] p-6 shadow-2xl relative animate-in zoom-in-95 duration-150">
+          <div className="w-full max-w-md max-h-[92dvh] overflow-y-auto rounded-2xl bg-[var(--bg-paper-warm)] border border-[var(--border-paper)] p-4 sm:p-6 shadow-2xl relative animate-in zoom-in-95 duration-150">
             <button
               onClick={() => setShowCreateModal(false)}
-              className="absolute right-4 top-4 text-[var(--ink-muted)] hover:text-[var(--ink-primary)]"
+              className="absolute right-2 top-2 min-w-11 min-h-11 flex items-center justify-center text-[var(--ink-muted)] hover:text-[var(--ink-primary)]"
             >
               <X className="w-4 h-4" />
             </button>
@@ -271,7 +315,7 @@ export function BatchesView({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[var(--ink-primary)] mb-1 font-bold">Subject *</label>
                   <input
@@ -295,7 +339,7 @@ export function BatchesView({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[var(--ink-primary)] mb-1 font-bold">Grade / Target</label>
                   <input

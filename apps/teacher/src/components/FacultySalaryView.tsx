@@ -30,10 +30,12 @@ import type {
 
 interface FacultySalaryViewProps {
   instituteName?: string;
+  isOwner?: boolean;
 }
 
 export function FacultySalaryView({
   instituteName = '',
+  isOwner = false,
 }: FacultySalaryViewProps) {
   const [salaries, setSalaries] = useState<SalaryStatementItem[]>([]);
   const [faculties, setFaculties] = useState<FacultyMember[]>([]);
@@ -81,7 +83,7 @@ export function FacultySalaryView({
     try {
       const [salList, facList, prof] = await Promise.all([
         teacherApi.getSalaries(selectedPeriod),
-        teacherApi.getFaculties(),
+        isOwner ? teacherApi.getFaculties() : Promise.resolve([]), // owner-only roster
         teacherApi.getTuitionProfile(),
       ]);
       setSalaries(salList);
@@ -154,7 +156,7 @@ export function FacultySalaryView({
         <div>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-['Raleway'] font-bold uppercase tracking-widest text-[var(--brand-electric)]">
-              Tuition Owner • Financial Operations & Compensation
+              {isOwner ? 'Tuition Owner • Financial Operations & Compensation' : 'My Pay Slips • Compensation'}
             </span>
             <span className="badge-code font-['Inter'] text-[10px]">PAYROLL LEDGER</span>
           </div>

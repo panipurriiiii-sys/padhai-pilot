@@ -23,6 +23,7 @@ function JoinFacultyContent() {
   const [loading, setLoading] = useState(true);
   const [preview, setPreview] = useState<InvitationPreview | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
 
   // Form State
   const [fullName, setFullName] = useState('');
@@ -31,7 +32,8 @@ function JoinFacultyContent() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://padhai-pilot.vercel.app/api';
+  const rawBase = (process.env.NEXT_PUBLIC_API_URL || 'https://padhai-pilot.vercel.app/api').replace(/\/+$/, '');
+  const apiBase = rawBase.endsWith('/api') ? rawBase : `${rawBase}/api`;
 
   useEffect(() => {
     if (!token) {
@@ -41,7 +43,7 @@ function JoinFacultyContent() {
     }
 
     const cleanBase = apiBase.replace(/\/+$/, '');
-    fetch(`${cleanBase}/faculty-invitations/preview/${encodeURIComponent(token)}`)
+    fetch(`${cleanBase}/faculty-invitations/${encodeURIComponent(token)}`)
       .then(async (res) => {
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
@@ -63,12 +65,12 @@ function JoinFacultyContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!password) {
-      setError('Please choose a secure password.');
+      setFormError('Please choose a secure password.');
       return;
     }
 
     setSubmitting(true);
-    setError(null);
+    setFormError(null);
 
     try {
       const cleanBase = apiBase.replace(/\/+$/, '');
@@ -97,7 +99,7 @@ function JoinFacultyContent() {
         router.push('/');
       }, 2000);
     } catch (err: any) {
-      setError(err.message || 'Error accepting invitation.');
+      setFormError(err.message || 'Error accepting invitation.');
       setSubmitting(false);
     }
   };
@@ -113,8 +115,8 @@ function JoinFacultyContent() {
         </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-[var(--bg-paper-warm)] py-8 px-6 shadow-2xl rounded-2xl border border-[var(--border-paper)] sm:px-10">
+      <div className="mt-8 px-4 sm:px-0 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-[var(--bg-paper-warm)] py-8 px-5 shadow-2xl rounded-2xl border border-[var(--border-paper)] sm:px-10">
           {loading && (
             <div className="flex flex-col items-center justify-center py-12 gap-3 text-stone-600">
               <Loader2 className="w-8 h-8 animate-spin text-[var(--brand-electric)]" />
@@ -155,6 +157,9 @@ function JoinFacultyContent() {
 
           {!loading && !error && !success && preview && (
             <form onSubmit={handleSubmit} className="space-y-5">
+              {formError && (
+                <p role="alert" className="text-xs text-rose-700 bg-rose-50 border border-rose-200 p-3 rounded-lg leading-relaxed">{formError}</p>
+              )}
               <div className="p-4 rounded-xl bg-blue-50/60 border border-blue-200/60 space-y-2">
                 <div className="flex items-center gap-2 text-blue-900 font-bold text-xs">
                   <Building2 className="w-4 h-4 text-blue-700" />
@@ -208,7 +213,7 @@ function JoinFacultyContent() {
 
               <div>
                 <label className="block text-xs font-semibold text-stone-700 mb-1">
-                  {preview.hasExistingAccount ? 'Confirm Account Password' : 'Create Account Password'}
+                  {preview.hasExistingAccount ? 'Confirm Account Password' : 'Account password (new, or your current one if you already have an account)'}
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-stone-400">
@@ -225,7 +230,7 @@ function JoinFacultyContent() {
                   />
                 </div>
                 <p className="mt-1 text-[11px] text-stone-500">
-                  Must be at least 8 characters long.
+                  Use a strong password; the server checks the password policy.
                 </p>
               </div>
 

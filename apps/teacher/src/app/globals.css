@@ -3,3 +3,27 @@
 
 /* All design tokens, base styles and shared component classes (.paper-card, .btn-primary, .input-paper, ...)
    come from @padhai-pilot/shared. Do not add literal colours, fonts or shadows here: change the token instead. */
+
+/* Mobile touch targets (WCAG 2.5.5): on phones every control inside the work area is at least 44px tall. */
+@media (max-width: 1023px) {
+  main button,
+  main select,
+  main textarea,
+  main input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  main [role="button"],
+  [role="dialog"] button,
+  [role="dialog"] select,
+  [role="dialog"] input:not([type="checkbox"]):not([type="radio"]):not([type="file"]) {
+    min-height: 2.75rem;
+  }
+  main button:not(.btn-primary):not(.btn-secondary):has(> svg:only-child) {
+    min-width: 2.75rem;
+  }
+  main input[type="checkbox"],
+  main input[type="radio"],
+  [role="dialog"] input[type="checkbox"],
+  [role="dialog"] input[type="radio"] {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+}
