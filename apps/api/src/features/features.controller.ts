@@ -116,8 +116,8 @@ export class FeaturesController {
     @Body() dto: UpdateGlobalFeatureFlagDto,
     @Req() req?: any,
   ) {
-    const actorId = req?.user?.id || 'admin_sys_01';
-    const actorEmail = req?.user?.email || 'superadmin@padhaipilot.com';
+    const actorId = req.user.id;
+    const actorEmail = req.user.email;
 
     await this.featuresService.updateGlobalFlag({
       featureKey: dto.featureKey,
@@ -219,9 +219,11 @@ export class FeaturesController {
    * Institute Admin / Super Admin: Configure Institute Feature Override
    */
   @Post('institute-config')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN')
   async updateInstituteConfig(
     @Body() dto: UpdateInstituteFeatureConfigDto,
-    @Req() req?: any,
+    @Req() req: any,
   ) {
     const actorId = req?.user?.id || 'admin_sys_01';
     const actorEmail = req?.user?.email || 'superadmin@padhaipilot.com';

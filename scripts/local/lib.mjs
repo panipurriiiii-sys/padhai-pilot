@@ -43,6 +43,9 @@ export function apiEnv(extra = {}) {
   for (const k of Object.keys(env)) {
     if (/^(UPSTASH_|KV_|REDIS_|POSTGRES_|DATABASE_URL|PRISMA_DATABASE_URL|VERCEL)/i.test(k)) delete env[k];
   }
+  // Prisma loads the root .env (production credentials) on its own; defining these as empty strings stops it
+  // from filling them in, so a local process can never reach the production database or Redis.
+  for (const k of ['DATABASE_URL_POOLED', 'POSTGRES_URL', 'POSTGRES_PRISMA_URL', 'PRISMA_DATABASE_URL', 'REDIS_URL', 'UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN', 'KV_URL', 'KV_REST_API_URL', 'KV_REST_API_TOKEN']) env[k] = '';
   return {
     ...env,
     NODE_ENV: 'development',
