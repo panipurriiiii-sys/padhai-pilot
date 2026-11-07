@@ -15,6 +15,10 @@ react {
         cliFile = file("../../../../node_modules/react-native/cli.js")
     }
 
+    // Windows: hermesc ships in the hoisted hermes-compiler package.
+    def hermesc = file("../../../../node_modules/hermes-compiler/hermesc/win64-bin/hermesc.exe")
+    if (hermesc.exists()) { hermesCommand = hermesc.absolutePath }
+
     /* Autolinking */
     autolinkLibrariesWithApp()
 }

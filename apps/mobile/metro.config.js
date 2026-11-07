@@ -15,7 +15,7 @@ const projectRoot = __dirname;
 const workspaceRoot = path.resolve(projectRoot, '../..');
 
 const config = {
-  watchFolders: [workspaceRoot],
+  watchFolders: [workspaceRoot, ...(process.env.METRO_EXTRA_WATCH ? [process.env.METRO_EXTRA_WATCH] : [])], // set when building from a subst drive (Windows long paths)
   resolver: {
     nodeModulesPaths: [
       path.resolve(projectRoot, 'node_modules'),

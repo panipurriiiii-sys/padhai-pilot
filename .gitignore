@@ -46,3 +46,4 @@ palette_analysis.json
 # Firebase config (owner supplies; never commit)
 google-services.json
 GoogleService-Info.plist
+release/
