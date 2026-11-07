@@ -74,7 +74,6 @@ export class AuthService {
 
   private async seedDemoUsers(): Promise<void> {
     const passwordHash = await hashPassword('password123');
-    const adityaPasswordHash = await hashPassword('Password@123');
     const apex = { instituteId: 'inst_apex_academy', instituteName: 'Apex IIT-JEE & Medical Academy' };
     const seed: MemoryUser[] = [
       { id: 'usr_teacher_sharma', email: 'teacher@padhaipilot.com', passwordHash, fullName: 'Prof. Rajesh Sharma', role: 'TEACHER', ...apex, phone: '+91 98765 43210' },
@@ -84,13 +83,6 @@ export class AuthService {
     ];
     for (const u of seed) this.memoryUsers.set(u.email, u);
     this.memoryUsers.set('admin@padhaipilot.com', { ...seed[2], email: 'admin@padhaipilot.com' });
-    this.memoryUsers.set('aditya@gmail.com', {
-      ...seed[2],
-      id: 'usr_admin_aditya',
-      email: 'aditya@gmail.com',
-      passwordHash: adityaPasswordHash,
-      fullName: 'Aditya Kashid (Platform Owner)',
-    });
   }
 
   /** Fail closed: without a database, only demo mode may fall back to the in-memory store. */
