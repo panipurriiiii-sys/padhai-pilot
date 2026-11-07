@@ -5,8 +5,8 @@ export const metadata = { title: 'Terms of Use - PadhaiPilot' };
 
 export default function TermsPage() {
   return (
-    <main className="max-w-3xl mx-auto px-6 py-16 space-y-6 text-sm leading-relaxed text-ink-secondary">
-      <Link href="/" className="text-xs text-electric underline">Back to home</Link>
+    <main className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-16 break-words space-y-6 text-sm leading-relaxed text-ink-secondary">
+      <Link href="/" className="inline-flex items-center min-h-[44px] text-xs text-electric underline">Back to home</Link>
       <h1 className="font-serif text-3xl font-bold text-ink-primary">Terms of Use</h1>
       <p>
         These terms govern use of {SITE.name}. They are a plain-language summary and should be reviewed by the operator&apos;s legal
