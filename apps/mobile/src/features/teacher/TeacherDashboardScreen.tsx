@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { Screen } from '../../components/common/Screen';
 import { QueryBoundary } from '../../components/common/QueryBoundary';
+import { InstituteHeader } from '../../components/common/InstituteHeader';
 import { Card } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
 import { EmptyPaper, KpiCard, QuickActionsBar, SectionHeader, TimeBlock } from '../../components/common/Paper';
@@ -26,6 +27,7 @@ export const TeacherDashboardScreen: React.FC = () => {
       refreshing={query.isRefetching}
       onRefresh={() => query.refetch()}
     >
+      <InstituteHeader />
       <QuickActionsBar
         items={[
           { label: 'Attendance', icon: 'calendar-check', tone: 'emerald', onPress: () => setTab('teacher_attendance') },

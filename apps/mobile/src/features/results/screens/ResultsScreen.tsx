@@ -8,12 +8,16 @@ import { Badge } from '../../../components/common/Badge';
 import { Button } from '../../../components/common/Button';
 import { Input } from '../../../components/common/Input';
 import { Body, Caption, StatValue, Subtitle } from '../../../components/common/Typography';
-import { useAttendanceData, useCorrectionRequest, useResultsData } from '../../../hooks/useStudentData';
+import { useAttendanceData, useCorrectionRequest, useProfileData, useResultsData } from '../../../hooks/useStudentData';
 import { useNavigationStore } from '../../../store/useNavigationStore';
 import { useTheme } from '../../../theme/ThemeContext';
+import { StudentInsights } from '../../student/StudentInsights';
+import { openPdf } from '../../../lib/pdf';
+import { documentPaths } from '../../../services/api/financeService';
+import { useAuthStore } from '../../../store/useAuthStore';
 import { errorMessage, formatDate, todayIso } from '../../../lib/format';
 
-type Tab = 'results' | 'attendance';
+type Tab = 'results' | 'attendance' | 'insights';
 const STATUS_VARIANT = { PRESENT: 'success', LATE: 'warning', EXCUSED: 'neutral', ABSENT: 'error' } as const;
 
 export const ResultsScreen: React.FC = () => {
@@ -25,7 +29,9 @@ export const ResultsScreen: React.FC = () => {
   const correction = useCorrectionRequest();
   const [date, setDate] = useState(todayIso());
   const [reason, setReason] = useState('');
-  const active = tab === 'results' ? results : attendance;
+  const studentId = useAuthStore((s) => s.session?.user?.id) ?? '';
+  const profile = useProfileData();
+  const active = tab === 'results' ? results : tab === 'attendance' ? attendance : null;
 
   const submitCorrection = () =>
     correction.mutate(
@@ -42,10 +48,10 @@ export const ResultsScreen: React.FC = () => {
   return (
     <Screen
       eyebrow="PROGRESS"
-      title={tab === 'results' ? 'Results' : 'Attendance'}
-      subtitle={tab === 'results' ? 'Only results your faculty has published' : 'Your own attendance record'}
-      refreshing={active.isRefetching}
-      onRefresh={() => active.refetch()}
+      title={tab === 'results' ? 'Results' : tab === 'attendance' ? 'Attendance' : 'Insights'}
+      subtitle={tab === 'results' ? 'Only results your faculty has published' : tab === 'attendance' ? 'Your own attendance record' : 'Charts from your own records'}
+      refreshing={active?.isRefetching}
+      onRefresh={active ? () => active.refetch() : undefined}
     >
       <Segmented
         value={tab}
@@ -53,10 +59,13 @@ export const ResultsScreen: React.FC = () => {
         options={[
           { key: 'results', label: 'Results' },
           { key: 'attendance', label: 'Attendance' },
+          { key: 'insights', label: 'Insights' },
         ]}
       />
 
-      {tab === 'results' ? (
+      {tab === 'insights' ? <StudentInsights /> : tab === 'results' ? (
+        <>
+        <Button title="Download report card (PDF)" variant="outline" size="sm" style={{ alignSelf: 'flex-start', marginTop: spacing.sm, marginBottom: spacing.sm }} disabled={!profile.data?.batchId} onPress={() => void openPdf(documentPaths.reportCard(studentId, profile.data?.batchId), 'report-card')} />
         <QueryBoundary
           query={results}
           isEmpty={(r) => r.length === 0}
@@ -87,8 +96,10 @@ export const ResultsScreen: React.FC = () => {
             ))
           }
         </QueryBoundary>
+        </>
       ) : (
         <>
+          <Button title="Download attendance report (PDF)" variant="outline" size="sm" style={{ alignSelf: 'flex-start', marginTop: spacing.sm, marginBottom: spacing.sm }} onPress={() => void openPdf(documentPaths.attendanceReport({}), 'attendance-report')} />
           <QueryBoundary query={attendance}>
             {(a) => (
               <>

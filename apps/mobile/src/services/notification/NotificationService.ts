@@ -118,7 +118,7 @@ export class NotificationService {
         id: opts.id,
         title: opts.title,
         body: opts.body,
-        data: opts.data,
+        data: opts.data as Record<string, string | number | object> | undefined,
         android: {
           channelId,
           pressAction: {

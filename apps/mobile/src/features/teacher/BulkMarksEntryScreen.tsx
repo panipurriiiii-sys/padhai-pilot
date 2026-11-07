@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, View, StyleSheet } from 'react-native';
+import { openPdf } from '../../lib/pdf';
+import { documentPaths } from '../../services/api/financeService';
 import { Screen, SectionTitle } from '../../components/common/Screen';
 import { QueryBoundary } from '../../components/common/QueryBoundary';
 import { BatchPicker } from '../../components/common/BatchPicker';
@@ -163,6 +165,7 @@ export const BulkMarksEntryScreen: React.FC = () => {
                 <Badge label={a.status} variant={a.status === 'PUBLISHED' ? 'success' : 'warning'} />
               </View>
               <Caption>{`${a.subject} · ${a.batchName ?? ''} · ${formatDate(a.assessmentDate)} · /${a.maxMarks}`}</Caption>
+              <Button title="Result sheet PDF" size="sm" variant="outline" style={{ marginTop: 8, alignSelf: 'flex-start' }} onPress={() => void openPdf(documentPaths.resultSheet(a.id), `result-sheet-${a.title}`)} />
             </Card>
           ))
         }

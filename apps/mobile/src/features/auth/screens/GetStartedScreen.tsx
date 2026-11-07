@@ -73,7 +73,7 @@ export const GetStartedScreen: React.FC<GetStartedScreenProps> = ({
 
   return (
     <View style={styles.root}>
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+      <StatusBar barStyle="light-content" />
 
       {/* 1. Fullscreen Wallpaper Background Layer */}
       <Image

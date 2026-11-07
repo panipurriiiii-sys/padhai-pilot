@@ -37,8 +37,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   const [emailFocused, setEmailFocused] = useState(false);
   const [pwdFocused, setPwdFocused] = useState(false);
 
-  const emailInputRef = useRef<TextInput>(null);
-  const pwdInputRef = useRef<TextInput>(null);
+  const emailInputRef = useRef<React.ElementRef<typeof TextInput>>(null);
+  const pwdInputRef = useRef<React.ElementRef<typeof TextInput>>(null);
 
   const emailBorder = emailError
     ? colors.error

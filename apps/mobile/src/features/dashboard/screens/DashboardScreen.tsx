@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { Screen } from '../../../components/common/Screen';
 import { QueryBoundary } from '../../../components/common/QueryBoundary';
+import { InstituteHeader } from '../../../components/common/InstituteHeader';
 import { Card } from '../../../components/common/Card';
 import { Badge } from '../../../components/common/Badge';
 import { EmptyPaper, KpiCard, QuickActionsBar, SectionHeader, TimeBlock } from '../../../components/common/Paper';
@@ -26,6 +27,7 @@ export const DashboardScreen: React.FC = () => {
       refreshing={query.isRefetching}
       onRefresh={() => query.refetch()}
     >
+      <InstituteHeader />
       <QuickActionsBar
         items={[
           { label: 'Homework', icon: 'file-check-2', tone: 'blue', onPress: () => setTab('student_academics') },
@@ -125,9 +127,9 @@ export const DashboardScreen: React.FC = () => {
                   <Text style={{ fontFamily: typography.fonts.ui, fontSize: 12, color: colors.textMuted, marginTop: 2 }}>
                     {`${e.subject} · ${e.facultyName} · ${formatDate(e.lessonDate)}`}
                   </Text>
-                  {e.content ? (
+                  {e.conceptsTaught ? (
                     <Text numberOfLines={2} style={{ fontFamily: typography.fonts.ui, fontSize: 12, lineHeight: 17, color: colors.textSecondary, marginTop: 6 }}>
-                      {e.content}
+                      {e.conceptsTaught}
                     </Text>
                   ) : null}
                 </Card>

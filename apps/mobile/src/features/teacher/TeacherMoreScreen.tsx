@@ -16,6 +16,7 @@ import {
   useApplyLeave,
   useCreateAnnouncement,
   useCreateAssignment,
+  useUpdateAssignment,
   useGradeSubmission,
   useLeaves,
   useSalaries,
@@ -29,11 +30,16 @@ import {
   useLessonPlans,
   useLessonPlanMutations,
 } from '../../hooks/useTeacherData';
-import type { TimetableConflictError, WeekDay } from '@padhai-pilot/shared';
+import type { Assignment, TimetableConflictError, WeekDay } from '@padhai-pilot/shared';
 import { StudentLeaveReview } from '../leave/StudentLeavePanels';
 import { TeacherQueriesPanel } from './TeacherQueriesPanel';
 import { TeacherReportsPanel } from './TeacherReportsPanel';
+import { useBackToMenu } from '../../hooks/useBackToMenu';
 import { openPdf } from '../../lib/pdf';
+import { openUrl } from '../../lib/links';
+import { pickAndUploadMedia } from '../../lib/mediaUpload';
+import { AppearanceCard } from '../../components/common/AppearanceCard';
+import { InstituteHeader } from '../../components/common/InstituteHeader';
 import { documentPaths } from '../../services/api/financeService';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useNavigationStore } from '../../store/useNavigationStore';
@@ -107,7 +113,71 @@ const Grading: React.FC<{ assignmentId: string }> = ({ assignmentId }) => {
   );
 };
 
+const AttachButton: React.FC<{ onUploaded: (url: string) => void }> = ({ onUploaded }) => {
+  const [busy, setBusy] = useState(false);
+  return (
+    <Button
+      title="Attach file from device"
+      variant="outline"
+      size="sm"
+      loading={busy}
+      style={{ alignSelf: 'flex-start', marginBottom: 12 }}
+      onPress={async () => {
+        setBusy(true);
+        try {
+          const m = await pickAndUploadMedia();
+          if (m) onUploaded(m.url);
+        } catch (e) {
+          Alert.alert('Could not attach', errorMessage(e));
+        } finally {
+          setBusy(false);
+        }
+      }}
+    />
+  );
+};
+
+const EditAssignment: React.FC<{ a: Assignment; onDone: () => void }> = ({ a, onDone }) => {
+  const update = useUpdateAssignment();
+  const [title, setTitle] = useState(a.title);
+  const [subject, setSubject] = useState(a.subject);
+  const [instructions, setInstructions] = useState(a.instructions);
+  const [due, setDue] = useState((a.dueDate ?? '').slice(0, 10));
+  const [maxMarks, setMaxMarks] = useState(String(a.maxMarks ?? ''));
+  const [attachment, setAttachment] = useState(a.attachmentUrl ?? '');
+  const attachmentOk = attachment.trim() === '' || /^https:\/\/\S+$/i.test(attachment.trim());
+  const marks = Number(maxMarks);
+  const ready = attachmentOk && !!title.trim() && !!subject.trim() && !!instructions.trim() && /^\d{4}-\d{2}-\d{2}$/.test(due) && Number.isFinite(marks) && marks > 0;
+  return (
+    <View style={{ marginTop: 10 }}>
+      <Input label="Title" value={title} onChangeText={setTitle} />
+      <Input label="Subject" value={subject} onChangeText={setSubject} />
+      <Input label="Instructions" value={instructions} onChangeText={setInstructions} multiline />
+      <Input label="Due date (YYYY-MM-DD)" value={due} onChangeText={setDue} autoCapitalize="none" />
+      <Input label="Max marks" value={maxMarks} onChangeText={setMaxMarks} keyboardType="numeric" />
+      <Input label="Document link (https, empty removes)" value={attachment} onChangeText={setAttachment} autoCapitalize="none" error={attachmentOk ? null : 'Must start with https://'} />
+      <AttachButton onUploaded={setAttachment} />
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        <Button
+          title="Save changes"
+          size="sm"
+          disabled={!ready}
+          loading={update.isPending}
+          onPress={() =>
+            update.mutate(
+              { id: a.id, data: { title: title.trim(), subject: subject.trim(), instructions: instructions.trim(), dueDate: due, maxMarks: marks, attachmentUrl: attachment.trim() === '' ? null : attachment.trim() } },
+              { onSuccess: () => { Alert.alert('Saved', 'Assignment updated.'); onDone(); }, onError: (e) => Alert.alert('Could not save', errorMessage(e)) },
+            )
+          }
+        />
+        <Button title="Cancel" size="sm" variant="ghost" onPress={onDone} />
+      </View>
+    </View>
+  );
+};
+
 const Homework: React.FC = () => {
+  const [editing, setEditing] = useState<string | null>(null);
   const q = useTeacherAssignments();
   const create = useCreateAssignment();
   const batches = useBatches();
@@ -142,6 +212,7 @@ const Homework: React.FC = () => {
           autoCapitalize="none"
           error={attachmentOk ? null : 'Must start with https://'}
         />
+        <AttachButton onUploaded={setAttachment} />
         <Button
           title="Publish to batch"
           disabled={!ready}
@@ -163,6 +234,12 @@ const Homework: React.FC = () => {
             <Card key={a.id} style={{ marginBottom: 8 }} onPress={() => setOpen(open === a.id ? null : a.id)}>
               <Subtitle>{a.title}</Subtitle>
               <Caption>{`${a.batchName ?? ''} · due ${formatDate(a.dueDate)} · ${a.submissionCount}/${a.totalStudents} submitted`}</Caption>
+              {a.attachmentUrl ? <Button title="Open attached document" size="sm" variant="ghost" style={{ alignSelf: 'flex-start' }} onPress={() => void openUrl(a.attachmentUrl)} /> : null}
+              {editing === a.id ? (
+                <EditAssignment a={a} onDone={() => setEditing(null)} />
+              ) : (
+                <Button title="Edit" size="sm" variant="outline" style={{ alignSelf: 'flex-start', marginTop: 6 }} onPress={() => setEditing(a.id)} />
+              )}
               {open === a.id ? <Grading assignmentId={a.id} /> : null}
             </Card>
           ))
@@ -189,24 +266,24 @@ const Tests: React.FC = () => {
             <View style={styles.between}>
               <Subtitle style={{ flex: 1 }}>{t.title}</Subtitle>
               <Badge
-                label={t.isResultsReleased ? 'Results Out' : t.status}
-                variant={t.isResultsReleased ? 'success' : 'neutral'}
+                label={t.resultsReleased ? 'Results Out' : t.status}
+                variant={t.resultsReleased ? 'success' : 'neutral'}
               />
             </View>
             <Caption>{`${t.batchName ?? 'Batch'} · ${t.subject} · ${t.questions?.length ?? 0} questions · ${t.totalMarks ?? 0} marks`}</Caption>
             <View style={[styles.between, { marginTop: 8 }]}>
               <Caption>{`Duration: ${t.durationMinutes ?? 45} mins`}</Caption>
               <Button
-                title={t.isResultsReleased ? 'Hide Results' : 'Release Results'}
+                title={t.resultsReleased ? 'Hide Results' : 'Release Results'}
                 size="sm"
-                variant={t.isResultsReleased ? 'outline' : 'primary'}
+                variant={t.resultsReleased ? 'outline' : 'primary'}
                 loading={toggleResults.isPending}
                 onPress={() =>
                   toggleResults.mutate(t.id, {
                     onSuccess: () =>
                       Alert.alert(
                         'Updated',
-                        t.isResultsReleased ? 'Results hidden.' : 'Results released to students!',
+                        t.resultsReleased ? 'Results hidden.' : 'Results released to students!',
                       ),
                     onError: (e) => Alert.alert('Error', errorMessage(e)),
                   })
@@ -709,6 +786,9 @@ const Salary: React.FC = () => {
             <Body>{`Net payable ${formatInr(s.netPayable)}`}</Body>
             <Caption>{`Base ${formatInr(s.baseAmount)} + ${formatInr(s.additions)} − ${formatInr(s.deductions + s.advances)}`}</Caption>
             {s.paymentDate ? <Caption>{`Paid ${formatDate(s.paymentDate)}`}</Caption> : null}
+            {s.status !== 'DRAFT' ? (
+              <Button title="Salary slip PDF" size="sm" variant="outline" style={{ marginTop: 8, alignSelf: 'flex-start' }} onPress={() => void openPdf(documentPaths.salarySlip(s.id), `salary-slip-${s.payPeriod}`)} />
+            ) : null}
           </Card>
         ))
       }
@@ -722,6 +802,8 @@ export const TeacherMoreScreen: React.FC = () => {
   const { setTab } = useNavigationStore();
   const [view, setView] = useState<View_>('menu');
   const current = MENU.find((m) => m.key === view);
+  const toMenu = React.useCallback(() => setView('menu'), []);
+  useBackToMenu(view !== 'menu', toMenu);
 
   return (
     <Screen eyebrow="OPERATIONS" title={current?.label ?? 'Faculty Hub'} subtitle={current?.hint ?? 'Academic administration & management'}>
@@ -797,11 +879,13 @@ export const TeacherMoreScreen: React.FC = () => {
           {view === 'salary' ? <Salary /> : null}
           {view === 'profile' ? (
             <>
+              <InstituteHeader showLetterhead />
               <Card style={{ marginBottom: spacing.md }}>
                 <Subtitle>{session?.user?.fullName || session?.user?.name}</Subtitle>
                 <Caption>{session?.user?.email}</Caption>
                 <Caption>{`${session?.user?.instituteName ?? ''} · ${session?.user?.role ?? ''}`}</Caption>
               </Card>
+              <AppearanceCard />
               <Button title="Sign out" variant="outline" onPress={logout} />
             </>
           ) : null}

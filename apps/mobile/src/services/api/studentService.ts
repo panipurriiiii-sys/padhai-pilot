@@ -39,6 +39,9 @@ export type {
   StudyMaterialItem,
 };
 
+import type { StudentAnalyticsSummary } from '@padhai-pilot/shared';
+export type { StudentAnalyticsSummary };
+
 interface Ack {
   success: boolean;
   message: string;
@@ -88,6 +91,7 @@ export const studentService = {
 
   getResults: async () => list(await apiClient.get<StudentAssessmentResult[]>('/student/results')),
   getMaterials: async () => list(await apiClient.get<StudyMaterialItem[]>('/student/materials')),
+  getAnalytics: () => apiClient.get<StudentAnalyticsSummary>('/analytics/student'),
   getFees: () => apiClient.get<StudentFeeSummary>('/student/fees'),
   getAnnouncements: async () => list(await apiClient.get<StudentAnnouncementItem[]>('/student/announcements')),
 

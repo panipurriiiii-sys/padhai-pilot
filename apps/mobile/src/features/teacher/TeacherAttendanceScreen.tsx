@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, Text, View } from 'react-native';
+import { openPdf } from '../../lib/pdf';
+import { documentPaths } from '../../services/api/financeService';
 import { Screen } from '../../components/common/Screen';
 import { QueryBoundary } from '../../components/common/QueryBoundary';
 import { BatchPicker } from '../../components/common/BatchPicker';
@@ -51,6 +53,10 @@ export const TeacherAttendanceScreen: React.FC = () => {
     <Screen eyebrow="Classroom & Academic" title="Mark Attendance" subtitle="Stamp each student: P present, A absent, L late, E excused">
       <BatchPicker value={batchId} onChange={setBatchId} />
       <Input label="Session date (YYYY-MM-DD)" value={date} onChangeText={setDate} autoCapitalize="none" error={validDate ? null : 'Use YYYY-MM-DD'} />
+
+      {batchId ? (
+        <Button title="Attendance report PDF (last 30 days)" variant="outline" size="sm" style={{ alignSelf: 'flex-start', marginBottom: 8 }} onPress={() => void openPdf(documentPaths.attendanceReport({ batchId }), 'attendance-report')} />
+      ) : null}
 
       {!batchId ? (
         <EmptyPaper message="Select a batch to begin." />

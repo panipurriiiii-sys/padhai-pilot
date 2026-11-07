@@ -241,6 +241,10 @@ export const TeacherClassesScreen: React.FC = () => {
                   <Card key={s.id} style={{ marginBottom: spacing.sm }}>
                     <Subtitle>{s.fullName}</Subtitle>
                     <Caption>{`Roll ${s.rollNumber} · ${s.email}`}</Caption>
+                    <View style={{ flexDirection: 'row', gap: 8, marginTop: spacing.xs }}>
+                      <Button title="Report card" size="sm" variant="outline" onPress={() => void openPdf(documentPaths.reportCard(s.id, batchId), `report-card-${s.rollNumber}`)} />
+                      <Button title="Attendance" size="sm" variant="outline" onPress={() => void openPdf(documentPaths.attendanceReport({ batchId, studentId: s.id }), `attendance-${s.rollNumber}`)} />
+                    </View>
                   </Card>
                 ))}
               </>

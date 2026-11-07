@@ -4,13 +4,13 @@ import { QueryBoundary } from '../../components/common/QueryBoundary';
 import { Card } from '../../components/common/Card';
 import { KpiCard, SectionHeader, EmptyPaper } from '../../components/common/Paper';
 import { Subtitle, Caption } from '../../components/common/Typography';
-import { useTeacherReports, useTeacherAnalytics } from '../../hooks/useTeacherData';
+import { TeacherAnalyticsCharts } from './TeacherAnalyticsCharts';
+import { useTeacherReports } from '../../hooks/useTeacherData';
 import { useTheme } from '../../theme/ThemeContext';
 
 export const TeacherReportsPanel: React.FC = () => {
   const { spacing, colors, typography } = useTheme();
   const reportsQuery = useTeacherReports();
-  const analyticsQuery = useTeacherAnalytics();
 
   return (
     <View style={{ flex: 1, gap: spacing.md }}>
@@ -92,6 +92,7 @@ export const TeacherReportsPanel: React.FC = () => {
           );
         }}
       </QueryBoundary>
+      <TeacherAnalyticsCharts />
     </View>
   );
 };

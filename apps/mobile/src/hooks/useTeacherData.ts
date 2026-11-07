@@ -112,6 +112,15 @@ export const useCreateAssignment = () => {
   });
 };
 
+export const useUpdateAssignment = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { id: string; data: Parameters<typeof teacherService.updateAssignment>[1] }) =>
+      teacherService.updateAssignment(v.id, v.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: teacherKeys.assignments }),
+  });
+};
+
 export const useGradeSubmission = (assignmentId: string) => {
   const qc = useQueryClient();
   return useMutation({

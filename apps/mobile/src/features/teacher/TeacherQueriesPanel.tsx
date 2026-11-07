@@ -78,7 +78,7 @@ export const TeacherQueriesPanel: React.FC = () => {
                   </Body>
 
                   {q.replies && q.replies.length > 0 && (
-                    <View style={{ marginTop: spacing.sm, paddingLeft: spacing.sm, borderLeftWidth: 2, borderLeftColor: colors.brandElectric }}>
+                    <View style={{ marginTop: spacing.sm, paddingLeft: spacing.sm, borderLeftWidth: 2, borderLeftColor: colors.primary }}>
                       {q.replies.map((r: any) => (
                         <View key={r.id} style={{ marginTop: 4 }}>
                           <Caption style={{ fontWeight: '600' }}>Faculty Response:</Caption>

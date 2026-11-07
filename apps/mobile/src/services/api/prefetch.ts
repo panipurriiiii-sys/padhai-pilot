@@ -28,7 +28,7 @@ export async function prefetchAppData(queryClient: QueryClient, role?: string): 
         }),
         queryClient.prefetchQuery({
           queryKey: teacherKeys.timetable,
-          queryFn: teacherService.getTimetable,
+          queryFn: () => teacherService.getTimetable(),
           staleTime: 15 * 60 * 1000,
         }),
         queryClient.prefetchQuery({
