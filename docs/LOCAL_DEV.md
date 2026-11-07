@@ -37,3 +37,7 @@ Overrides: `LOCAL_API_PORT` (default 3001), `LOCAL_DB_PORT` (default 54329). If 
 - `it.fails(...)` = a KNOWN BUG, written as the correct behaviour; the suite goes red when it is fixed so the marker gets removed. `it.todo(...)` = feature not built yet. Do not delete either.
 - The DB is created with `--encoding=UTF8` (Windows default WIN1252 cannot store the rupee sign and made fee reminders 500).
 - Unit tests: `npm test` (vitest, 30 s timeout since scrypt-heavy specs timed out on a loaded machine).
+
+## Frontends against the LIVE backend (`npm run local:web:live`)
+Starts teacher :3000, student :3002, admin :3003, web :3004 with `NEXT_PUBLIC_API_URL=/api` and `API_PROXY_TARGET=https://padhai-pilot.vercel.app` (override `API_PROXY_TARGET` to change). Each portal's `next.config.ts` has an optional `rewrites()` that forwards `/api/:path*` to `${API_PROXY_TARGET}/api/:path*` (same-origin from the browser, so no CORS). With `API_PROXY_TARGET` unset nothing is rewritten.
+**Caveat:** the live API currently runs the pre-merge build and its migrations are not applied, so only older features work there (the newest routes - batch fees, promote, branding, leaves, invitations accept, etc. - 404/500). `npm run local:all` is the full, current stack.

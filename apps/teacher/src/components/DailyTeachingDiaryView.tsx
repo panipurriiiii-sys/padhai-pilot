@@ -33,12 +33,14 @@ interface DailyTeachingDiaryViewProps {
   batches: BatchSummary[];
   teacherName?: string;
   instituteName?: string;
+  isOwner?: boolean;
 }
 
 export function DailyTeachingDiaryView({
   batches,
   teacherName = '',
   instituteName = '',
+  isOwner = false,
 }: DailyTeachingDiaryViewProps) {
   const [diaries, setDiaries] = useState<DailyTeachingDiaryEntry[]>([]);
   const [overview, setOverview] = useState<TeachingDiaryOverview | null>(null);
@@ -81,7 +83,7 @@ export function DailyTeachingDiaryView({
       const batchParam = selectedBatchFilter === 'ALL' ? undefined : selectedBatchFilter;
       const [list, stats] = await Promise.all([
         teacherApi.getDiaries(batchParam),
-        teacherApi.getDiariesOverview(),
+        isOwner ? teacherApi.getDiariesOverview() : Promise.resolve(null), // owner-only summary
       ]);
       setDiaries(list);
       setOverview(stats);

@@ -134,7 +134,7 @@ export function Sidebar({
 
   return (
     <>
-    <aside className="hidden md:flex w-64 h-screen sticky top-0 flex-col bg-[var(--bg-surface-subtle)] border-r border-[var(--border-paper)] shadow-[2px_0_12px_rgba(60,52,40,0.03)] select-none z-30 shrink-0">
+    <aside className="hidden lg:flex w-64 h-screen sticky top-0 flex-col bg-[var(--bg-surface-subtle)] border-r border-[var(--border-paper)] shadow-[2px_0_12px_rgba(60,52,40,0.03)] select-none z-30 shrink-0">
       {/* Brand & Studio Header */}
       <div className="p-4 border-b border-[var(--border-paper)] bg-[var(--bg-paper-warm)]">
         <div className="flex items-center gap-3 mb-2">
@@ -231,7 +231,7 @@ export function Sidebar({
 
       {/* Mobile Slide-Over Navigation Drawer */}
       {isOpenMobile && (
-        <div className="fixed inset-0 z-50 md:hidden flex">
+        <div className="fixed inset-0 z-50 lg:hidden flex">
           {/* Backdrop */}
           <div
             className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"

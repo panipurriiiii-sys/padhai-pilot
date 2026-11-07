@@ -267,7 +267,50 @@ export function BatchFeesView({ batches }: { batches: BatchSummary[] }) {
               <p className="text-xs text-[var(--ink-muted)]">Use Set fee schedule above to configure monthly, half-yearly, or annual tuition charges.</p>
             </div>
           ) : (
-            <div className="paper-card overflow-x-auto">
+            <>
+            {/* Phones: one card per fee record */}
+            <ul className="md:hidden space-y-3">
+              {fees.map((f) => (
+                <li key={f.id} className="paper-card p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-bold font-['Raleway'] text-sm text-[var(--ink-primary)] truncate">{f.studentName || 'Student'}</p>
+                      <p className="text-[11px] text-[var(--ink-secondary)]">{f.feeTitle} - due {new Date(f.dueDate).toLocaleDateString()}</p>
+                    </div>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border shrink-0 ${STATUS_STYLE[f.status]}`}>{f.status}</span>
+                  </div>
+                  <dl className="grid grid-cols-3 gap-2 text-center text-xs font-data">
+                    <div><dt className="text-[10px] uppercase text-[var(--ink-muted)]">Total</dt><dd>{inr(f.totalAmount)}</dd></div>
+                    <div><dt className="text-[10px] uppercase text-[var(--ink-muted)]">Paid</dt><dd className="text-emerald-800">{inr(f.paidAmount)}</dd></div>
+                    <div><dt className="text-[10px] uppercase text-[var(--ink-muted)]">Balance</dt><dd className="font-bold">{inr(f.balanceDue)}</dd></div>
+                  </dl>
+                  {f.balanceDue > 0 && (
+                    <div className="flex gap-2">
+                      <button type="button" className="btn-primary flex-1 text-xs px-3" onClick={() => openPay(f)}>Record payment</button>
+                      {f.status !== 'PAID' && (
+                        <button type="button" className="btn-secondary text-xs px-4" onClick={() => remind([f.id])}>Remind</button>
+                      )}
+                    </div>
+                  )}
+                  {f.payments && f.payments.length > 0 && (
+                    <div className="pt-2 border-t border-[var(--border-paper)] space-y-1 text-[11px] text-[var(--ink-secondary)]">
+                      {f.payments.map((p) => (
+                        <div key={p.id} className="flex items-center justify-between gap-2">
+                          <span className="min-w-0 truncate">{p.receiptNumber} ({inr(p.amount)}, {p.mode}){p.status === 'VOIDED' ? ' - voided' : ''}</span>
+                          <span className="flex gap-1 shrink-0">
+                            <button type="button" aria-label="Open receipt" className="underline text-[var(--brand-electric)] px-2" onClick={() => openReceipt(p.id)}>PDF</button>
+                            {p.status === 'ISSUED' && (
+                              <button type="button" aria-label="Void payment" className="text-rose-700 px-2" onClick={() => voidPayment(p.id)}>Void</button>
+                            )}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <div className="hidden md:block paper-card overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="text-left text-[var(--ink-muted)] border-b border-[var(--border-paper)]">
@@ -317,6 +360,7 @@ export function BatchFeesView({ batches }: { batches: BatchSummary[] }) {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </>
       )}

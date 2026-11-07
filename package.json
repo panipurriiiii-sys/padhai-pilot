@@ -30,6 +30,7 @@
     "local:seed": "tsx scripts/local/seed.mts",
     "local:api": "node scripts/local/api.mjs",
     "local:web": "node scripts/local/web.mjs",
+    "local:web:live": "node -e \"process.env.LOCAL_WEB_LIVE='1';import('./scripts/local/web.mjs')\"",
     "local:all": "node scripts/local/all.mjs",
     "test:e2e": "node scripts/local/e2e.mjs",
     "prisma:generate":"npx prisma generate --schema=apps/api/prisma/schema.prisma"

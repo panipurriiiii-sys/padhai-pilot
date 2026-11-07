@@ -66,14 +66,14 @@ export function BatchActions({ batch, batches, onChanged }: { batch: BatchSummar
 
   return (
     <>
-      <div className="flex gap-2">
-        <button type="button" className="btn-secondary text-xs px-3 py-2 flex items-center gap-1.5" onClick={() => open('edit')}>
+      <div className="flex flex-wrap gap-2">
+        <button type="button" className="btn-secondary text-xs px-3 py-2 min-h-11 flex items-center gap-1.5" onClick={() => open('edit')}>
           <Pencil className="w-3.5 h-3.5" /> Edit batch
         </button>
-        <button type="button" className="btn-secondary text-xs px-3 py-2 flex items-center gap-1.5" onClick={() => teacherApi.openAttendanceReport({ batchId: batch.id }).catch((e) => alert(e instanceof Error ? e.message : 'Could not generate the report.'))}>
+        <button type="button" className="btn-secondary text-xs px-3 py-2 min-h-11 flex items-center gap-1.5" onClick={() => teacherApi.openAttendanceReport({ batchId: batch.id }).catch((e) => alert(e instanceof Error ? e.message : 'Could not generate the report.'))}>
           <FileText className="w-3.5 h-3.5" /> Attendance report PDF
         </button>
-        <button type="button" className="btn-secondary text-xs px-3 py-2 flex items-center gap-1.5" onClick={() => open('promote')}>
+        <button type="button" className="btn-secondary text-xs px-3 py-2 min-h-11 flex items-center gap-1.5" onClick={() => open('promote')}>
           <ArrowUpRight className="w-3.5 h-3.5" /> Promote to next class
         </button>
       </div>
@@ -98,7 +98,7 @@ export function BatchActions({ batch, batches, onChanged }: { batch: BatchSummar
             <div className="space-y-3 text-sm" role="status">
               <p className="text-[var(--ink-primary)]">
                 {result.alreadyPromoted
-                  ? 'This batch was already promoted. Nothing was moved this time.'
+                  ? 'No active students were left to move (the batch is empty or was already promoted). Nothing was changed.'
                   : `${result.movedCount} student${result.movedCount === 1 ? '' : 's'} moved to ${result.targetBatchName}.`}
               </p>
               {result.skippedCount > 0 && <p className="text-xs text-[var(--ink-muted)]">{result.skippedCount} skipped (already in the target batch).</p>}
