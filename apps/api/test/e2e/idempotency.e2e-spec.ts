@@ -37,13 +37,12 @@ describe('duplicate submissions are idempotent', () => {
     expect(res.some((r) => r.status === 200 || r.status === 201)).toBe(true);
   });
 
-  // KNOWN BUG (api-core): GET /teacher/assignments/:id/submissions 500s (selects User.rollNumber, absent from the schema).
   it('teacher can list submissions, one per student', async () => {
     const asgs = await call('GET', '/teacher/assignments', { token: t.ownerA });
     const id = (asgs.body.items ?? asgs.body)[0].id;
     const subs = await call('GET', `/teacher/assignments/${id}/submissions`, { token: t.ownerA });
     expect(subs.status).toBe(200);
-    const ids = (subs.body.items ?? subs.body).map((s: any) => s.studentId ?? s.student?.id).filter(Boolean);
+    const ids = (subs.body.submissions ?? subs.body.items ?? subs.body).map((s: any) => s.studentId ?? s.student?.id).filter(Boolean);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
