@@ -10,6 +10,8 @@ import { Icon, IconName } from '../../components/common/Icon';
 import { IconChip, Tone } from '../../components/common/Paper';
 import { Body, Caption, Subtitle } from '../../components/common/Typography';
 import { FeesScreen } from './FeesScreen';
+import { useBackToMenu } from '../../hooks/useBackToMenu';
+import { InstituteHeader } from '../../components/common/InstituteHeader';
 import { StudentLeaveApply } from '../leave/StudentLeavePanels';
 import {
   useAnnouncementsData,
@@ -234,6 +236,7 @@ const Profile: React.FC = () => {
   const [code, setCode] = useState('');
   return (
     <>
+      <InstituteHeader showLetterhead />
       <QueryBoundary query={q}>
         {(p) => (
           <Card style={{ marginBottom: spacing.md }}>
@@ -270,6 +273,8 @@ export const StudentMoreScreen: React.FC = () => {
   const currentTab = useNavigationStore((s) => s.currentTab);
   const [view, setView] = useState<View_>(currentTab === 'student_fees' ? 'fees' : 'menu');
   const current = MENU.find((m) => m.key === view);
+  const toMenu = React.useCallback(() => setView('menu'), []);
+  useBackToMenu(view !== 'menu', toMenu);
 
   if (view === 'fees') {
     return (

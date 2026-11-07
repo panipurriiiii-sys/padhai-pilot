@@ -79,6 +79,9 @@ export type {
   UpdateTimetableSlotPayload,
 };
 
+import type { TeacherAnalyticsSummary } from '@padhai-pilot/shared';
+export type { TeacherAnalyticsSummary };
+
 const list = <T>(value: T[] | null | undefined): T[] => (Array.isArray(value) ? value : []);
 
 /**
@@ -123,6 +126,10 @@ export const teacherService = {
     maxMarks?: number;
     attachmentUrl?: string;
   }) => apiClient.post<Assignment>('/teacher/assignments', data),
+  updateAssignment: (
+    id: string,
+    data: { title?: string; instructions?: string; subject?: string; dueDate?: string; maxMarks?: number; attachmentUrl?: string | null },
+  ) => apiClient.put<Assignment>(`/teacher/assignments/${id}`, data),
   getSubmissions: async (assignmentId: string) =>
     list(await apiClient.get<AssignmentSubmission[]>(`/teacher/assignments/${assignmentId}/submissions`)),
   gradeSubmission: (submissionId: string, data: { marksObtained: number; feedback?: string; resubmit?: boolean }) =>
@@ -176,7 +183,7 @@ export const teacherService = {
 
   // Reports & Analytics
   getReports: () => apiClient.get<any>('/teacher/reports'),
-  getAnalytics: () => apiClient.get<any>('/analytics/teacher'),
+  getAnalytics: () => apiClient.get<TeacherAnalyticsSummary>('/analytics/teacher'),
 
   // Academic Queries (Student Doubts & Questions)
   getQueries: async (params?: { status?: string; batchId?: string }) => {

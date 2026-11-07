@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, BackHandler } from 'react-native';
 import { useAuthStore } from '../store/useAuthStore';
 import { useNavigationStore } from '../store/useNavigationStore';
 import { LoginScreen } from '../features/auth/screens/LoginScreen';
+import { FacultyJoinScreen, captureFacultyInvite, usePendingFacultyInvite } from '../features/auth/screens/FacultyJoinScreen';
 import { PermissionOnboardingScreen } from '../features/permissions/PermissionOnboardingScreen';
 import { permissionManager } from '../features/permissions/permissionManager';
 
@@ -68,6 +69,36 @@ export const RootNavigator: React.FC = () => {
     }
   }, [isAuthenticated, isTeacher]);
 
+  // Faculty invitation links (padhaipilot://join-faculty?token=) work while signed out.
+  const pendingInvite = usePendingFacultyInvite((s) => s.token);
+  useEffect(() => {
+    if (isAuthenticated) return undefined;
+    return subscribeDeepLinks((url) => {
+      captureFacultyInvite(url);
+    });
+  }, [isAuthenticated]);
+
+  // Android back button: from any non-home tab return to the role's home tab, then let the OS exit.
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (!isAuthenticated) {
+        if (usePendingFacultyInvite.getState().token) {
+          usePendingFacultyInvite.getState().set(null);
+          return true;
+        }
+        return false;
+      }
+      const home = isTeacher ? 'teacher_dashboard' : 'student_dashboard';
+      const cur = useNavigationStore.getState().currentTab;
+      if (cur !== home && cur !== 'dashboard') {
+        setTab(home);
+        return true;
+      }
+      return false;
+    });
+    return () => sub.remove();
+  }, [isAuthenticated, isTeacher, setTab]);
+
   // Deep links (padhaipilot://...) and push-notification taps; ignored until signed in.
   useEffect(() => {
     if (!isAuthenticated) return undefined;
@@ -82,6 +113,10 @@ export const RootNavigator: React.FC = () => {
       unsubPush();
     };
   }, [isAuthenticated, isTeacher, setTab]);
+
+  if (!isAuthenticated && pendingInvite) {
+    return <FacultyJoinScreen token={pendingInvite} />;
+  }
 
   if (!isAuthenticated) {
     return <LoginScreen />;

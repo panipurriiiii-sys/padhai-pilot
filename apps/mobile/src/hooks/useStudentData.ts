@@ -19,10 +19,13 @@ export const studentKeys = {
   tasks: ['student', 'tasks'] as const,
   documents: ['student', 'documents'] as const,
   notifications: ['student', 'notifications'] as const,
+  analytics: ['student', 'analytics'] as const,
 };
 
 export const useDashboardData = () =>
   useQuery({ queryKey: studentKeys.dashboard, queryFn: studentService.getDashboard, staleTime: 2 * MIN });
+export const useStudentAnalytics = () =>
+  useQuery({ queryKey: studentKeys.analytics, queryFn: studentService.getAnalytics, staleTime: 5 * MIN });
 export const useProfileData = () =>
   useQuery({ queryKey: studentKeys.profile, queryFn: studentService.getProfile, staleTime: 10 * MIN });
 export const useDiaryData = () =>
