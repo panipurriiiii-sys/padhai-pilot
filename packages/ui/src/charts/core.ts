@@ -131,6 +131,11 @@ export const areaPath = (pts: Array<[number, number]>, baseY: number): string =>
 /** Donut arc as a stroked path along the ring centre-line (angles in turns 0..1, starting at 12 o'clock). */
 export function arcPath(cx: number, cy: number, r: number, from: number, to: number): string {
   const a0 = from * 2 * Math.PI - Math.PI / 2;
+  if (to - from >= 0.9999) {
+    // A single full-circle slice: one SVG arc cannot start and end on the same point, so draw two half arcs.
+    const q = (a: number) => `${(cx + r * Math.cos(a)).toFixed(2)} ${(cy + r * Math.sin(a)).toFixed(2)}`;
+    return `M${q(a0)}A${r} ${r} 0 1 1 ${q(a0 + Math.PI)}A${r} ${r} 0 1 1 ${q(a0 + 2 * Math.PI)}`;
+  }
   const a1 = Math.min(to, from + 0.99999) * 2 * Math.PI - Math.PI / 2;
   const large = to - from > 0.5 ? 1 : 0;
   const p = (a: number) => `${(cx + r * Math.cos(a)).toFixed(2)} ${(cy + r * Math.sin(a)).toFixed(2)}`;

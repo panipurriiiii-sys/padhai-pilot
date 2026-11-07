@@ -5,8 +5,8 @@ export const metadata = { title: 'Privacy Policy - PadhaiPilot' };
 
 export default function PrivacyPage() {
   return (
-    <main className="max-w-3xl mx-auto px-6 py-16 space-y-6 text-sm leading-relaxed text-ink-secondary">
-      <Link href="/" className="text-xs text-electric underline">Back to home</Link>
+    <main className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-16 break-words space-y-6 text-sm leading-relaxed text-ink-secondary">
+      <Link href="/" className="inline-flex items-center min-h-[44px] text-xs text-electric underline">Back to home</Link>
       <h1 className="font-serif text-3xl font-bold text-ink-primary">Privacy Policy</h1>
       <p>
         This policy explains what information {SITE.name} processes when an institute, teacher or student uses the platform.
