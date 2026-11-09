@@ -116,7 +116,7 @@ import type {
   InAppNotification,
 } from '@padhai-pilot/shared';
 import { Loader2, Menu, LayoutDashboard, NotebookPen, CalendarCheck, Users, Bell } from 'lucide-react';
-import { MotionProvider, ToastProvider } from '@padhai-pilot/ui';
+import { MotionProvider, ToastProvider, DashboardSkeleton, OfflineBanner } from '@padhai-pilot/ui';
 
 type ResourceKey = 'dashboard' | 'batches' | 'invitations' | 'assignments' | 'tests' | 'lessonPlans' | 'timetable' | 'announcements' | 'reports' | 'analytics';
 const ALL_RESOURCES: ResourceKey[] = ['dashboard', 'batches', 'invitations', 'assignments', 'tests', 'lessonPlans', 'timetable', 'announcements', 'reports', 'analytics'];
@@ -419,13 +419,8 @@ function TeacherApp() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen ak-desk-surface flex flex-col items-center justify-center text-[var(--ink-primary)]">
-        <div className="flex items-center gap-3">
-          <Loader2 className="w-6 h-6 animate-spin text-[var(--brand-electric)]" />
-          <span className="font-['Playfair_Display'] text-xl font-bold">
-            PadhaiPilot <span className="text-sm font-['Raleway'] font-normal text-[var(--ink-muted)]">Faculty Studio</span>
-          </span>
-        </div>
+      <div className="min-h-screen ak-desk-surface flex flex-col p-6 lg:p-10 max-w-7xl mx-auto w-full">
+        <DashboardSkeleton cards={4} />
       </div>
     );
   }
@@ -442,6 +437,7 @@ function TeacherApp() {
 
   return (
     <div className="min-h-screen ak-desk-surface flex flex-col lg:flex-row relative text-[var(--ink-primary)]">
+      <OfflineBanner />
       {/* Mobile Top Header */}
       <div className="lg:hidden sticky top-0 z-40 bg-[var(--bg-paper)]/95 backdrop-blur-md border-b border-[var(--border-paper)] px-4 py-2.5 flex items-center justify-between w-full">
         <div className="flex items-center gap-2.5 min-w-0">
@@ -451,7 +447,30 @@ function TeacherApp() {
               {user?.instituteName || 'Teacher Portal'}
             </h1>
             <p className="font-['Raleway'] text-[10px] text-[var(--brand-electric)] font-semibold truncate capitalize">
-              {currentTab.replace(/([A-Z])/g, ' $1').trim()}
+              {({
+                dashboard: 'Overview',
+                bulkMarks: 'Bulk Marks',
+                batches: 'Batches',
+                attendance: 'Attendance',
+                assignments: 'Assignments',
+                tests: 'Tests & Quizzes',
+                lessonPlans: 'Lesson Plans',
+                invitations: 'Invitations',
+                timetable: 'Timetable',
+                announcements: 'Announcements',
+                teachingDiary: 'Teaching Diary',
+                studyMaterials: 'Study Materials',
+                library: 'Library',
+                facultyRoster: 'Faculty Roster',
+                facultySalary: 'Salary Slips',
+                facultyLeave: 'Leave',
+                studentFees: 'Student Fees',
+                studentLeaves: 'Student Leave',
+                tuitionBranding: 'Branding',
+                reports: 'Reports',
+                subscription: 'Subscription',
+                settings: 'Settings',
+              } as Record<string, string>)[currentTab] ?? currentTab.replace(/([A-Z])/g, ' $1').trim()}
             </p>
           </div>
         </div>

@@ -14,7 +14,7 @@ import {
   BarChart3,
   Settings,
   Building2,
-  LogIn,
+  LogOut,
   FileSpreadsheet,
   Sliders,
   NotebookPen,
@@ -247,7 +247,7 @@ export function Sidebar({
               {isOwner ? 'Tuition Owner / Administrator' : 'Faculty Member'}
             </p>
           </div>
-          <LogIn className="w-3.5 h-3.5 text-[var(--ink-faint)] group-hover:text-[var(--brand-electric)] transition-colors shrink-0" />
+          <LogOut className="w-3.5 h-3.5 text-[var(--ink-faint)] group-hover:text-[var(--brand-electric)] transition-colors shrink-0" />
         </button>
       </div>
     </aside>
@@ -381,7 +381,7 @@ export function Sidebar({
                     {isOwner ? 'Tuition Owner / Administrator' : 'Faculty Member'}
                   </p>
                 </div>
-                <LogIn className="w-3.5 h-3.5 text-[var(--ink-faint)] shrink-0" />
+                <LogOut className="w-3.5 h-3.5 text-[var(--ink-faint)] shrink-0" />
               </button>
             </div>
           </div>

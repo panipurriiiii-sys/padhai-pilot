@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { User, Lock, Building2, Bell, Save, CheckCircle2, AlertCircle, LogOut } from 'lucide-react';
+import { User, Lock, Building2, Bell, Save, CheckCircle2, AlertCircle, LogOut, Eye, EyeOff } from 'lucide-react';
 import type { UserSession } from '@padhai-pilot/shared';
 import { teacherApi } from '../lib/api';
 
@@ -24,6 +24,9 @@ export function SettingsView({ user, onUpdateUser, onLogout }: SettingsViewProps
   const [isChangingPass, setIsChangingPass] = useState(false);
   const [passErrorMsg, setPassErrorMsg] = useState('');
   const [passSuccessMsg, setPassSuccessMsg] = useState('');
+  const [showOldPwd, setShowOldPwd] = useState(false);
+  const [showNewPwd, setShowNewPwd] = useState(false);
+  const [showConfirmPwd, setShowConfirmPwd] = useState(false);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -195,40 +198,73 @@ export function SettingsView({ user, onUpdateUser, onLogout }: SettingsViewProps
         <form onSubmit={handleChangePassword} className="space-y-3.5">
           <div>
             <label className="block text-stone-500 mb-1 font-medium">Current Password *</label>
-            <input
-              type="password"
-              required
-              placeholder="••••••••••••"
-              value={oldPassword}
-              onChange={(e) => setOldPassword(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-paper-warm border border-border-paper text-stone-900 focus:outline-none focus:border-electric"
-            />
+            <div className="relative">
+              <input
+                type={showOldPwd ? 'text' : 'password'}
+                required
+                placeholder="••••••••••••"
+                value={oldPassword}
+                onChange={(e) => setOldPassword(e.target.value)}
+                className="w-full px-3 py-2 pr-9 rounded-lg bg-paper-warm border border-border-paper text-stone-900 focus:outline-none focus:border-electric"
+              />
+              <button
+                type="button"
+                onClick={() => setShowOldPwd((v) => !v)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 transition"
+                tabIndex={-1}
+                aria-label={showOldPwd ? 'Hide password' : 'Show password'}
+              >
+                {showOldPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
               <label className="block text-stone-500 mb-1 font-medium">New Password (min 6 chars) *</label>
-              <input
-                type="password"
-                required
-                minLength={6}
-                placeholder="••••••••••••"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-paper-warm border border-border-paper text-stone-900 focus:outline-none focus:border-electric"
-              />
+              <div className="relative">
+                <input
+                  type={showNewPwd ? 'text' : 'password'}
+                  required
+                  minLength={6}
+                  placeholder="••••••••••••"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full px-3 py-2 pr-9 rounded-lg bg-paper-warm border border-border-paper text-stone-900 focus:outline-none focus:border-electric"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPwd((v) => !v)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 transition"
+                  tabIndex={-1}
+                  aria-label={showNewPwd ? 'Hide password' : 'Show password'}
+                >
+                  {showNewPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
             <div>
               <label className="block text-stone-500 mb-1 font-medium">Confirm New Password *</label>
-              <input
-                type="password"
-                required
-                minLength={6}
-                placeholder="••••••••••••"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-paper-warm border border-border-paper text-stone-900 focus:outline-none focus:border-electric"
-              />
+              <div className="relative">
+                <input
+                  type={showConfirmPwd ? 'text' : 'password'}
+                  required
+                  minLength={6}
+                  placeholder="••••••••••••"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full px-3 py-2 pr-9 rounded-lg bg-paper-warm border border-border-paper text-stone-900 focus:outline-none focus:border-electric"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPwd((v) => !v)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 transition"
+                  tabIndex={-1}
+                  aria-label={showConfirmPwd ? 'Hide password' : 'Show password'}
+                >
+                  {showConfirmPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
           </div>
 

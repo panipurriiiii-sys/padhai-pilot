@@ -95,7 +95,18 @@ import {
   SubjectPerformanceCard,
   HomeworkCompletionCard,
 } from '../components/charts';
-import { EmptyState, ErrorState, MotionProvider, ToastProvider } from '@padhai-pilot/ui';
+import {
+  EmptyState,
+  ErrorState,
+  MotionProvider,
+  ToastProvider,
+  DashboardSkeleton,
+  TableSkeleton,
+  CardGridSkeleton,
+  OfflineBanner,
+  Pagination,
+  usePagination,
+} from '@padhai-pilot/ui';
 import { StudentFeesPanel, StudentLeavesPanel } from '../components/StudentFinance';
 // FrozenAccountView and LibraryView are dynamically imported above
 
@@ -169,6 +180,9 @@ function StudentPortal() {
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showOldPwd, setShowOldPwd] = useState(false);
+  const [showNewPwd, setShowNewPwd] = useState(false);
+  const [showConfirmPwd, setShowConfirmPwd] = useState(false);
   const [passwordUpdating, setPasswordUpdating] = useState(false);
   const [passwordNotice, setPasswordNotice] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
   const [analytics, setAnalytics] = useState<StudentAnalyticsSummary | null>(null);
@@ -765,6 +779,25 @@ function StudentPortal() {
     });
   }, [results, selectedSubject]);
 
+  // Filtered Teaching Diaries
+  const filteredDiaries = useMemo(() => {
+    return diaries
+      .filter((d) => selectedSubject === 'ALL' || d.subject === selectedSubject)
+      .filter(
+        (d) =>
+          !searchQuery.trim() ||
+          d.chapterTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          d.conceptsTaught.toLowerCase().includes(searchQuery.toLowerCase()),
+      );
+  }, [diaries, selectedSubject, searchQuery]);
+
+  // Enterprise Pagination Hooks for Smooth 60 FPS Lists
+  const pagedMaterials = usePagination(filteredMaterials, 9);
+  const pagedDiaries = usePagination(filteredDiaries, 6);
+  const pagedAssignments = usePagination(assignments, 6);
+  const pagedTests = usePagination(tests, 6);
+  const pagedResults = usePagination(filteredResults, 8);
+
   // Unread notification count
   const unreadNotificationCount = useMemo(() => {
     return notifications.filter((n) => !n.isRead).length;
@@ -1056,6 +1089,7 @@ function StudentPortal() {
 
   return (
     <div className="min-h-screen bg-[var(--bg-desk)] text-[var(--ink-primary)] flex flex-col font-['Raleway']">
+      <OfflineBanner />
       {/* TOP HEADER */}
       <header className="sticky top-0 z-40 bg-[var(--bg-paper)]/90 backdrop-blur-md border-b border-[var(--border-paper)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
@@ -1167,12 +1201,7 @@ function StudentPortal() {
       {/* MAIN CONTENT AREA */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-6 pb-24 md:pb-8">
         {isLoading ? (
-          <div className="py-24 text-center space-y-3">
-            <Loader2 className="w-8 h-8 text-[var(--brand-electric)] animate-spin mx-auto" />
-            <div className="text-xs text-[var(--ink-muted)] font-medium">
-              Synchronizing verified student academic ledger...
-            </div>
-          </div>
+          <DashboardSkeleton cards={4} />
         ) : blockingErrors.length > 0 ? (
           <div className="py-16 flex justify-center" role="alert">
             <ErrorState
@@ -1525,15 +1554,7 @@ function StudentPortal() {
 
                 {/* Diary Entries List */}
                 <div className="space-y-4">
-                  {diaries
-                    .filter((d) => selectedSubject === 'ALL' || d.subject === selectedSubject)
-                    .filter(
-                      (d) =>
-                        !searchQuery.trim() ||
-                        d.chapterTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        d.conceptsTaught.toLowerCase().includes(searchQuery.toLowerCase()),
-                    )
-                    .map((diary) => (
+                  {pagedDiaries.pagedItems.map((diary) => (
                       <div
                         key={diary.id}
                         className="p-5 rounded-2xl bg-[var(--bg-paper)] border border-[var(--border-paper)] hover:border-[var(--border-paper)] transition shadow-lg space-y-3.5"
@@ -1604,6 +1625,15 @@ function StudentPortal() {
                       </div>
                     ))}
                 </div>
+
+                <Pagination
+                  currentPage={pagedDiaries.currentPage}
+                  totalPages={pagedDiaries.totalPages}
+                  onPageChange={pagedDiaries.setPage}
+                  totalItems={pagedDiaries.totalItems}
+                  pageSize={pagedDiaries.pageSize}
+                  onPageSizeChange={pagedDiaries.setPageSize}
+                />
               </div>
             )}
 
@@ -1651,7 +1681,7 @@ function StudentPortal() {
 
                 {/* Materials Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredMaterials.map((mat) => (
+                  {pagedMaterials.pagedItems.map((mat) => (
                     <div
                       key={mat.id}
                       className="p-5 rounded-2xl bg-[var(--bg-paper)] border border-[var(--border-paper)] hover:border-[var(--border-paper)] transition shadow-lg flex flex-col justify-between space-y-3"
@@ -1711,6 +1741,15 @@ function StudentPortal() {
                     </div>
                   ))}
                 </div>
+
+                <Pagination
+                  currentPage={pagedMaterials.currentPage}
+                  totalPages={pagedMaterials.totalPages}
+                  onPageChange={pagedMaterials.setPage}
+                  totalItems={pagedMaterials.totalItems}
+                  pageSize={pagedMaterials.pageSize}
+                  onPageSizeChange={pagedMaterials.setPageSize}
+                />
               </div>
             )}
 
@@ -1898,79 +1937,90 @@ function StudentPortal() {
                     description="Practice problem sets and homework assigned by faculty will appear here."
                   />
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {assignments.map((asg) => (
-                    <div
-                      key={asg.id}
-                      className="p-5 rounded-2xl bg-[var(--bg-paper)] border border-[var(--border-paper)] flex flex-col justify-between space-y-4 shadow-lg"
-                    >
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[var(--bg-paper-warm)] text-[var(--brand-electric)] border border-[var(--border-paper)]">
-                            {asg.subject}
-                          </span>
-                          <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                              asg.status === 'GRADED'
-                                ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)]'
-                                : asg.status === 'SUBMITTED'
-                                ? 'bg-[rgba(22,119,255,0.15)] text-[var(--brand-electric)]'
-                                : 'bg-[var(--status-warning-bg)] text-[var(--status-warning-text)]'
-                            }`}
-                          >
-                            {asg.status}
-                          </span>
-                        </div>
-
-                        <h3 className="font-['Raleway'] font-bold text-sm text-[var(--ink-primary)]">
-                          {asg.title}
-                        </h3>
-
-                        <p className="text-xs text-[var(--ink-muted)] leading-relaxed line-clamp-3">
-                          {asg.instructions}
-                        </p>
-
-                        <div className="text-[11px] text-[var(--ink-secondary)] pt-1">
-                          Max Marks: <strong className="font-['Inter']">{asg.maxMarks}</strong>
-                        </div>
-                        {asg.attachmentUrl && (
-                          <a href={asg.attachmentUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[var(--brand-electric)] underline">
-                            <FileText className="w-3.5 h-3.5" /> Open assignment document
-                          </a>
-                        )}
-                      </div>
-
-                      {asg.submission?.marksObtained !== undefined && (
-                        <div className="p-3 rounded-xl bg-[var(--bg-paper-warm)] border border-[var(--border-paper)] text-xs space-y-1">
-                          <div className="flex items-center justify-between text-[var(--status-success-text)] font-bold">
-                            <span>Score Released:</span>
-                            <span className="font-['Inter']">{asg.submission.marksObtained} / {asg.maxMarks}</span>
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {pagedAssignments.pagedItems.map((asg) => (
+                      <div
+                        key={asg.id}
+                        className="p-5 rounded-2xl bg-[var(--bg-paper)] border border-[var(--border-paper)] flex flex-col justify-between space-y-4 shadow-lg"
+                      >
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[var(--bg-paper-warm)] text-[var(--brand-electric)] border border-[var(--border-paper)]">
+                              {asg.subject}
+                            </span>
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                asg.status === 'GRADED'
+                                  ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)]'
+                                  : asg.status === 'SUBMITTED'
+                                  ? 'bg-[rgba(22,119,255,0.15)] text-[var(--brand-electric)]'
+                                  : 'bg-[var(--status-warning-bg)] text-[var(--status-warning-text)]'
+                              }`}
+                            >
+                              {asg.status}
+                            </span>
                           </div>
-                          {asg.submission.feedback && (
-                            <div className="text-[11px] text-[var(--ink-muted)]">
-                              Feedback: {asg.submission.feedback}
-                            </div>
+
+                          <h3 className="font-['Raleway'] font-bold text-sm text-[var(--ink-primary)]">
+                            {asg.title}
+                          </h3>
+
+                          <p className="text-xs text-[var(--ink-muted)] leading-relaxed line-clamp-3">
+                            {asg.instructions}
+                          </p>
+
+                          <div className="text-[11px] text-[var(--ink-secondary)] pt-1">
+                            Max Marks: <strong className="font-['Inter']">{asg.maxMarks}</strong>
+                          </div>
+                          {asg.attachmentUrl && (
+                            <a href={asg.attachmentUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[var(--brand-electric)] underline">
+                              <FileText className="w-3.5 h-3.5" /> Open assignment document
+                            </a>
                           )}
                         </div>
-                      )}
 
-                      <div className="pt-2 border-t border-[var(--border-paper)] flex items-center justify-between">
-                        <span className="text-[10px] text-[var(--ink-muted)]">
-                          Due: {new Date(asg.dueDate).toLocaleDateString()}
-                        </span>
-                        <button
-                          onClick={() => {
-                            setSelectedAssignment(asg);
-                            setAssignmentAnswer(asg.submission?.content || '');
-                            setAssignmentFileUrl(asg.submission?.attachmentUrl || '');
-                          }}
-                          className="px-3 py-1.5 rounded-xl bg-[var(--brand-electric)] hover:bg-[var(--brand-hover)] text-white text-xs font-semibold transition"
-                        >
-                          {asg.status === 'GRADED' ? 'View Work' : asg.status === 'SUBMITTED' ? 'Edit Work' : 'Submit'}
-                        </button>
+                        {asg.submission?.marksObtained !== undefined && (
+                          <div className="p-3 rounded-xl bg-[var(--bg-paper-warm)] border border-[var(--border-paper)] text-xs space-y-1">
+                            <div className="flex items-center justify-between text-[var(--status-success-text)] font-bold">
+                              <span>Score Released:</span>
+                              <span className="font-['Inter']">{asg.submission.marksObtained} / {asg.maxMarks}</span>
+                            </div>
+                            {asg.submission.feedback && (
+                              <div className="text-[11px] text-[var(--ink-muted)]">
+                                Feedback: {asg.submission.feedback}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        <div className="pt-2 border-t border-[var(--border-paper)] flex items-center justify-between">
+                          <span className="text-[10px] text-[var(--ink-muted)]">
+                            Due: {new Date(asg.dueDate).toLocaleDateString()}
+                          </span>
+                          <button
+                            onClick={() => {
+                              setSelectedAssignment(asg);
+                              setAssignmentAnswer(asg.submission?.content || '');
+                              setAssignmentFileUrl(asg.submission?.attachmentUrl || '');
+                            }}
+                            className="px-3 py-1.5 rounded-xl bg-[var(--brand-electric)] hover:bg-[var(--brand-hover)] text-white text-xs font-semibold transition"
+                          >
+                            {asg.status === 'GRADED' ? 'View Work' : asg.status === 'SUBMITTED' ? 'Edit Work' : 'Submit'}
+                          </button>
+                        </div>
                       </div>
+                    ))}
                     </div>
-                  ))}
+                    <Pagination
+                      currentPage={pagedAssignments.currentPage}
+                      totalPages={pagedAssignments.totalPages}
+                      totalItems={pagedAssignments.totalItems}
+                      pageSize={pagedAssignments.pageSize}
+                      onPageChange={pagedAssignments.setPage}
+                      onPageSizeChange={pagedAssignments.setPageSize}
+                      pageSizeOptions={[6, 12, 24]}
+                    />
                   </div>
                 )}
               </div>
@@ -1988,62 +2038,73 @@ function StudentPortal() {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {tests.map((test) => (
-                    <div
-                      key={test.id}
-                      className="p-5 rounded-2xl bg-[var(--bg-paper)] border border-[var(--border-paper)] flex flex-col justify-between space-y-4 shadow-lg"
-                    >
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[var(--bg-paper-warm)] text-[var(--brand-electric)]">
-                            {test.subject}
-                          </span>
-                          <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                              test.status === 'ACTIVE'
-                                ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)]'
-                                : test.status === 'COMPLETED'
-                                ? 'bg-[rgba(22,119,255,0.15)] text-[var(--brand-electric)]'
-                                : 'bg-[var(--status-warning-bg)] text-[var(--status-warning-text)]'
-                            }`}
-                          >
-                            {test.status}
-                          </span>
-                        </div>
-
-                        <h3 className="font-['Raleway'] font-bold text-sm text-[var(--ink-primary)]">
-                          {test.title}
-                        </h3>
-
-                        <p className="text-xs text-[var(--ink-muted)] line-clamp-2">
-                          {test.instructions}
-                        </p>
-
-                        <div className="flex items-center gap-3 text-[11px] text-[var(--ink-secondary)] pt-1">
-                          <span>Duration: <strong className="font-['Inter']">{test.durationMinutes}m</strong></span>
-                          <span>•</span>
-                          <span>Max: <strong className="font-['Inter']">{test.totalMarks}M</strong></span>
-                        </div>
-                      </div>
-
-                      {test.attempt && (
-                        <div className="p-3 rounded-xl bg-[var(--bg-paper-warm)] border border-[var(--border-paper)] text-xs text-[var(--status-success-text)] font-bold flex items-center justify-between">
-                          <span>Attempt Scored:</span>
-                          <span className="font-['Inter']">{test.attempt.score} / {test.totalMarks}</span>
-                        </div>
-                      )}
-
-                      <button
-                        onClick={() => handleStartTest(test.id)}
-                        disabled={test.status === 'COMPLETED'}
-                        className="w-full py-2.5 rounded-xl bg-[var(--brand-electric)] hover:bg-[var(--brand-hover)] disabled:bg-[var(--bg-paper-warm)] disabled:text-[var(--ink-faint)] text-xs font-semibold text-white transition flex items-center justify-center gap-1.5 shadow"
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {pagedTests.pagedItems.map((test) => (
+                      <div
+                        key={test.id}
+                        className="p-5 rounded-2xl bg-[var(--bg-paper)] border border-[var(--border-paper)] flex flex-col justify-between space-y-4 shadow-lg"
                       >
-                        <Clock className="w-3.5 h-3.5" />
-                        <span>{test.status === 'COMPLETED' ? 'Completed' : 'Start Test Session'}</span>
-                      </button>
-                    </div>
-                  ))}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[var(--bg-paper-warm)] text-[var(--brand-electric)]">
+                              {test.subject}
+                            </span>
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                test.status === 'ACTIVE'
+                                  ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)]'
+                                  : test.status === 'COMPLETED'
+                                  ? 'bg-[rgba(22,119,255,0.15)] text-[var(--brand-electric)]'
+                                  : 'bg-[var(--status-warning-bg)] text-[var(--status-warning-text)]'
+                              }`}
+                            >
+                              {test.status}
+                            </span>
+                          </div>
+
+                          <h3 className="font-['Raleway'] font-bold text-sm text-[var(--ink-primary)]">
+                            {test.title}
+                          </h3>
+
+                          <p className="text-xs text-[var(--ink-muted)] line-clamp-2">
+                            {test.instructions}
+                          </p>
+
+                          <div className="flex items-center gap-3 text-[11px] text-[var(--ink-secondary)] pt-1">
+                            <span>Duration: <strong className="font-['Inter']">{test.durationMinutes}m</strong></span>
+                            <span>•</span>
+                            <span>Max: <strong className="font-['Inter']">{test.totalMarks}M</strong></span>
+                          </div>
+                        </div>
+
+                        {test.attempt && (
+                          <div className="p-3 rounded-xl bg-[var(--bg-paper-warm)] border border-[var(--border-paper)] text-xs text-[var(--status-success-text)] font-bold flex items-center justify-between">
+                            <span>Attempt Scored:</span>
+                            <span className="font-['Inter']">{test.attempt.score} / {test.totalMarks}</span>
+                          </div>
+                        )}
+
+                        <button
+                          onClick={() => handleStartTest(test.id)}
+                          disabled={test.status === 'COMPLETED'}
+                          className="w-full py-2.5 rounded-xl bg-[var(--brand-electric)] hover:bg-[var(--brand-hover)] disabled:bg-[var(--bg-paper-warm)] disabled:text-[var(--ink-faint)] text-xs font-semibold text-white transition flex items-center justify-center gap-1.5 shadow"
+                        >
+                          <Clock className="w-3.5 h-3.5" />
+                          <span>{test.status === 'COMPLETED' ? 'Completed' : 'Start Test Session'}</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <Pagination
+                    currentPage={pagedTests.currentPage}
+                    totalPages={pagedTests.totalPages}
+                    totalItems={pagedTests.totalItems}
+                    pageSize={pagedTests.pageSize}
+                    onPageChange={pagedTests.setPage}
+                    onPageSizeChange={pagedTests.setPageSize}
+                    pageSizeOptions={[6, 12, 24]}
+                  />
                 </div>
               </div>
             )}
@@ -2093,7 +2154,7 @@ function StudentPortal() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[var(--border-paper)] text-xs">
-                        {filteredResults.map((res) => (
+                        {pagedResults.pagedItems.map((res) => (
                           <tr key={res.assessmentId} className="hover:bg-[var(--bg-paper-warm)]/40 transition">
                             <td className="p-3.5 font-bold text-[var(--ink-primary)]">{res.title}</td>
                             <td className="p-3.5 text-[var(--ink-secondary)]">{res.subject}</td>
@@ -2112,6 +2173,17 @@ function StudentPortal() {
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                  <div className="p-4 border-t border-[var(--border-paper)]">
+                    <Pagination
+                      currentPage={pagedResults.currentPage}
+                      totalPages={pagedResults.totalPages}
+                      totalItems={pagedResults.totalItems}
+                      pageSize={pagedResults.pageSize}
+                      onPageChange={pagedResults.setPage}
+                      onPageSizeChange={pagedResults.setPageSize}
+                      pageSizeOptions={[8, 16, 32]}
+                    />
                   </div>
                 </div>
               </div>
@@ -2477,15 +2549,30 @@ function StudentPortal() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <label className="space-y-1 text-[11px] font-semibold text-[var(--ink-secondary)]">
                       Current password
-                      <input type="password" autoComplete="current-password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} className="input-paper w-full font-normal" />
+                      <div className="relative">
+                        <input type={showOldPwd ? 'text' : 'password'} autoComplete="current-password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} className="input-paper w-full font-normal pr-8" />
+                        <button type="button" onClick={() => setShowOldPwd((v) => !v)} tabIndex={-1} aria-label={showOldPwd ? 'Hide' : 'Show'} className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--ink-muted)] hover:text-[var(--ink-primary)] transition">
+                          {showOldPwd ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
                     </label>
                     <label className="space-y-1 text-[11px] font-semibold text-[var(--ink-secondary)]">
                       New password (min 8)
-                      <input type="password" autoComplete="new-password" minLength={8} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="input-paper w-full font-normal" />
+                      <div className="relative">
+                        <input type={showNewPwd ? 'text' : 'password'} autoComplete="new-password" minLength={8} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="input-paper w-full font-normal pr-8" />
+                        <button type="button" onClick={() => setShowNewPwd((v) => !v)} tabIndex={-1} aria-label={showNewPwd ? 'Hide' : 'Show'} className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--ink-muted)] hover:text-[var(--ink-primary)] transition">
+                          {showNewPwd ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
                     </label>
                     <label className="space-y-1 text-[11px] font-semibold text-[var(--ink-secondary)]">
                       Confirm new password
-                      <input type="password" autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="input-paper w-full font-normal" />
+                      <div className="relative">
+                        <input type={showConfirmPwd ? 'text' : 'password'} autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="input-paper w-full font-normal pr-8" />
+                        <button type="button" onClick={() => setShowConfirmPwd((v) => !v)} tabIndex={-1} aria-label={showConfirmPwd ? 'Hide' : 'Show'} className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--ink-muted)] hover:text-[var(--ink-primary)] transition">
+                          {showConfirmPwd ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
                     </label>
                   </div>
                   {passwordNotice && (
