@@ -8,6 +8,7 @@ import {
   Building2,
   History,
   Layers,
+  Library,
   LogOut,
   Menu,
   Palette,
@@ -27,6 +28,7 @@ const NAV = [
   { href: '/features', label: 'Feature flags', icon: ToggleRight },
   { href: '/audit', label: 'Audit log', icon: History },
   { href: '/announcements', label: 'Announcements', icon: Radio },
+  { href: '/study-library', label: 'Study Library', icon: Library },
   { href: '/theme', label: 'Theme', icon: Palette },
 ];
 

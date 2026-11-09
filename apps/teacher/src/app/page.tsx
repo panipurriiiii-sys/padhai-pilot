@@ -19,6 +19,7 @@ import { FacultyManagementView } from '../components/FacultyManagementView';
 import { FacultySalaryView } from '../components/FacultySalaryView';
 import { FacultyLeaveView } from '../components/FacultyLeaveView';
 import { StudyMaterialView } from '../components/StudyMaterialView';
+import { LibraryView } from '../components/LibraryView';
 import { BatchFeesView } from '../components/BatchFeesView';
 import { StudentLeavesView } from '../components/StudentLeavesView';
 import { TuitionBrandingView } from '../components/TuitionBrandingView';
@@ -523,6 +524,10 @@ function TeacherApp() {
               batches={batches}
               teacherName={user?.fullName}
             />
+          )}
+
+          {currentTab === 'library' && (
+            <LibraryView userRole={user?.role} />
           )}
 
           {currentTab === 'facultyRoster' && (

@@ -26,6 +26,7 @@ import {
   Sparkles,
   X,
   Bell,
+  Library,
 } from 'lucide-react';
 
 export type NavTab =
@@ -35,6 +36,7 @@ export type NavTab =
   | 'bulkMarks'
   | 'batches'
   | 'studyMaterials'
+  | 'library'
   | 'assignments'
   | 'tests'
   | 'lessonPlans'
@@ -91,6 +93,7 @@ export function Sidebar({
         { id: 'bulkMarks' as NavTab, label: 'Bulk Marks', icon: FileSpreadsheet, badge: 'New' },
         { id: 'batches' as NavTab, label: 'Batches & Roster', icon: Users },
         { id: 'studyMaterials' as NavTab, label: 'Study Materials', icon: FileText },
+        { id: 'library' as NavTab, label: 'Study Library', icon: Library },
         { id: 'assignments' as NavTab, label: 'Assignments', icon: FileCheck2 },
         { id: 'tests' as NavTab, label: 'Tests & Quizzes', icon: Award },
         { id: 'lessonPlans' as NavTab, label: 'Curriculum Plans', icon: BookOpen },

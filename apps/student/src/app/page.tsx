@@ -85,11 +85,13 @@ import {
 import { EmptyState, ErrorState, MotionProvider, ToastProvider } from '@padhai-pilot/ui';
 import { StudentFeesPanel, StudentLeavesPanel } from '../components/StudentFinance';
 import { FrozenAccountView } from '../components/FrozenAccountView';
+import { LibraryView } from '../components/LibraryView';
 
 type PortalTab =
   | 'OVERVIEW'
   | 'DIARY'
   | 'MATERIALS'
+  | 'LIBRARY'
   | 'TIMETABLE'
   | 'ATTENDANCE'
   | 'ASSIGNMENTS'
@@ -1069,6 +1071,7 @@ function StudentPortal() {
             { id: 'OVERVIEW', label: 'Overview', icon: Layers },
             { id: 'DIARY', label: 'Daily Diary', icon: BookOpen },
             { id: 'MATERIALS', label: 'Study Vault', icon: FileText },
+            { id: 'LIBRARY', label: 'Study Library', icon: Bookmark },
             { id: 'TIMETABLE', label: 'Timetable', icon: Calendar },
             { id: 'ATTENDANCE', label: 'Attendance', icon: CheckCircle2 },
             { id: 'ASSIGNMENTS', label: 'Homework', icon: FileCheck },
@@ -1649,6 +1652,11 @@ function StudentPortal() {
                   ))}
                 </div>
               </div>
+            )}
+
+            {/* LIBRARY TAB */}
+            {activeTab === 'LIBRARY' && (
+              <LibraryView />
             )}
 
             {/* 4. TIMETABLE TAB */}
@@ -2473,7 +2481,7 @@ function StudentPortal() {
         }}
         onNavigate={(url) => {
           const tab = url.replace(/^\//, '').toUpperCase();
-          if (['OVERVIEW', 'RESULTS', 'ATTENDANCE', 'MATERIALS', 'TIMETABLE', 'DIARY', 'ASSIGNMENTS', 'TESTS', 'QUERIES', 'TASKS', 'FEES', 'NOTICES', 'PROFILE', 'DOCUMENTS', 'ANALYTICS'].includes(tab)) {
+          if (['OVERVIEW', 'RESULTS', 'ATTENDANCE', 'MATERIALS', 'LIBRARY', 'TIMETABLE', 'DIARY', 'ASSIGNMENTS', 'TESTS', 'QUERIES', 'TASKS', 'FEES', 'NOTICES', 'PROFILE', 'DOCUMENTS', 'ANALYTICS'].includes(tab)) {
             setActiveTab(tab as any);
           }
         }}

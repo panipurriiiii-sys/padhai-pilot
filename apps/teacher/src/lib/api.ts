@@ -182,6 +182,25 @@ export function openBlob(blob: Blob, fileName: string) {
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
+export interface LibraryMaterialItem {
+  id: string;
+  title: string;
+  description?: string;
+  board: string;
+  classLevel?: string;
+  subject?: string;
+  contentType: string;
+  fileUrl?: string;
+  externalUrl?: string;
+  yearOrEdition?: string;
+  tags: string[];
+  isApproved: boolean;
+  viewCount: number;
+  instituteId?: string;
+  createdAt: string;
+  uploader?: { id: string; fullName: string };
+}
+
 /** Normalised API failure: `status` 0 means the server could not be reached. */
 export class ApiError extends Error {
   constructor(
@@ -874,6 +893,61 @@ export const teacherApi = {
     return await request('/notifications/preferences', {
       method: 'PUT',
       body: JSON.stringify(prefs),
+    });
+  },
+
+  // ── Study Library ─────────────────────────────────────────────────────────
+  async getLibraryMaterials(params: {
+    board?: string;
+    classLevel?: string;
+    subject?: string;
+    contentType?: string;
+    q?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{
+    items: LibraryMaterialItem[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    const qs = new URLSearchParams();
+    if (params.board) qs.set('board', params.board);
+    if (params.classLevel) qs.set('classLevel', params.classLevel);
+    if (params.subject) qs.set('subject', params.subject);
+    if (params.contentType) qs.set('contentType', params.contentType);
+    if (params.q) qs.set('q', params.q);
+    if (params.page) qs.set('page', String(params.page));
+    if (params.limit) qs.set('limit', String(params.limit));
+    const query = qs.toString();
+    return request(`/study-library${query ? `?${query}` : ''}`);
+  },
+
+  async getLibraryMeta(): Promise<{
+    boards: string[];
+    subjects: string[];
+    contentTypes: string[];
+    classLevels: string[];
+  }> {
+    return request('/study-library/meta');
+  },
+
+  async createLibraryMaterial(data: {
+    title: string;
+    description?: string;
+    board: string;
+    classLevel?: string;
+    subject?: string;
+    contentType: string;
+    fileUrl?: string;
+    externalUrl?: string;
+    yearOrEdition?: string;
+    tags?: string[];
+  }): Promise<LibraryMaterialItem> {
+    return request('/study-library', {
+      method: 'POST',
+      body: JSON.stringify(data),
     });
   },
 };

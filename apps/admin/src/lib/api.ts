@@ -349,9 +349,51 @@ class AdminApiClient {
   restoreTheme(revision: number, reason?: string) {
     return this.send<{ theme?: { revision: number } }>('POST', `/admin/theme/restore/${revision}`, { reason });
   }
+
+  // Study Library (admin view: platform-level materials, any approval status)
+  getLibraryMaterials(params: { page?: number; limit?: number } = {}) {
+    const qs = new URLSearchParams();
+    if (params.page) qs.set('page', String(params.page));
+    if (params.limit) qs.set('limit', String(params.limit));
+    const query = qs.toString();
+    return this.send<{
+      items: LibraryMaterialAdminItem[];
+      total: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+    }>('GET', `/study-library/admin/all${query ? `?${query}` : ''}`);
+  }
+
+  approveLibraryMaterial(id: string) {
+    return this.send<LibraryMaterialAdminItem>('PUT', `/study-library/${encodeURIComponent(id)}/approve`);
+  }
+
+  deleteLibraryMaterial(id: string) {
+    return this.send<{ success: boolean }>('DELETE', `/study-library/${encodeURIComponent(id)}`);
+  }
 }
 
 export const adminApi = new AdminApiClient();
+
+export interface LibraryMaterialAdminItem {
+  id: string;
+  title: string;
+  description?: string;
+  board: string;
+  classLevel?: string;
+  subject?: string;
+  contentType: string;
+  fileUrl?: string;
+  externalUrl?: string;
+  yearOrEdition?: string;
+  tags: string[];
+  isApproved: boolean;
+  viewCount: number;
+  instituteId?: string;
+  createdAt: string;
+  uploader?: { id: string; fullName: string; email: string };
+}
 
 /** Shape returned by POST /admin/theme/validate (authoritative shared validator plus a preview diff). */
 export interface ThemeValidation {
