@@ -753,25 +753,8 @@ export class AssessmentService {
           status: 'PUBLISHED',
         },
       },
-      select: {
-        id: true,
-        assessmentId: true,
-        obtainedMarks: true,
-        percentage: true,
-        grade: true,
-        resultStatus: true,
-        attendanceStatus: true,
-        feedback: true,
-        assessment: {
-          select: {
-            title: true,
-            subject: true,
-            category: true,
-            assessmentDate: true,
-            maxMarks: true,
-            publishedAt: true,
-          },
-        },
+      include: {
+        assessment: true,
       },
       orderBy: {
         assessment: { assessmentDate: 'desc' },
