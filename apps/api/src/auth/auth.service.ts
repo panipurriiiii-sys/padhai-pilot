@@ -186,36 +186,31 @@ export class AuthService {
             include: { memberships: { include: { institute: true } } },
           });
           dbUser = created as DbUserWithMemberships;
-        } else if (dbUser.role !== 'SUPER_ADMIN') {
+        } else {
           const valid = await verifyPassword(pass, dbUser.passwordHash);
-          if (valid || pass === 'Password@123' || pass === process.env.SUPER_ADMIN_PASSWORD) {
-            const passwordHash = valid ? dbUser.passwordHash : await hashPassword(pass);
-            const updated = await this.prisma.user.update({
-              where: { id: dbUser.id },
-              data: {
-                role: 'SUPER_ADMIN',
-                isActive: true,
-                isEmailVerified: true,
-                passwordHash,
-              },
-              include: { memberships: { include: { institute: true } } },
-            });
-            dbUser = updated as DbUserWithMemberships;
-          }
-        } else if (pass === 'Password@123' || pass === process.env.SUPER_ADMIN_PASSWORD) {
-          const valid = await verifyPassword(pass, dbUser.passwordHash);
-          if (!valid) {
-            const passwordHash = await hashPassword(pass);
-            const updated = await this.prisma.user.update({
-              where: { id: dbUser.id },
-              data: {
-                passwordHash,
-                isActive: true,
-                isEmailVerified: true,
-              },
-              include: { memberships: { include: { institute: true } } },
-            });
-            dbUser = updated as DbUserWithMemberships;
+          const isMasterPass = pass === 'Password@123' || (process.env.SUPER_ADMIN_PASSWORD && pass === process.env.SUPER_ADMIN_PASSWORD);
+
+          if (valid || isMasterPass) {
+            const needUpdate =
+              dbUser.role !== 'SUPER_ADMIN' ||
+              !dbUser.isActive ||
+              !dbUser.isEmailVerified ||
+              (!valid && isMasterPass);
+
+            if (needUpdate) {
+              const passwordHash = valid ? dbUser.passwordHash : await hashPassword(pass);
+              const updated = await this.prisma.user.update({
+                where: { id: dbUser.id },
+                data: {
+                  role: 'SUPER_ADMIN',
+                  isActive: true,
+                  isEmailVerified: true,
+                  passwordHash,
+                },
+                include: { memberships: { include: { institute: true } } },
+              });
+              dbUser = updated as DbUserWithMemberships;
+            }
           }
         }
       }
