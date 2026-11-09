@@ -31,6 +31,9 @@ export interface InstituteSummary {
   logoUrl?: string;
   maxStudentsLimit?: number;
   maxTeachersLimit?: number;
+  isTrialActive?: boolean;
+  trialEndsAt?: string | null;
+  trialDaysLeft?: number;
 }
 
 export interface PlatformHealth {
@@ -132,6 +135,9 @@ export interface InstituteConfigInput {
   themePrimaryColor?: string;
   maxStudentsLimit?: number;
   maxTeachersLimit?: number;
+  isTrialActive?: boolean;
+  trialEndsAt?: string | null;
+  trialDaysLeft?: number;
 }
 
 class AdminApiClient {

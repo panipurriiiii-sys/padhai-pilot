@@ -59,6 +59,9 @@ export interface InstituteEffectiveFeatures {
     instituteName: string;
     plan: SubscriptionPlan;
     isInstituteActive: boolean;
+    isTrialActive?: boolean;
+    trialDaysLeft?: number;
+    trialEndsAt?: string | null;
     evaluatedFeatures: Record<FeatureKey, FeatureEvaluationResult>;
     evaluatedAt: string;
 }

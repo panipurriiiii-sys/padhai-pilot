@@ -360,16 +360,36 @@ export class StudentService {
       (user.instituteId
         ? await db.institute.findUnique({
             where: { id: user.instituteId },
-            select: { id: true, name: true, academicYear: true, plan: true, status: true, isActive: true },
+            select: { id: true, name: true, academicYear: true, plan: true, status: true, isActive: true, features: true },
           })
         : null);
 
     const plan = ((institute as any)?.plan || 'STARTER').toUpperCase();
     const isPremium = ['GROWTH', 'PRO', 'ENTERPRISE'].includes(plan);
-    const isFrozen = !isPremium || (institute as any)?.status === 'FROZEN' || (institute as any)?.isActive === false;
-    const freezeReason = isFrozen ? 'TUITION_PREMIUM_REQUIRED' : undefined;
+    const instFeatures = ((institute as any)?.features || {}) as Record<string, any>;
+    const trialEndsAt = instFeatures.trialEndsAt ? new Date(instFeatures.trialEndsAt).getTime() : null;
+    const now = Date.now();
+    const isTrialActive = Boolean(
+      ((institute as any)?.status === 'TRIAL' || instFeatures.isTrial === true) &&
+      trialEndsAt &&
+      trialEndsAt > now
+    );
+
+    // Students are unfrozen if tuition is on Premium OR active Trial (and institute is not suspended/inactive)
+    const isFrozen =
+      (!isPremium && !isTrialActive) ||
+      (institute as any)?.status === 'FROZEN' ||
+      (institute as any)?.status === 'SUSPENDED' ||
+      (institute as any)?.isActive === false;
+
+    const freezeReason = isFrozen
+      ? ((institute as any)?.status === 'SUSPENDED' ? 'TUITION_SUSPENDED' : 'TUITION_PREMIUM_REQUIRED')
+      : undefined;
+
     const freezeMessage = isFrozen
-      ? `Your tuition (${institute?.name || 'Your Institute'}) is on the Free Starter plan. Student portal access is frozen until your tuition upgrades to a Premium plan (Growth or Pro).`
+      ? (institute as any)?.status === 'SUSPENDED'
+        ? `Your tuition (${institute?.name || 'Your Institute'}) account is currently suspended. Please contact your tuition administrator.`
+        : `Your tuition (${institute?.name || 'Your Institute'}) subscription has expired. Student access is paused until your tuition activates a plan or free trial.`
       : undefined;
 
     const prefs = (dbUser.notificationPreferences ?? {}) as Partial<typeof DEFAULT_NOTIFICATION_PREFS>;

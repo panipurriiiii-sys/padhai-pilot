@@ -142,6 +142,8 @@ export function SubscriptionView({
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('annual');
   const [currentPlan, setCurrentPlan] = useState<SubscriptionPlan>('GROWTH');
   const [effectiveFeatures, setEffectiveFeatures] = useState<Record<string, FeatureEvaluationResult> | null>(null);
+  const [isTrialActive, setIsTrialActive] = useState<boolean>(false);
+  const [trialDaysLeft, setTrialDaysLeft] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
 
@@ -153,6 +155,12 @@ export function SubscriptionView({
         if (isMounted && res?.data) {
           if (res.data.plan) {
             setCurrentPlan(res.data.plan);
+          }
+          if (res.data.isTrialActive !== undefined) {
+            setIsTrialActive(Boolean(res.data.isTrialActive));
+          }
+          if (res.data.trialDaysLeft !== undefined) {
+            setTrialDaysLeft(Number(res.data.trialDaysLeft) || 0);
           }
           if (res.data.evaluatedFeatures) {
             setEffectiveFeatures(res.data.evaluatedFeatures);
@@ -231,8 +239,26 @@ export function SubscriptionView({
         </div>
       )}
 
-      {/* Student Accounts Freeze Alert for Starter Plan */}
-      {currentPlan === 'STARTER' && (
+      {/* Free Trial Active Banner */}
+      {isTrialActive && (
+        <div className="p-4 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 text-blue-900 text-xs flex items-start gap-3 shadow-xs">
+          <Sparkles className="w-5 h-5 text-[var(--brand-electric)] shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <div className="font-bold text-xs uppercase tracking-wider text-blue-900 flex items-center gap-2">
+              <span>7-Day Free Trial Active</span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] bg-blue-100 text-blue-800 font-extrabold">
+                {trialDaysLeft} {trialDaysLeft === 1 ? 'day' : 'days'} remaining
+              </span>
+            </div>
+            <p className="text-[11px] text-blue-700 mt-1 leading-relaxed">
+              Your coaching institute is currently enjoying full VIP access. All student portals and features are fully unlocked during this trial. Upgrade before your trial expires to avoid service interruption.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Student Accounts Freeze Alert for Starter Plan (Only when not in trial) */}
+      {currentPlan === 'STARTER' && !isTrialActive && (
         <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-3 shadow-xs">
           <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
           <div>

@@ -310,9 +310,9 @@ export class FeaturesService {
   ): Promise<InstituteEffectiveFeatures> {
     const safeInstituteId = instituteId?.trim() || 'default';
     try {
-      let institute = await this.prisma.institute.findUnique({
+      let institute: any = await this.prisma.institute.findUnique({
         where: { id: safeInstituteId },
-        select: { id: true, name: true, plan: true, isActive: true },
+        select: { id: true, name: true, plan: true, status: true, isActive: true, features: true },
       }).catch(() => null);
 
       if (!institute) {
@@ -320,9 +320,23 @@ export class FeaturesService {
           id: safeInstituteId,
           name: 'Institute',
           plan: 'GROWTH',
+          status: 'ACTIVE',
           isActive: true,
+          features: null,
         };
       }
+
+      const feat = ((institute.features || {}) as Record<string, any>);
+      const trialEndsAt = feat.trialEndsAt ? new Date(feat.trialEndsAt).getTime() : null;
+      const now = Date.now();
+      const isTrialActive = Boolean(
+        (institute.status === 'TRIAL' || feat.isTrial === true) &&
+        trialEndsAt &&
+        trialEndsAt > now
+      );
+      const trialDaysLeft = trialEndsAt
+        ? Math.max(0, Math.ceil((trialEndsAt - now) / (1000 * 60 * 60 * 24)))
+        : 0;
 
       const allDefs = getAllRegisteredFeatures();
       const evaluatedFeatures: Record<string, FeatureEvaluationResult> = {};
@@ -352,6 +366,9 @@ export class FeaturesService {
         instituteName: institute.name,
         plan: (institute.plan as SubscriptionPlan) || 'GROWTH',
         isInstituteActive: institute.isActive,
+        isTrialActive,
+        trialDaysLeft,
+        trialEndsAt: feat.trialEndsAt || null,
         evaluatedFeatures: evaluatedFeatures as Record<FeatureKey, FeatureEvaluationResult>,
         evaluatedAt: new Date().toISOString(),
       };

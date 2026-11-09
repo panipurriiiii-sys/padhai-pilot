@@ -46,6 +46,7 @@ interface DbUserWithMemberships {
   role: string;
   avatarUrl: string | null;
   isActive: boolean;
+  isEmailVerified?: boolean;
   passwordHash: string;
   tokenVersion?: number;
   memberships: Array<{

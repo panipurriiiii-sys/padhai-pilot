@@ -37,6 +37,9 @@ export interface InstituteTenantRecord {
   logoUrl?: string;
   maxStudentsLimit?: number;
   maxTeachersLimit?: number;
+  isTrialActive?: boolean;
+  trialEndsAt?: string | null;
+  trialDaysLeft?: number;
 }
 
 export interface PlatformAuditLog {
@@ -96,6 +99,18 @@ export class AdminService {
     counts: { students: number; teachers: number } | undefined,
     owner?: { fullName: string; email: string } | null,
   ): InstituteTenantRecord {
+    const feat = (inst.features || {}) as Record<string, any>;
+    const trialEndsAt = feat.trialEndsAt ? new Date(feat.trialEndsAt).toISOString() : null;
+    const now = Date.now();
+    const isTrialActive = Boolean(
+      (inst.status === 'TRIAL' || feat.isTrial === true) &&
+      trialEndsAt &&
+      new Date(trialEndsAt).getTime() > now
+    );
+    const trialDaysLeft = trialEndsAt
+      ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - now) / (1000 * 60 * 60 * 24)))
+      : 0;
+
     return {
       id: inst.id,
       name: inst.name,
@@ -116,6 +131,9 @@ export class AdminService {
       ...(inst.logoUrl ? { logoUrl: inst.logoUrl } : {}),
       ...(inst.maxStudents ? { maxStudentsLimit: inst.maxStudents } : {}),
       ...(inst.maxTeachers ? { maxTeachersLimit: inst.maxTeachers } : {}),
+      isTrialActive,
+      trialEndsAt,
+      trialDaysLeft,
     };
   }
 
@@ -214,17 +232,42 @@ export class AdminService {
     actor: { id: string; email: string },
   ): Promise<InstituteTenantRecord> {
     const before = await this.getInstituteById(id);
+    const existing = await this.db.institute.findUnique({ where: { id }, select: { features: true } });
+    const feat = ((existing?.features || {}) as Record<string, any>);
+
+    if (dto.status === 'TRIAL') {
+      const trialDurationDays = (dto as any).trialDays || 7;
+      const trialEndsAt = new Date(Date.now() + trialDurationDays * 24 * 60 * 60 * 1000).toISOString();
+      feat.isTrial = true;
+      feat.trialStartedAt = new Date().toISOString();
+      feat.trialEndsAt = trialEndsAt;
+      feat.trialDays = trialDurationDays;
+    } else if (dto.status === 'ACTIVE') {
+      feat.isTrial = false;
+    }
+
+    const updateData: Record<string, any> = {
+      status: dto.status,
+      isActive: dto.status !== 'SUSPENDED' && dto.status !== 'ARCHIVED',
+    };
+    if (dto.status === 'TRIAL' || dto.status === 'ACTIVE') {
+      updateData.features = feat;
+    }
+
     await this.db.institute.update({
       where: { id },
-      data: { status: dto.status, isActive: dto.status !== 'SUSPENDED' && dto.status !== 'ARCHIVED' },
+      data: updateData,
     });
+    if (this.redis && typeof this.redis.invalidateTenant === 'function') {
+      await this.redis.invalidateTenant(id).catch(() => {});
+    }
     await this.recordAuditLog({
       actorId: actor.id,
       actorEmail: actor.email,
       action: 'INSTITUTE_STATUS_CHANGED',
       targetId: id,
       targetType: 'INSTITUTE',
-      details: `Changed status from ${before.status} to ${dto.status}. Reason: ${dto.reason}`,
+      details: `Changed status from ${before.status} to ${dto.status}. Reason: ${dto.reason}${dto.status === 'TRIAL' ? ' (7-Day Free Trial Activated)' : ''}`,
       status: dto.status === 'SUSPENDED' || dto.status === 'ARCHIVED' ? 'WARNING' : 'SUCCESS',
     });
     return this.getInstituteById(id);

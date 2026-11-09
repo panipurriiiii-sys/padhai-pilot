@@ -22,8 +22,8 @@ import {
 } from './ui';
 
 const TRANSITIONS: { to: InstituteStatus; label: string; icon: React.ElementType; danger?: boolean }[] = [
-  { to: 'ACTIVE', label: 'Activate', icon: PlayCircle },
-  { to: 'TRIAL', label: 'Set to trial', icon: FlaskConical },
+  { to: 'ACTIVE', label: 'Activate (Permanent)', icon: PlayCircle },
+  { to: 'TRIAL', label: 'Grant 7-Day Free Trial', icon: FlaskConical },
   { to: 'SUSPENDED', label: 'Suspend', icon: PauseCircle, danger: true },
   { to: 'ARCHIVED', label: 'Archive', icon: Archive, danger: true },
 ];
@@ -111,6 +111,7 @@ export function InstituteDetail({ id }: { id: string }) {
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
             {[
               ['Plan', i.plan],
+              ['Trial Status', i.isTrialActive ? `Active (${i.trialDaysLeft} days left)` : i.status === 'TRIAL' ? 'Trial Expired' : 'Not on Trial'],
               ['Owner', `${i.ownerName || '-'} (${i.ownerEmail || '-'})`],
               ['Phone', i.ownerPhone || '-'],
               ['Students', `${i.studentCount}${i.maxStudentsLimit ? ` / ${i.maxStudentsLimit}` : ' (no cap)'}`],
@@ -215,7 +216,7 @@ export function InstituteDetail({ id }: { id: string }) {
               type="button"
               className={transition === 'SUSPENDED' || transition === 'ARCHIVED' ? 'btn-danger' : 'btn-primary'}
               disabled={busy || reason.trim().length < 3}
-              onClick={() => transition && run(() => adminApi.updateInstituteStatus(id, transition, reason.trim()), `Status set to ${transition}.`, closeAll)}
+              onClick={() => transition && run(() => adminApi.updateInstituteStatus(id, transition, reason.trim()), transition === 'TRIAL' ? '7-Day Free Trial granted successfully.' : `Status set to ${transition}.`, closeAll)}
             >
               {busy && <Spin />} Confirm
             </button>
@@ -223,8 +224,13 @@ export function InstituteDetail({ id }: { id: string }) {
         }
       >
         {err && <div className="notice is-danger" role="alert">{err}</div>}
+        {transition === 'TRIAL' && (
+          <div className="p-3 mb-2 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs">
+            <strong>7-Day Free Trial:</strong> This grants full access to the institute and unfreezes all student portals for exactly 7 days from now.
+          </div>
+        )}
         <Field label="Reason (recorded in the audit log)">
-          <textarea className="input-paper w-full" rows={3} value={reason} onChange={(e) => setReason(e.target.value)} />
+          <textarea className="input-paper w-full" rows={3} value={reason} placeholder={transition === 'TRIAL' ? 'e.g. Granted 7-day trial extension upon tuition owner request' : 'State reason'} onChange={(e) => setReason(e.target.value)} />
         </Field>
       </Dialog>
 
