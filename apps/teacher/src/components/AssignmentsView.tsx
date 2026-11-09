@@ -14,7 +14,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import type { BatchSummary, Assignment, AssignmentSubmission } from '@padhai-pilot/shared';
-import { EmptyState } from '@padhai-pilot/ui';
+import { EmptyState, Pagination, usePagination } from '@padhai-pilot/ui';
 import { AssignmentCompletionCard } from './charts';
 
 interface AssignmentsViewProps {
@@ -48,6 +48,8 @@ export function AssignmentsView({
   const [attachmentName, setAttachmentName] = useState('');
   const [attachBusy, setAttachBusy] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+
+  const pagedAssignments = usePagination(assignments, 10);
 
   const handleAttach = async (file: File | undefined) => {
     if (!file) return;
@@ -192,46 +194,57 @@ export function AssignmentsView({
           <EmptyState art="education/homework" title="No assignments published yet" description="Create an assignment to give a batch a problem set. Submissions and grading status will show up here." />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {assignments.map((asg) => (
-            <div
-              key={asg.id}
-              className="p-5 rounded-xl bg-white border border-border-paper hover:border-border-paper transition flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-surface-subtle text-electric border border-electric/20">
-                    {asg.subject}
-                  </span>
-                  <span className="text-xs text-stone-500 flex items-center gap-1 font-['Inter']">
-                    <Calendar className="w-3.5 h-3.5 text-electric" />
-                    Due {new Date(asg.dueDate).toLocaleDateString()}
-                  </span>
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {pagedAssignments.pagedItems.map((asg) => (
+              <div
+                key={asg.id}
+                className="p-5 rounded-xl bg-white border border-border-paper hover:border-border-paper transition flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-surface-subtle text-electric border border-electric/20">
+                      {asg.subject}
+                    </span>
+                    <span className="text-xs text-stone-500 flex items-center gap-1 font-['Inter']">
+                      <Calendar className="w-3.5 h-3.5 text-electric" />
+                      Due {new Date(asg.dueDate).toLocaleDateString()}
+                    </span>
+                  </div>
+
+                  <h3 className="font-semibold text-base text-stone-900 leading-snug">{asg.title}</h3>
+                  <p className="text-xs text-stone-500 mt-1.5 line-clamp-2 leading-relaxed">
+                    {asg.instructions}
+                  </p>
                 </div>
 
-                <h3 className="font-semibold text-base text-stone-900 leading-snug">{asg.title}</h3>
-                <p className="text-xs text-stone-500 mt-1.5 line-clamp-2 leading-relaxed">
-                  {asg.instructions}
-                </p>
-              </div>
+                <div className="mt-5 pt-3 border-t border-border-paper flex items-center justify-between">
+                  <div className="font-['Inter'] text-xs">
+                    <span className="text-stone-900 font-bold">{asg.submissionCount}</span>
+                    <span className="text-stone-500"> / {asg.totalStudents} submitted</span>
+                    <span className="ml-2 text-[10px] text-stone-500">(Max: {asg.maxMarks} pts)</span>
+                  </div>
 
-              <div className="mt-5 pt-3 border-t border-border-paper flex items-center justify-between">
-                <div className="font-['Inter'] text-xs">
-                  <span className="text-stone-900 font-bold">{asg.submissionCount}</span>
-                  <span className="text-stone-500"> / {asg.totalStudents} submitted</span>
-                  <span className="ml-2 text-[10px] text-stone-500">(Max: {asg.maxMarks} pts)</span>
+                  <button
+                    onClick={() => handleOpenSubmissions(asg)}
+                    className="px-3 py-1.5 rounded-lg bg-surface-subtle hover:bg-electric text-stone-700 hover:text-white border border-border-paper hover:border-electric text-xs font-semibold transition flex items-center gap-1.5"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>Review Work</span>
+                  </button>
                 </div>
-
-                <button
-                  onClick={() => handleOpenSubmissions(asg)}
-                  className="px-3 py-1.5 rounded-lg bg-surface-subtle hover:bg-electric text-stone-700 hover:text-white border border-border-paper hover:border-electric text-xs font-semibold transition flex items-center gap-1.5"
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  <span>Review Work</span>
-                </button>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+          <Pagination
+            currentPage={pagedAssignments.currentPage}
+            totalPages={pagedAssignments.totalPages}
+            totalItems={pagedAssignments.totalItems}
+            pageSize={pagedAssignments.pageSize}
+            onPageChange={pagedAssignments.setPage}
+            onPageSizeChange={pagedAssignments.setPageSize}
+            pageSizeOptions={[10, 20, 40]}
+          />
         </div>
       )}
 

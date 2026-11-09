@@ -188,3 +188,4 @@ export function usePagination<T>(items: T[], initialPageSize = 10) {
     canPrev: currentPage > 1,
   };
 }
+

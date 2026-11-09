@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import type { UseQueryResult } from '@tanstack/react-query';
-import { Skeleton } from './Skeleton';
+import { Skeleton, CardSkeleton } from './Skeleton';
 import { ErrorState } from './ErrorState';
 import { EmptyPaper } from './Paper';
 import { errorMessage } from '../../lib/format';
@@ -12,6 +12,8 @@ interface QueryBoundaryProps<T> {
   isEmpty?: (data: T) => boolean;
   emptyTitle?: string;
   emptyDescription?: string;
+  /** Custom skeleton node (e.g., <ListRowSkeleton /> or <MetricsGridSkeleton />) */
+  skeleton?: React.ReactNode;
   children: (data: T) => React.ReactNode;
 }
 
@@ -21,14 +23,17 @@ export function QueryBoundary<T>({
   isEmpty,
   emptyTitle = 'Nothing here yet',
   emptyDescription = 'New items will appear here as soon as they are published.',
+  skeleton,
   children,
 }: QueryBoundaryProps<T>): React.ReactElement | null {
   if (query.isLoading) {
+    if (skeleton) {
+      return <>{skeleton}</>;
+    }
     return (
       <View style={{ gap: 12 }}>
-        <Skeleton height={72} />
-        <Skeleton height={72} />
-        <Skeleton height={72} />
+        <CardSkeleton />
+        <CardSkeleton />
       </View>
     );
   }

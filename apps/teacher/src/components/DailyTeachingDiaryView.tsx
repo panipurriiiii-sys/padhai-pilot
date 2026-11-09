@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { teacherApi } from '../lib/api';
 import { LoadError } from './LoadError';
+import { Pagination, usePagination } from '@padhai-pilot/ui';
 import type {
   DailyTeachingDiaryEntry,
   TeachingDiaryOverview,
@@ -144,6 +145,8 @@ export function DailyTeachingDiaryView({
     }
     return true;
   });
+
+  const pagedDiaries = usePagination(filteredDiaries, 8);
 
   return (
     <div className="space-y-6">
@@ -318,8 +321,9 @@ export function DailyTeachingDiaryView({
                 </button>
               </div>
             ) : (
-              <div className="space-y-3">
-                {filteredDiaries.map((entry) => {
+              <div className="space-y-4">
+                <div className="space-y-3">
+                  {pagedDiaries.pagedItems.map((entry) => {
                   const isSelected = previewEntry?.id === entry.id;
                   const formattedDate = new Date(entry.lessonDate).toLocaleDateString('en-IN', {
                     day: 'numeric',
@@ -396,6 +400,16 @@ export function DailyTeachingDiaryView({
                     </div>
                   );
                 })}
+                </div>
+                <Pagination
+                  currentPage={pagedDiaries.currentPage}
+                  totalPages={pagedDiaries.totalPages}
+                  totalItems={pagedDiaries.totalItems}
+                  pageSize={pagedDiaries.pageSize}
+                  onPageChange={pagedDiaries.setPage}
+                  onPageSizeChange={pagedDiaries.setPageSize}
+                  pageSizeOptions={[8, 16, 32]}
+                />
               </div>
             )}
           </div>

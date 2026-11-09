@@ -23,6 +23,7 @@ import {
 import { teacherApi } from '../lib/api';
 import { uploadMediaFile } from '../lib/mediaUpload';
 import { LoadError } from './LoadError';
+import { Pagination, usePagination } from '@padhai-pilot/ui';
 import type {
   StudyMaterialItem,
   CreateStudyMaterialDto,
@@ -213,6 +214,8 @@ export function StudyMaterialView({
     return true;
   });
 
+  const pagedMaterials = usePagination(filteredMaterials, 12);
+
   return (
     <div className="space-y-6">
       {/* Toast Notification */}
@@ -309,8 +312,9 @@ export function StudyMaterialView({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredMaterials.map((mat) => {
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {pagedMaterials.pagedItems.map((mat) => {
             const formattedDate = new Date(mat.createdAt).toLocaleDateString('en-IN', {
               day: 'numeric',
               month: 'short',
@@ -401,6 +405,16 @@ export function StudyMaterialView({
               </div>
             );
           })}
+          </div>
+          <Pagination
+            currentPage={pagedMaterials.currentPage}
+            totalPages={pagedMaterials.totalPages}
+            totalItems={pagedMaterials.totalItems}
+            pageSize={pagedMaterials.pageSize}
+            onPageChange={pagedMaterials.setPage}
+            onPageSizeChange={pagedMaterials.setPageSize}
+            pageSizeOptions={[12, 24, 48]}
+          />
         </div>
       )}
 

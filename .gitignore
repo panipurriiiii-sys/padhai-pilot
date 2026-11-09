@@ -48,3 +48,5 @@ palette_analysis.json
 google-services.json
 GoogleService-Info.plist
 release/
+.vercel
+.env*

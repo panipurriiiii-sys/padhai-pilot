@@ -14,6 +14,7 @@ import {
   FileText,
 } from 'lucide-react';
 import type { BatchSummary, StudentRosterItem } from '@padhai-pilot/shared';
+import { Pagination, usePagination } from '@padhai-pilot/ui';
 import { BatchActions } from './BatchActions';
 import { teacherApi } from '../lib/api';
 
@@ -61,6 +62,8 @@ export function BatchesView({
       s.rollNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       s.email.toLowerCase().includes(searchTerm.toLowerCase()),
   );
+
+  const pagedStudents = usePagination(filteredStudents, 15);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -242,7 +245,7 @@ export function BatchesView({
                     </td>
                   </tr>
                 ) : (
-                  filteredStudents.map((std) => (
+                  pagedStudents.pagedItems.map((std) => (
                     <tr key={std.id} className="hover:bg-amber-50/20 transition">
                       <td className="py-3 px-4 font-['Inter'] font-bold text-[var(--brand-electric)]">
                         {std.rollNumber}
@@ -288,6 +291,17 @@ export function BatchesView({
                 )}
               </tbody>
             </table>
+          </div>
+          <div className="p-4 border-t border-[var(--border-paper)]">
+            <Pagination
+              currentPage={pagedStudents.currentPage}
+              totalPages={pagedStudents.totalPages}
+              totalItems={pagedStudents.totalItems}
+              pageSize={pagedStudents.pageSize}
+              onPageChange={pagedStudents.setPage}
+              onPageSizeChange={pagedStudents.setPageSize}
+              pageSizeOptions={[15, 30, 50]}
+            />
           </div>
         </div>
       )}
