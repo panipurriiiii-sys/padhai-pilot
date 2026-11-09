@@ -91,6 +91,10 @@ export const RedisKeys = {
     return `${REDIS_KEY_VERSION}:tenant:${instituteId}:teacher:${teacherId}:dashboard`;
   },
 
+  studentDashboard(instituteId: string, studentId: string): string {
+    return `${REDIS_KEY_VERSION}:tenant:${instituteId}:student:${studentId}:dashboard`;
+  },
+
   rateLimit(action: string, identifier: string): string {
     const hashed = hashIdentifier(identifier);
     return `${REDIS_KEY_VERSION}:rate:${action}:${hashed}`;

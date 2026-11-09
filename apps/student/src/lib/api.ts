@@ -31,6 +31,26 @@ function getCleanApiBaseUrl(): string {
 let cachedToken: string | null = null;
 let cachedSession: UserSession | null = null;
 
+// Lightweight in-memory SWR / TTL cache to eliminate redundant API calls
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+const studentApiCache = new Map<string, CacheEntry<any>>();
+const CLIENT_CACHE_TTL_MS = 180_000; // 3 minutes
+
+export function invalidateStudentApiCache(endpointPrefix?: string) {
+  if (!endpointPrefix) {
+    studentApiCache.clear();
+    return;
+  }
+  for (const key of studentApiCache.keys()) {
+    if (key.includes(endpointPrefix)) {
+      studentApiCache.delete(key);
+    }
+  }
+}
+
 export function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
   if (!cachedToken) {
@@ -55,7 +75,10 @@ export function clearAuthToken() {
   }
 }
 
-async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+async function request<T>(
+  endpoint: string,
+  options: RequestInit & { bypassCache?: boolean } = {},
+): Promise<T> {
   const token = getAuthToken();
   const headers = new Headers(options.headers || {});
 
@@ -67,6 +90,17 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   const baseUrl = getCleanApiBaseUrl();
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   const url = endpoint.startsWith('http') ? endpoint : `${baseUrl}${cleanEndpoint}`;
+
+  const method = (options.method || 'GET').toUpperCase();
+  const isGet = method === 'GET';
+
+  // Client-side cache check to prevent redundant edge/database roundtrips
+  if (isGet && !options.bypassCache) {
+    const cached = studentApiCache.get(cleanEndpoint);
+    if (cached && Date.now() - cached.timestamp < CLIENT_CACHE_TTL_MS) {
+      return cached.data as T;
+    }
+  }
 
   let res: Response;
   try {
@@ -87,7 +121,16 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   }
 
   if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
+  const data = (await res.json()) as T;
+
+  if (isGet) {
+    studentApiCache.set(cleanEndpoint, { data, timestamp: Date.now() });
+  } else {
+    // Invalidate student-scoped read cache on any state mutation
+    invalidateStudentApiCache('student');
+  }
+
+  return data;
 }
 
 /** Fetches a server-rendered PDF (needs the bearer token) as a Blob. */

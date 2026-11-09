@@ -2,6 +2,7 @@ import { inheritBatchFees } from '../finance/fee-core.js';
 import {
   Injectable,
   Inject,
+  Optional,
   NotFoundException,
   BadRequestException,
   ForbiddenException,
@@ -11,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { AccessService } from '../common/access/access.service.js';
 import { AssessmentService } from '../assessment/assessment.service.js';
+import { RedisService } from '../redis/redis.service.js';
 import type { AuthenticatedUser } from '../common/types.js';
 import { signSession } from '../common/security/session.js';
 import {
@@ -85,16 +87,24 @@ export class StudentService {
   constructor(
     @Inject(AccessService) private readonly access: AccessService,
     @Inject(AssessmentService) private readonly assessmentService: AssessmentService,
+    @Optional() @Inject(RedisService) private readonly redis?: RedisService,
   ) {}
 
   // ==========================================================================
-  // 1. DASHBOARD
+  // 1. DASHBOARD (With Redis Caching)
   // ==========================================================================
   async getDashboard(user: AuthenticatedUser) {
+    if (this.redis) {
+      const cached = await this.redis.getStudentDashboard<any>(user.instituteId, user.id);
+      if (cached) {
+        return cached;
+      }
+    }
+
     const profile = await this.getStudentProfile(user);
 
     if (profile.isFrozen) {
-      return {
+      const frozenRes = {
         student: {
           id: user.id,
           fullName: profile.fullName,
@@ -129,6 +139,10 @@ export class StudentService {
         freezeReason: profile.freezeReason,
         freezeMessage: profile.freezeMessage,
       };
+      if (this.redis) {
+        await this.redis.setStudentDashboard(user.instituteId, user.id, frozenRes, 60).catch(() => {});
+      }
+      return frozenRes;
     }
 
     const [results, materials, attendance, announcements, fees, diaries, assignments, tests, timetable] = await Promise.all([
@@ -149,7 +163,7 @@ export class StudentService {
       : 0;
     const today = new Date().toLocaleDateString('en-US', { weekday: 'long', timeZone: 'Asia/Kolkata' });
 
-    return {
+    const dashboardResponse = {
       student: {
         id: user.id,
         fullName: profile.fullName,
@@ -177,6 +191,12 @@ export class StudentService {
       announcements: announcements.slice(0, 2),
       timetable: timetable.find((d) => d.day === today)?.slots ?? [],
     };
+
+    if (this.redis) {
+      await this.redis.setStudentDashboard(user.instituteId, user.id, dashboardResponse, 180).catch(() => {});
+    }
+
+    return dashboardResponse;
   }
 
   // ==========================================================================
@@ -710,6 +730,9 @@ export class StudentService {
         if (!isUniqueViolation(err) || attempt === 1) throw err; // double-submit race: fall through to update path
       }
     }
+    if (this.redis) {
+      await this.redis.invalidateStudentDashboard(user.instituteId, user.id).catch(() => {});
+    }
     return {
       success: true,
       message: isDraft ? 'Assignment draft saved successfully.' : 'Assignment submitted successfully to faculty!',
@@ -897,6 +920,9 @@ export class StudentService {
         });
         return created;
       });
+      if (this.redis) {
+        await this.redis.invalidateStudentDashboard(user.instituteId, user.id).catch(() => {});
+      }
       return toResult(attempt);
     } catch (err) {
       if (isUniqueViolation(err)) {

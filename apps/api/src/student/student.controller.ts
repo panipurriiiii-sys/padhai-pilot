@@ -11,6 +11,7 @@ import {
   HttpCode,
   HttpStatus,
   Inject,
+  Res,
 } from '@nestjs/common';
 import { StudentService } from './student.service.js';
 import { AuthGuard } from '../common/guards/auth.guard.js';
@@ -40,7 +41,10 @@ export class StudentController {
 
   // 1. Dashboard Overview
   @Get('dashboard')
-  async getDashboard(@CurrentUser() user: AuthenticatedUser) {
+  async getDashboard(@CurrentUser() user: AuthenticatedUser, @Res({ passthrough: true }) res?: any) {
+    if (res?.setHeader) {
+      res.setHeader('Cache-Control', 'private, max-age=60, stale-while-revalidate=120');
+    }
     return this.studentService.getDashboard(user);
   }
 
@@ -84,7 +88,10 @@ export class StudentController {
 
   // 5. Timetable & Academic Calendar
   @Get('timetable')
-  async getTimetable(@CurrentUser() user: AuthenticatedUser) {
+  async getTimetable(@CurrentUser() user: AuthenticatedUser, @Res({ passthrough: true }) res?: any) {
+    if (res?.setHeader) {
+      res.setHeader('Cache-Control', 'private, max-age=300, stale-while-revalidate=600');
+    }
     return this.studentService.getTimetable(user);
   }
 
@@ -152,7 +159,11 @@ export class StudentController {
     @CurrentUser() user: AuthenticatedUser,
     @Query('batchId') batchId?: string,
     @Query('category') category?: string,
+    @Res({ passthrough: true }) res?: any,
   ) {
+    if (res?.setHeader) {
+      res.setHeader('Cache-Control', 'private, max-age=180, stale-while-revalidate=300');
+    }
     return this.studentService.getMaterials(user, batchId, category);
   }
 
@@ -164,7 +175,10 @@ export class StudentController {
 
   // 12. Announcements & Faculty Notices
   @Get('announcements')
-  async getAnnouncements(@CurrentUser() user: AuthenticatedUser) {
+  async getAnnouncements(@CurrentUser() user: AuthenticatedUser, @Res({ passthrough: true }) res?: any) {
+    if (res?.setHeader) {
+      res.setHeader('Cache-Control', 'private, max-age=120, stale-while-revalidate=300');
+    }
     return this.studentService.getAnnouncements(user);
   }
 

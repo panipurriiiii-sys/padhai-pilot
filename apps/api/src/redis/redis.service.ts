@@ -236,6 +236,27 @@ export class RedisService implements OnModuleInit {
     this.logger.debug(`Dashboard cache invalidated for teacher: ${teacherId} in tenant: ${instituteId}`);
   }
 
+  async getStudentDashboard<T>(instituteId: string, studentId: string): Promise<T | null> {
+    const key = RedisKeys.studentDashboard(instituteId, studentId);
+    return this.get<T>(key);
+  }
+
+  async setStudentDashboard<T>(
+    instituteId: string,
+    studentId: string,
+    data: T,
+    ttlSeconds: number = RedisTTLs.DASHBOARD_SECONDS,
+  ): Promise<void> {
+    const key = RedisKeys.studentDashboard(instituteId, studentId);
+    await this.set(key, data, ttlSeconds);
+  }
+
+  async invalidateStudentDashboard(instituteId: string, studentId: string): Promise<void> {
+    const key = RedisKeys.studentDashboard(instituteId, studentId);
+    await this.del(key);
+    this.logger.debug(`Dashboard cache invalidated for student: ${studentId} in tenant: ${instituteId}`);
+  }
+
   async invalidateTenant(instituteId: string): Promise<void> {
     const brandingKey = RedisKeys.tenantBranding(instituteId);
     const featuresKey = RedisKeys.tenantFeatures(instituteId);

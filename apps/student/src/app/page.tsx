@@ -247,6 +247,10 @@ function StudentPortal() {
 
   const availableSubjects = useMemo(() => {
     const subs = new Set<string>();
+    dashboardData?.recentResults?.forEach((r: any) => { if (r.subject?.trim()) subs.add(r.subject.trim()); });
+    dashboardData?.recentMaterials?.forEach((m: any) => { if (m.subject?.trim()) subs.add(m.subject.trim()); });
+    dashboardData?.recentDiaries?.forEach((d: any) => { if (d.subject?.trim()) subs.add(d.subject.trim()); });
+    dashboardData?.timetable?.forEach((slot: any) => { if (slot.subject?.trim()) subs.add(slot.subject.trim()); });
     diaries.forEach((d) => { if (d.subject?.trim()) subs.add(d.subject.trim()); });
     materials.forEach((m) => { if (m.subject?.trim()) subs.add(m.subject.trim()); });
     results.forEach((r) => { if (r.subject?.trim()) subs.add(r.subject.trim()); });
@@ -259,7 +263,7 @@ function StudentPortal() {
       if (rec.subjectName?.trim()) subs.add(rec.subjectName.trim());
     });
     return ['ALL', ...Array.from(subs)];
-  }, [diaries, materials, results, assignments, tests, timetable, attendanceData]);
+  }, [dashboardData, diaries, materials, results, assignments, tests, timetable, attendanceData]);
 
   // Modals & Interactive States
   const [selectedResult, setSelectedResult] = useState<StudentAssessmentResult | null>(null);
@@ -324,22 +328,22 @@ function StudentPortal() {
   const loadResource = async (key: string) => {
     try {
       switch (key) {
-        case 'dashboard': setDashboardData(await studentApi.getDashboard()); break;
-        case 'results': setResults(await studentApi.getPublishedResults()); break;
-        case 'notifications': setNotifications(await studentApi.getNotifications()); break;
-        case 'materials': setMaterials(await studentApi.getStudyMaterials()); break;
-        case 'attendance': setAttendanceData(await studentApi.getAttendance()); break;
-        case 'fees': setFeesData(await studentApi.getFees()); break;
-        case 'announcements': setAnnouncements(await studentApi.getAnnouncements()); break;
-        case 'diary': setDiaries(await studentApi.getTeachingDiaries()); break;
-        case 'timetable': setTimetable(await studentApi.getTimetable()); break;
-        case 'assignments': setAssignments(await studentApi.getAssignments()); break;
-        case 'tests': setTests(await studentApi.getTests()); break;
-        case 'queries': setQueries(await studentApi.getAcademicQueries()); break;
-        case 'tasks': setStudyTasks(await studentApi.getStudyTasks()); break;
-        case 'documents': setDocuments(await studentApi.getDocuments()); break;
-        case 'profile': setProfileData(await studentApi.getProfile()); break;
-        case 'analytics': setAnalytics(await studentApi.getAnalytics()); break;
+        case 'dashboard': setDashboardData(await cached('student:dashboard', 3 * 60 * 1000, () => studentApi.getDashboard())); break;
+        case 'results': setResults(await cached('student:results', 3 * 60 * 1000, () => studentApi.getPublishedResults())); break;
+        case 'notifications': setNotifications(await cached('student:notifications', 60 * 1000, () => studentApi.getNotifications())); break;
+        case 'materials': setMaterials(await cached('student:materials', 5 * 60 * 1000, () => studentApi.getStudyMaterials())); break;
+        case 'attendance': setAttendanceData(await cached('student:attendance', 5 * 60 * 1000, () => studentApi.getAttendance())); break;
+        case 'fees': setFeesData(await cached('student:fees', 5 * 60 * 1000, () => studentApi.getFees())); break;
+        case 'announcements': setAnnouncements(await cached('student:announcements', 3 * 60 * 1000, () => studentApi.getAnnouncements())); break;
+        case 'diary': setDiaries(await cached('student:diary', 5 * 60 * 1000, () => studentApi.getTeachingDiaries())); break;
+        case 'timetable': setTimetable(await cached('student:timetable', 10 * 60 * 1000, () => studentApi.getTimetable())); break;
+        case 'assignments': setAssignments(await cached('student:assignments', 3 * 60 * 1000, () => studentApi.getAssignments())); break;
+        case 'tests': setTests(await cached('student:tests', 3 * 60 * 1000, () => studentApi.getTests())); break;
+        case 'queries': setQueries(await cached('student:queries', 2 * 60 * 1000, () => studentApi.getAcademicQueries())); break;
+        case 'tasks': setStudyTasks(await cached('student:tasks', 2 * 60 * 1000, () => studentApi.getStudyTasks())); break;
+        case 'documents': setDocuments(await cached('student:documents', 10 * 60 * 1000, () => studentApi.getDocuments())); break;
+        case 'profile': setProfileData(await cached('student:profile', 10 * 60 * 1000, () => studentApi.getProfile())); break;
+        case 'analytics': setAnalytics(await cached('student:analytics', 5 * 60 * 1000, () => studentApi.getAnalytics())); break;
       }
       setLoadErrors((p) => {
         if (!p[key]) return p;
@@ -352,8 +356,19 @@ function StudentPortal() {
     }
   };
 
-  // Load all student data. Every resource is independent: one failure never hides the others,
-  // and a failed resource shows an error state with Retry instead of empty or sample data.
+  // Ultra-optimized initial load: only load Overview essentials on boot
+  const INITIAL_RESOURCES = ['dashboard', 'notifications'] as const;
+
+  const loadInitialStudentData = async () => {
+    setIsLoading(true);
+    try {
+      await Promise.all(INITIAL_RESOURCES.map((k) => loadResource(k)));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load all student data on demand or full manual refresh
   const loadAllStudentData = async () => {
     setIsLoading(true);
     try {
@@ -388,7 +403,7 @@ function StudentPortal() {
       .then((auth) => {
         if (auth && auth.user) {
           setStudent(auth.user);
-          return loadAllStudentData();
+          return loadInitialStudentData();
         } else {
           clearAuthToken();
           invalidate('student:currentUser');
@@ -405,7 +420,7 @@ function StudentPortal() {
           const session = studentApi.getStudentSession();
           if (session) {
             setStudent(session);
-            return loadAllStudentData();
+            return loadInitialStudentData();
           }
         }
       })
@@ -415,6 +430,17 @@ function StudentPortal() {
 
     return () => window.removeEventListener("pp:unauthorized", onUnauthorized);
   }, []);
+
+  // Lazy-load additional tab data on demand with zero redundant queries
+  useEffect(() => {
+    if (!student) return;
+    const needed = TAB_RESOURCES[activeTab];
+    if (needed && needed.length > 0) {
+      needed.forEach((k) => {
+        loadResource(k);
+      });
+    }
+  }, [activeTab, student]);
 
   const blockingErrors = (TAB_RESOURCES[activeTab] ?? []).filter((k) => loadErrors[k]);
 
@@ -428,7 +454,7 @@ function StudentPortal() {
     try {
       const res = await studentApi.login(loginEmail.trim(), loginPassword);
       setStudent(res.user);
-      await loadAllStudentData();
+      await loadInitialStudentData();
     } catch (err: any) {
       setAuthError(err.message || 'Invalid email or password.');
     } finally {
@@ -452,7 +478,7 @@ function StudentPortal() {
       });
       setStudent(res.user);
       setAuthSuccessMsg('Account created successfully!');
-      await loadAllStudentData();
+      await loadInitialStudentData();
     } catch (err: any) {
       setAuthError(err.message || 'Registration failed.');
     } finally {
