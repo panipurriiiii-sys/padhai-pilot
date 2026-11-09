@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import webPush from 'web-push';
+import * as webPushModule from 'web-push';
+
+const webPush: any = (webPushModule as any).default || webPushModule;
 import {
   DEFAULT_VAPID_PUBLIC_KEY,
   DEFAULT_VAPID_PRIVATE_KEY,
