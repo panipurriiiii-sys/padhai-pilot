@@ -283,6 +283,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
 
       - name: Fast-forward / Merge dev into main & Push
         run: |
@@ -290,7 +291,7 @@ jobs:
           echo " All CI quality checks PASSED on branch 'dev'!"
           echo " Auto-promoting verified code from 'dev' to 'main'..."
           echo "=========================================================="
-          git fetch origin main:main
+          git fetch origin main
           git checkout main
           git merge origin/dev --ff-only || git merge origin/dev -m "chore(release): auto-promote dev to main [skip ci]"
           git push origin main

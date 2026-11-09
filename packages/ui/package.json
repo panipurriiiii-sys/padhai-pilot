@@ -20,7 +20,7 @@
   "scripts": {
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
-    "test": "node --test test/core.test.mjs"
+    "test": "node --import tsx --test test/core.test.mjs"
   },
   "dependencies": {
     "@padhai-pilot/assets": "*",
