@@ -5,7 +5,7 @@ import type { CreateFacultyDto } from '@padhai-pilot/shared';
 const MIN = 60 * 1000;
 
 export const useFaculties = () =>
-  useQuery({ queryKey: ['tuition', 'faculties'], queryFn: tuitionService.getFaculties, staleTime: 2 * MIN });
+  useQuery({ queryKey: ['tuition', 'faculties'], queryFn: tuitionService.getFaculties, staleTime: 5 * MIN });
 
 export const useFacultyMutations = () => {
   const qc = useQueryClient();

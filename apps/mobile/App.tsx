@@ -24,7 +24,7 @@ function App() {
             // Keep in storage and memory for 24 hours so user can browse offline anytime
             gcTime: 1000 * 60 * 60 * 24,
             refetchOnWindowFocus: false,
-            refetchOnReconnect: 'always',
+            refetchOnReconnect: false,
           },
         },
       }),

@@ -23,9 +23,9 @@ export const studentKeys = {
 };
 
 export const useDashboardData = () =>
-  useQuery({ queryKey: studentKeys.dashboard, queryFn: studentService.getDashboard, staleTime: 2 * MIN });
+  useQuery({ queryKey: studentKeys.dashboard, queryFn: studentService.getDashboard, staleTime: 10 * MIN });
 export const useStudentAnalytics = () =>
-  useQuery({ queryKey: studentKeys.analytics, queryFn: studentService.getAnalytics, staleTime: 5 * MIN });
+  useQuery({ queryKey: studentKeys.analytics, queryFn: studentService.getAnalytics, staleTime: 15 * MIN });
 export const useProfileData = () =>
   useQuery({ queryKey: studentKeys.profile, queryFn: studentService.getProfile, staleTime: 10 * MIN });
 export const useDiaryData = () =>
@@ -33,27 +33,33 @@ export const useDiaryData = () =>
 export const useTimetableData = () =>
   useQuery({ queryKey: studentKeys.timetable, queryFn: studentService.getTimetable, staleTime: 30 * MIN });
 export const useAttendanceData = () =>
-  useQuery({ queryKey: studentKeys.attendance, queryFn: studentService.getAttendance, staleTime: 5 * MIN });
+  useQuery({ queryKey: studentKeys.attendance, queryFn: studentService.getAttendance, staleTime: 2 * MIN });
 export const useAssignmentsData = () =>
-  useQuery({ queryKey: studentKeys.assignments, queryFn: studentService.getAssignments, staleTime: 2 * MIN });
+  useQuery({ queryKey: studentKeys.assignments, queryFn: studentService.getAssignments, staleTime: 3 * MIN });
 export const useTestsData = () =>
   useQuery({ queryKey: studentKeys.tests, queryFn: studentService.getTests, staleTime: 2 * MIN });
 export const useResultsData = () =>
   useQuery({ queryKey: studentKeys.results, queryFn: studentService.getResults, staleTime: 5 * MIN });
 export const useMaterialsData = () =>
-  useQuery({ queryKey: studentKeys.materials, queryFn: studentService.getMaterials, staleTime: 5 * MIN });
+  useQuery({ queryKey: studentKeys.materials, queryFn: studentService.getMaterials, staleTime: 3 * MIN });
 export const useFeesData = () =>
   useQuery({ queryKey: studentKeys.fees, queryFn: studentService.getFees, staleTime: 5 * MIN });
 export const useAnnouncementsData = () =>
-  useQuery({ queryKey: studentKeys.announcements, queryFn: studentService.getAnnouncements, staleTime: 2 * MIN });
+  useQuery({ queryKey: studentKeys.announcements, queryFn: studentService.getAnnouncements, staleTime: 5 * MIN });
 export const useQueriesData = () =>
   useQuery({ queryKey: studentKeys.queries, queryFn: studentService.getQueries, staleTime: 2 * MIN });
 export const useStudyTasksData = () =>
-  useQuery({ queryKey: studentKeys.tasks, queryFn: studentService.getStudyTasks, staleTime: 2 * MIN });
+  useQuery({ queryKey: studentKeys.tasks, queryFn: studentService.getStudyTasks, staleTime: 5 * MIN });
 export const useDocumentsData = () =>
-  useQuery({ queryKey: studentKeys.documents, queryFn: studentService.getDocuments, staleTime: 10 * MIN });
+  useQuery({ queryKey: studentKeys.documents, queryFn: studentService.getDocuments, staleTime: 30 * MIN });
 export const useNotificationsData = () =>
-  useQuery({ queryKey: studentKeys.notifications, queryFn: studentService.getNotifications, staleTime: MIN });
+  useQuery({
+    queryKey: studentKeys.notifications,
+    queryFn: studentService.getNotifications,
+    staleTime: MIN, // 1 min stale
+    refetchInterval: 90 * 1000, // poll every 90 s when app is active
+    refetchIntervalInBackground: false, // stop polling when app is backgrounded
+  });
 
 export const useSubmitAssignment = () => {
   const qc = useQueryClient();
