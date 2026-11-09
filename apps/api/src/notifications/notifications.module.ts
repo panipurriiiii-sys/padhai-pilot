@@ -23,3 +23,4 @@ import { PrismaModule } from '../prisma/prisma.module.js';
   ],
 })
 export class NotificationsModule {}
+

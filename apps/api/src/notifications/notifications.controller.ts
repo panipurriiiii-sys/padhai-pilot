@@ -127,3 +127,4 @@ export class NotificationsController {
     return this.notificationsService.updateUserPreferences(user.id, body);
   }
 }
+

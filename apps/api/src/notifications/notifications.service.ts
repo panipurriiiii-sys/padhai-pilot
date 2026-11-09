@@ -188,3 +188,4 @@ export class NotificationsService {
     return 'GENERAL';
   }
 }
+

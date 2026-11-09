@@ -8,3 +8,4 @@ export const DEFAULT_VAPID_PRIVATE_KEY =
 
 export const DEFAULT_VAPID_SUBJECT =
   process.env.VAPID_SUBJECT || 'mailto:support@padhaipilot.com';
+

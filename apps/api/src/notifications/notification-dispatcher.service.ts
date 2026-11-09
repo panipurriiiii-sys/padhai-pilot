@@ -215,3 +215,4 @@ export class NotificationDispatcherService {
     return 'GENERAL';
   }
 }
+

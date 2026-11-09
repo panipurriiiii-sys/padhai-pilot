@@ -43,6 +43,7 @@ palette_analysis.json
 
 # Local dev harness (embedded PostgreSQL data, generated secrets, logs)
 .local/
+.claude/
 # Firebase config (owner supplies; never commit)
 google-services.json
 GoogleService-Info.plist

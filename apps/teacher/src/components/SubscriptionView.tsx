@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { teacherApi } from '../lib/api';
 import type { SubscriptionPlan, FeatureEvaluationResult } from '@padhai-pilot/shared';
+import { RazorpayCheckoutButton } from './RazorpayCheckoutButton';
 
 interface SubscriptionViewProps {
   instituteName?: string;
@@ -425,7 +426,18 @@ export function SubscriptionView({
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                       <span>Active Plan</span>
                     </button>
-                  ) : (
+                  ) : tier.id === 'ENTERPRISE' ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        window.open('mailto:sales@padhaipilot.in?subject=PadhaiPilot Enterprise Inquiry', '_blank');
+                      }}
+                      className="w-full py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 bg-stone-900 hover:bg-black text-white"
+                    >
+                      <span>Contact Sales</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  ) : tier.id === 'STARTER' ? (
                     <button
                       type="button"
                       onClick={() => {
@@ -435,19 +447,38 @@ export function SubscriptionView({
                         }
                         setCurrentPlan(tier.id);
                         setActionSuccess(
-                          `Upgraded institute to ${tier.name}. Entitlements and capacity refreshed immediately.`,
+                          `Switched institute to Free Starter. Entitlements updated.`,
                         );
                         setTimeout(() => setActionSuccess(null), 5000);
                       }}
+                      className="w-full py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 bg-stone-900 hover:bg-black text-white"
+                    >
+                      <span>Switch to Free Starter</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  ) : (
+                    <RazorpayCheckoutButton
+                      amount={billingCycle === 'annual' ? (tier.id === 'GROWTH' ? 14990 : 34990) : (tier.id === 'GROWTH' ? 1499 : 3499)}
+                      description={`PadhaiPilot ${tier.name} (${billingCycle === 'annual' ? 'Annual Plan' : 'Monthly Plan'})`}
+                      notes={{
+                        plan: tier.id,
+                        billingCycle,
+                        instituteName: instituteName || 'My Institute',
+                      }}
+                      buttonText={`Pay & Upgrade to ${tier.name}`}
                       className={`w-full py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
                         tier.isPopular
                           ? 'bg-[var(--brand-electric)] hover:bg-brand-hover text-white shadow-sm'
                           : 'bg-stone-900 hover:bg-black text-white'
                       }`}
-                    >
-                      <span>{tier.id === 'ENTERPRISE' ? 'Contact Sales' : `Upgrade to ${tier.name}`}</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
+                      onPaymentSuccess={(res) => {
+                        setCurrentPlan(tier.id);
+                        setActionSuccess(
+                          `Payment verified via Razorpay! Upgraded institute to ${tier.name}. Payment ID: ${res.razorpay_payment_id}`,
+                        );
+                        setTimeout(() => setActionSuccess(null), 6000);
+                      }}
+                    />
                   )}
                 </div>
               </div>
