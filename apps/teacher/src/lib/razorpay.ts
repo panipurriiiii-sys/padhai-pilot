@@ -122,8 +122,12 @@ export async function openRazorpayCheckout(options: RazorpayCheckoutOptions): Pr
     throw error;
   }
 
-  const razorpayKey =
-    process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_TxwR5OYFQBCDbY';
+  const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+  if (!razorpayKey) {
+    const err = new Error('Razorpay key is not configured. Set NEXT_PUBLIC_RAZORPAY_KEY_ID.');
+    options.onError?.(err);
+    throw err;
+  }
 
   // STEP 2: FRONTEND - Razorpay Checkout Modal
   const rzpOptions = {
