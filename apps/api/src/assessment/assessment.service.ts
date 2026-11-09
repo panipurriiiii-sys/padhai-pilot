@@ -753,12 +753,30 @@ export class AssessmentService {
           status: 'PUBLISHED',
         },
       },
-      include: {
-        assessment: true,
+      select: {
+        id: true,
+        assessmentId: true,
+        obtainedMarks: true,
+        percentage: true,
+        grade: true,
+        resultStatus: true,
+        attendanceStatus: true,
+        feedback: true,
+        assessment: {
+          select: {
+            title: true,
+            subject: true,
+            category: true,
+            assessmentDate: true,
+            maxMarks: true,
+            publishedAt: true,
+          },
+        },
       },
       orderBy: {
         assessment: { assessmentDate: 'desc' },
       },
+      take: 100,
     });
 
     return marks.map((m) => ({
@@ -786,6 +804,7 @@ export class AssessmentService {
         instituteId: studentUser.instituteId,
       },
       orderBy: { createdAt: 'desc' },
+      take: 50,
     });
     return notifs.map((n) => ({
       id: n.id,
@@ -835,6 +854,7 @@ export class AssessmentService {
         faculty: { select: { id: true, fullName: true } },
       },
       orderBy: { createdAt: 'desc' },
+      take: 100,
     });
 
     return materials.map((m) => ({

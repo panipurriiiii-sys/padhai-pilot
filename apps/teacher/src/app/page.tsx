@@ -170,27 +170,27 @@ function TeacherApp() {
   const loadResource = useCallback(async (key: ResourceKey) => {
     try {
       switch (key) {
-        case 'dashboard': setMetrics(await teacherApi.getDashboard()); break;
+        case 'dashboard': setMetrics(await cached('teacher:dashboard', 3 * 60 * 1000, () => teacherApi.getDashboard())); break;
         case 'batches': {
-          const list = await teacherApi.getBatches();
+          const list = await cached('teacher:batches', 5 * 60 * 1000, () => teacherApi.getBatches());
           setBatches(list);
           setSelectedBatchId((cur) => (cur && list.some((b) => b.id === cur) ? cur : list[0]?.id ?? ''));
           if (list.length > 0) {
-            const rosterRes = await teacherApi.getBatchRoster(list[0].id);
+            const rosterRes = await cached(`teacher:roster:${list[0].id}`, 3 * 60 * 1000, () => teacherApi.getBatchRoster(list[0].id));
             setStudents(rosterRes.students);
           } else {
             setStudents([]);
           }
           break;
         }
-        case 'invitations': setInvitations(await teacherApi.getInvitations()); break;
-        case 'assignments': setAssignments(await teacherApi.getAssignments()); break;
-        case 'tests': setTests(await teacherApi.getTests()); break;
-        case 'lessonPlans': setLessonPlans(await teacherApi.getLessonPlans()); break;
-        case 'timetable': setTimetable(await teacherApi.getTimetable()); break;
-        case 'announcements': setAnnouncements(await teacherApi.getAnnouncements()); break;
-        case 'reports': setReports(await teacherApi.getReports()); break;
-        case 'analytics': setAnalytics(await teacherApi.getAnalytics()); break;
+        case 'invitations': setInvitations(await cached('teacher:invitations', 5 * 60 * 1000, () => teacherApi.getInvitations())); break;
+        case 'assignments': setAssignments(await cached('teacher:assignments', 3 * 60 * 1000, () => teacherApi.getAssignments())); break;
+        case 'tests': setTests(await cached('teacher:tests', 3 * 60 * 1000, () => teacherApi.getTests())); break;
+        case 'lessonPlans': setLessonPlans(await cached('teacher:lessonPlans', 5 * 60 * 1000, () => teacherApi.getLessonPlans())); break;
+        case 'timetable': setTimetable(await cached('teacher:timetable', 10 * 60 * 1000, () => teacherApi.getTimetable())); break;
+        case 'announcements': setAnnouncements(await cached('teacher:announcements', 3 * 60 * 1000, () => teacherApi.getAnnouncements())); break;
+        case 'reports': setReports(await cached('teacher:reports', 5 * 60 * 1000, () => teacherApi.getReports())); break;
+        case 'analytics': setAnalytics(await cached('teacher:analytics', 10 * 60 * 1000, () => teacherApi.getAnalytics())); break;
       }
       setLoadErrors((p) => {
         if (!p[key]) return p;
@@ -277,6 +277,7 @@ function TeacherApp() {
     room?: string;
   }) => {
     const newBatch = await teacherApi.createBatch(data);
+    invalidate('teacher:batches');
     setBatches((prev) => [...prev, newBatch]);
     setSelectedBatchId(newBatch.id);
   };
@@ -287,6 +288,7 @@ function TeacherApp() {
     records: { studentId: string; status: any; note?: string }[];
   }) => {
     await teacherApi.saveAttendance(data);
+    invalidate('teacher:dashboard');
     const updatedMetrics = await teacherApi.getDashboard();
     setMetrics(updatedMetrics);
   };
@@ -351,6 +353,7 @@ function TeacherApp() {
     priority?: 'NORMAL' | 'URGENT';
   }) => {
     const newAnn = await teacherApi.createAnnouncement(data);
+    invalidate('teacher:announcements');
     setAnnouncements((prev) => [newAnn, ...prev]);
   };
 
@@ -365,7 +368,7 @@ function TeacherApp() {
   };
 
   const handleLogout = async () => {
-    invalidate('teacher:currentUser');
+    ['teacher:currentUser','teacher:dashboard','teacher:batches','teacher:assignments','teacher:tests','teacher:lessonPlans','teacher:timetable','teacher:announcements','teacher:reports','teacher:analytics','teacher:invitations'].forEach(invalidate);
     try {
       await teacherApi.logout();
     } catch {

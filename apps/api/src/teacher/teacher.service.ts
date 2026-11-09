@@ -47,23 +47,76 @@ export class TeacherService {
       isActive: true,
     };
 
-    const batches = await this.db.batch.findMany({
-      where: batchWhere,
-      select: {
-        id: true,
-        name: true,
-        code: true,
-        subject: true,
-        gradeLevel: true,
-        room: true,
-        teacherId: true,
-        _count: {
-          select: {
-            enrollments: { where: { status: 'ACTIVE' } },
+    const today = toDateOnly(new Date());
+    const todayDayName = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'][
+      new Date().getDay()
+    ];
+
+    const [batches, pendingReviews, recordedSessions, todaySchedule, recentAnnouncements] = await Promise.all([
+      this.db.batch.findMany({
+        where: batchWhere,
+        select: {
+          id: true,
+          name: true,
+          code: true,
+          subject: true,
+          gradeLevel: true,
+          room: true,
+          teacherId: true,
+          _count: {
+            select: {
+              enrollments: { where: { status: 'ACTIVE' } },
+            },
           },
         },
-      },
-    });
+      }),
+      this.db.assignmentSubmission.count({
+        where: {
+          status: 'SUBMITTED',
+          assignment: {
+            instituteId: user.instituteId,
+            ...(staffBatchIds !== null ? { batchId: { in: staffBatchIds } } : {}),
+          },
+        },
+      }),
+      this.db.attendanceSession.findMany({
+        where: {
+          instituteId: user.instituteId,
+          ...(staffBatchIds !== null ? { batchId: { in: staffBatchIds } } : {}),
+          date: today,
+        },
+        select: { batchId: true },
+      }),
+      this.db.timetableSlot.findMany({
+        where: {
+          instituteId: user.instituteId,
+          ...(staffBatchIds !== null ? { batchId: { in: staffBatchIds } } : {}),
+          dayOfWeek: todayDayName,
+        },
+        include: {
+          batch: { select: { name: true } },
+        },
+      }),
+      this.db.announcement.findMany({
+        where: {
+          instituteId: user.instituteId,
+          OR: [
+            { batchId: null },
+            ...(staffBatchIds !== null && staffBatchIds.length > 0 ? [{ batchId: { in: staffBatchIds } }] : []),
+          ],
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 3,
+        select: {
+          id: true,
+          title: true,
+          content: true,
+          priority: true,
+          batchId: true,
+          createdAt: true,
+        },
+      }),
+    ]);
 
     const activeBatches = batches.map((b) => ({
       id: b.id,
@@ -77,54 +130,8 @@ export class TeacherService {
     }));
 
     const totalStudents = activeBatches.reduce((sum, b) => sum + b.studentCount, 0);
-
-    const pendingReviews = await this.db.assignmentSubmission.count({
-      where: {
-        status: 'SUBMITTED',
-        assignment: {
-          instituteId: user.instituteId,
-          ...(staffBatchIds !== null ? { batchId: { in: staffBatchIds } } : {}),
-        },
-      },
-    });
-
-    const today = toDateOnly(new Date());
-    const recordedSessions = await this.db.attendanceSession.findMany({
-      where: {
-        instituteId: user.instituteId,
-        ...(staffBatchIds !== null ? { batchId: { in: staffBatchIds } } : {}),
-        date: today,
-      },
-      select: { batchId: true },
-    });
     const recordedBatchIds = new Set(recordedSessions.map((s) => s.batchId));
     const pendingAttendanceCount = activeBatches.filter((b) => !recordedBatchIds.has(b.id)).length;
-
-    const todayDayName = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'][
-      new Date().getDay()
-    ];
-    const todaySchedule = await this.db.timetableSlot.findMany({
-      where: {
-        instituteId: user.instituteId,
-        ...(staffBatchIds !== null ? { batchId: { in: staffBatchIds } } : {}),
-        dayOfWeek: todayDayName,
-      },
-      include: {
-        batch: { select: { name: true } },
-      },
-    });
-
-    const recentAnnouncements = await this.db.announcement.findMany({
-      where: {
-        instituteId: user.instituteId,
-        OR: [
-          { batchId: null },
-          ...(staffBatchIds !== null && staffBatchIds.length > 0 ? [{ batchId: { in: staffBatchIds } }] : []),
-        ],
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 3,
-    });
 
     const metrics = {
       todayClassesCount: todaySchedule.length,
