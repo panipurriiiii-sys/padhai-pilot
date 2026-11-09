@@ -34,7 +34,7 @@ export const teacherKeys = {
 };
 
 export const useTeacherDashboard = () =>
-  useQuery({ queryKey: teacherKeys.dashboard, queryFn: teacherService.getDashboard, staleTime: 2 * MIN });
+  useQuery({ queryKey: teacherKeys.dashboard, queryFn: teacherService.getDashboard, staleTime: 10 * MIN });
 export const useBatches = () =>
   useQuery({ queryKey: teacherKeys.batches, queryFn: teacherService.getBatches, staleTime: 10 * MIN });
 export const useRoster = (batchId?: string) =>
@@ -42,38 +42,38 @@ export const useRoster = (batchId?: string) =>
     queryKey: teacherKeys.roster(batchId ?? ''),
     queryFn: () => teacherService.getRoster(batchId as string),
     enabled: !!batchId,
-    staleTime: 5 * MIN,
+    staleTime: 3 * MIN,
   });
 export const useAttendanceSession = (batchId?: string, date?: string) =>
   useQuery({
     queryKey: teacherKeys.attendance(batchId ?? '', date ?? ''),
     queryFn: () => teacherService.getAttendance(batchId as string, date as string),
     enabled: !!batchId && !!date,
-    staleTime: 0,
+    staleTime: 0, // live session — always re-fetch on mount
   });
 export const useAssessments = () =>
   useQuery({ queryKey: teacherKeys.assessments, queryFn: () => teacherService.getAssessments(), staleTime: 2 * MIN });
 export const useTeacherAssignments = () =>
-  useQuery({ queryKey: teacherKeys.assignments, queryFn: teacherService.getAssignments, staleTime: 2 * MIN });
+  useQuery({ queryKey: teacherKeys.assignments, queryFn: teacherService.getAssignments, staleTime: 3 * MIN });
 export const useSubmissions = (assignmentId?: string) =>
   useQuery({
     queryKey: teacherKeys.submissions(assignmentId ?? ''),
     queryFn: () => teacherService.getSubmissions(assignmentId as string),
     enabled: !!assignmentId,
-    staleTime: MIN,
+    staleTime: 2 * MIN,
   });
 export const useInvitations = (batchId?: string) =>
-  useQuery({ queryKey: [...teacherKeys.invitations, batchId ?? 'all'], queryFn: () => teacherService.getInvitations(batchId), staleTime: MIN });
+  useQuery({ queryKey: [...teacherKeys.invitations, batchId ?? 'all'], queryFn: () => teacherService.getInvitations(batchId), staleTime: 5 * MIN });
 export const useTeacherTimetable = (batchId?: string) =>
   useQuery({ queryKey: [...teacherKeys.timetable, batchId ?? 'all'], queryFn: () => teacherService.getTimetable(batchId), staleTime: 5 * MIN });
 export const useTeacherAnnouncements = () =>
-  useQuery({ queryKey: teacherKeys.announcements, queryFn: () => teacherService.getAnnouncements(), staleTime: 2 * MIN });
+  useQuery({ queryKey: teacherKeys.announcements, queryFn: () => teacherService.getAnnouncements(), staleTime: 5 * MIN });
 export const useDiaries = () =>
-  useQuery({ queryKey: teacherKeys.diaries, queryFn: teacherService.getDiaries, staleTime: 2 * MIN });
+  useQuery({ queryKey: teacherKeys.diaries, queryFn: teacherService.getDiaries, staleTime: 5 * MIN });
 export const useTeacherMaterials = () =>
-  useQuery({ queryKey: teacherKeys.materials, queryFn: teacherService.getMaterials, staleTime: 5 * MIN });
+  useQuery({ queryKey: teacherKeys.materials, queryFn: teacherService.getMaterials, staleTime: 3 * MIN });
 export const useLeaves = () =>
-  useQuery({ queryKey: teacherKeys.leaves, queryFn: teacherService.getLeaves, staleTime: 2 * MIN });
+  useQuery({ queryKey: teacherKeys.leaves, queryFn: teacherService.getLeaves, staleTime: 5 * MIN });
 export const useSalaries = () =>
   useQuery({ queryKey: teacherKeys.salaries, queryFn: teacherService.getSalaries, staleTime: 10 * MIN });
 
@@ -245,16 +245,16 @@ export const useLessonPlanMutations = () => {
 };
 
 export const useTeacherReports = () =>
-  useQuery({ queryKey: teacherKeys.reports, queryFn: teacherService.getReports, staleTime: 5 * MIN });
+  useQuery({ queryKey: teacherKeys.reports, queryFn: teacherService.getReports, staleTime: 15 * MIN });
 
 export const useTeacherAnalytics = () =>
-  useQuery({ queryKey: teacherKeys.analytics, queryFn: teacherService.getAnalytics, staleTime: 5 * MIN });
+  useQuery({ queryKey: teacherKeys.analytics, queryFn: teacherService.getAnalytics, staleTime: 15 * MIN });
 
 export const useTeacherQueries = (batchId?: string, status?: string) =>
   useQuery({
     queryKey: teacherKeys.queries(batchId, status),
     queryFn: () => teacherService.getQueries({ batchId, status }),
-    staleTime: 2 * MIN,
+    staleTime: MIN, // 1 min — notification-like, can be slightly stale
   });
 
 export const useReplyToQuery = () => {

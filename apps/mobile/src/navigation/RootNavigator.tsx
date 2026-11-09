@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, BackHandler } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Platform, ToastAndroid, View, StyleSheet, BackHandler } from 'react-native';
 import { useAuthStore } from '../store/useAuthStore';
 import { useNavigationStore } from '../store/useNavigationStore';
 import { LoginScreen } from '../features/auth/screens/LoginScreen';
@@ -33,6 +33,7 @@ export const RootNavigator: React.FC = () => {
   const { colors } = useTheme();
   const { isAuthenticated, session } = useAuthStore();
   const { currentTab, setTab } = useNavigationStore();
+  const lastBackPressRef = useRef<number>(0);
 
   const [hasCheckedPermissions, setHasCheckedPermissions] = useState(false);
   const [needsPermissionOnboarding, setNeedsPermissionOnboarding] = useState(false);
@@ -79,7 +80,13 @@ export const RootNavigator: React.FC = () => {
     });
   }, [isAuthenticated]);
 
-  // Android back button: from any non-home tab return to the role's home tab, then let the OS exit.
+  // Android back button:
+  //   • FacultyJoinScreen (unauthenticated with pending invite) → dismiss the invite.
+  //   • Non-home main tabs (attendance, classes, diary, results, more) → do nothing (consume event).
+  //   • Home/dashboard tab → first press shows "press back again to exit" toast;
+  //     second press within 2 s lets the OS exit the app.
+  //   Sub-views (TeacherMore/StudentMore panels) register their own handler via
+  //   useBackToMenu which sits higher in the LIFO stack and resolves first.
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       if (!isAuthenticated) {
@@ -91,11 +98,22 @@ export const RootNavigator: React.FC = () => {
       }
       const home = isTeacher ? 'teacher_dashboard' : 'student_dashboard';
       const cur = useNavigationStore.getState().currentTab;
+
+      // On a non-home main tab: consume the event but stay on the current tab.
       if (cur !== home && cur !== 'dashboard') {
-        setTab(home);
         return true;
       }
-      return false;
+
+      // On home/dashboard tab: require a second back press within 2 s to exit.
+      const now = Date.now();
+      if (now - lastBackPressRef.current < 2000) {
+        return false; // let the OS exit the app
+      }
+      lastBackPressRef.current = now;
+      if (Platform.OS === 'android') {
+        ToastAndroid.show('Press back again to exit', ToastAndroid.SHORT);
+      }
+      return true;
     });
     return () => sub.remove();
   }, [isAuthenticated, isTeacher, setTab]);

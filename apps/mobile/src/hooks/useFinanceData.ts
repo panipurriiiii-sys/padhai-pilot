@@ -20,21 +20,21 @@ export const useFeeLedger = (batchId?: string) =>
     queryKey: financeKeys.ledger(batchId ?? ''),
     queryFn: () => financeService.getLedger(batchId as string),
     enabled: !!batchId,
-    staleTime: MIN,
+    staleTime: 2 * MIN,
   });
 export const useFeeSummary = (batchId?: string) =>
   useQuery({
     queryKey: financeKeys.summary(batchId ?? ''),
     queryFn: () => financeService.getSummary(batchId as string),
     enabled: !!batchId,
-    staleTime: MIN,
+    staleTime: 2 * MIN,
   });
 export const useFeeStructures = (batchId?: string) =>
   useQuery({
     queryKey: financeKeys.structures(batchId ?? ''),
     queryFn: () => financeService.getStructures(batchId as string),
     enabled: !!batchId,
-    staleTime: MIN,
+    staleTime: 2 * MIN,
   });
 
 export const useFeeMutations = (batchId: string) => {
@@ -68,7 +68,7 @@ export const useFeeMutations = (batchId: string) => {
 export const useStudentFeeLedger = () =>
   useQuery({ queryKey: financeKeys.studentLedger, queryFn: financeService.getStudentLedger, staleTime: 2 * MIN });
 export const useStudentLeaves = () =>
-  useQuery({ queryKey: financeKeys.studentLeaves, queryFn: financeService.getStudentLeaves, staleTime: MIN });
+  useQuery({ queryKey: financeKeys.studentLeaves, queryFn: financeService.getStudentLeaves, staleTime: 2 * MIN });
 export const useStudentLeaveMutations = () => {
   const qc = useQueryClient();
   const refresh = () => qc.invalidateQueries({ queryKey: financeKeys.studentLeaves });
@@ -78,7 +78,7 @@ export const useStudentLeaveMutations = () => {
   };
 };
 export const useLeavesForReview = () =>
-  useQuery({ queryKey: financeKeys.leaveReview, queryFn: () => financeService.getLeavesForReview(), staleTime: MIN });
+  useQuery({ queryKey: financeKeys.leaveReview, queryFn: () => financeService.getLeavesForReview(), staleTime: 2 * MIN });
 export const useReviewLeave = () => {
   const qc = useQueryClient();
   return useMutation({
