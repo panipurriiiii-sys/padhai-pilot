@@ -569,7 +569,7 @@ export function BulkMarksEntryView({
   // -------------------------------------------------------------
   // ACTIONS: SAVE DRAFT & PUBLISH
   // -------------------------------------------------------------
-  const handleSaveDraft = async () => {
+  const handleSaveDraft = async (): Promise<string | undefined> => {
     setIsLoading(true);
     setSaveMessage(null);
 
@@ -606,6 +606,7 @@ export function BulkMarksEntryView({
         text: `Draft saved successfully (${res.savedCount || roster.length} student records preserved in database).`,
       });
       setTimeout(() => setSaveMessage(null), 4000);
+      return res.assessmentId;
     } catch (err: any) {
       setSaveMessage({
         type: 'error',
@@ -635,11 +636,16 @@ export function BulkMarksEntryView({
   const handleConfirmPublish = async () => {
     setIsPublishing(true);
     try {
-      // 1. Ensure draft is up to date first
-      await handleSaveDraft();
+      // 1. Ensure draft is up to date — get the id back directly (React state may not have updated yet)
+      const savedId = await handleSaveDraft();
+      const idToPublish = savedId ?? currentAssessmentId;
+      if (!idToPublish) {
+        alert('Could not save draft. Please try again.');
+        return;
+      }
 
       // 2. Publish
-      const res = await teacherApi.publishAssessment(currentAssessmentId);
+      const res = await teacherApi.publishAssessment(idToPublish);
       setAssessmentStatus('PUBLISHED');
       setShowReviewModal(false);
       setPublishSuccessData({

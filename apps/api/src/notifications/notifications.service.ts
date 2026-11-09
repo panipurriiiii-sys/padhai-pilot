@@ -51,18 +51,24 @@ export class NotificationsService {
       }
     }
 
-    const [items, unreadCount, total] = await Promise.all([
-      this.prisma.notification.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        take: limit,
-        skip: offset,
-      }),
-      this.prisma.notification.count({
-        where: { userId, isRead: false },
-      }),
-      this.prisma.notification.count({ where }),
-    ]);
+    let items: any[] = [], unreadCount = 0, total = 0;
+    try {
+      [items, unreadCount, total] = await Promise.all([
+        this.prisma.notification.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          take: limit,
+          skip: offset,
+        }),
+        this.prisma.notification.count({
+          where: { userId, isRead: false },
+        }),
+        this.prisma.notification.count({ where }),
+      ]);
+    } catch {
+      // Migration pending — return empty list rather than 500
+      return { items: [], unreadCount: 0, total: 0 };
+    }
 
     return {
       items: items.map((item) => ({
