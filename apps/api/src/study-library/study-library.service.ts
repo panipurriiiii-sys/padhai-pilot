@@ -152,11 +152,11 @@ export class StudyLibraryService {
       throw new ForbiddenException('Access denied.');
     }
 
-    // Increment view count
-    await this.prisma.libraryMaterial.update({
+    // Fire-and-forget: increment view count without blocking the response
+    this.prisma.libraryMaterial.update({
       where: { id },
       data: { viewCount: { increment: 1 } },
-    });
+    }).catch(() => { /* non-critical counter — ignore errors */ });
 
     return item;
   }

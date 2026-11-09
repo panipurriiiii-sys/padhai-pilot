@@ -11,7 +11,7 @@ import type { AuthenticatedUser } from '../common/types.js';
 import { PublishThemeDto, RestoreThemeDto, UpdateBrandingDto, ValidateThemeDto } from './dto/theme.dto.js';
 
 /** Edge/CDN friendly: browsers revalidate after 60s, shared caches keep it 5 min, stale copy served while refreshing. */
-export const THEME_CACHE_CONTROL = 'public, max-age=60, s-maxage=300, stale-while-revalidate=86400';
+export const THEME_CACHE_CONTROL = 'public, s-maxage=600, stale-while-revalidate=1200';
 
 const parseIfNoneMatch = (header?: string): string[] =>
   (header ?? '')

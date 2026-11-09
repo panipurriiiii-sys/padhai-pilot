@@ -1,5 +1,8 @@
 import Link from 'next/link';
 import Image from 'next/image';
+
+// ISR: regenerate at most once per hour; serves stale instantly while revalidating in the background
+export const revalidate = 3600;
 import {
   BookOpen,
   GraduationCap,
@@ -107,7 +110,7 @@ export default function HomePage() {
       <header className="sticky top-0 z-50 bg-[#FBFBF9]/90 backdrop-blur-md border-b border-[#E3DFD9] px-4 sm:px-6 py-3 sm:py-4">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            <img src="/logo.png" alt="PadhaiPilot" className="w-10 h-10 rounded-xl object-contain" />
+            <Image src="/logo.png" alt="PadhaiPilot" width={40} height={40} priority className="rounded-xl object-contain" />
             <div>
               <span className="font-['Playfair_Display'] font-bold text-xl tracking-tight text-[#1C1917]">
                 {SITE.name}
@@ -594,7 +597,7 @@ export default function HomePage() {
       <footer className="border-t border-[#E3DFD9] py-10 sm:py-12 px-4 sm:px-6 text-xs text-[#57534E] bg-white">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left">
           <div className="flex flex-wrap items-center justify-center gap-3">
-            <img src="/logo.png" alt="PadhaiPilot" className="w-7 h-7 rounded-xl object-contain" />
+            <Image src="/logo.png" alt="PadhaiPilot" width={28} height={28} className="rounded-xl object-contain" />
             <span className="font-['Playfair_Display'] font-bold text-base text-[#1C1917]">{SITE.name}</span>
             <span className="text-[11px] text-[#57534E] font-['Inter'] sm:ml-2">© 2026–2027 PadhaiPilot Inc.</span>
           </div>
