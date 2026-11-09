@@ -162,6 +162,13 @@ export class AdminController {
     };
   }
 
+  /** One-time setup: apply pending migrations + seed platform study library. Safe to call multiple times (idempotent). */
+  @Post('seed-library')
+  @HttpCode(HttpStatus.OK)
+  async seedLibrary(@CurrentUser() user: AuthenticatedUser) {
+    return this.adminService.seedLibraryMaterials(user.id);
+  }
+
   @Post('announcements')
   @HttpCode(HttpStatus.CREATED)
   async createAnnouncement(

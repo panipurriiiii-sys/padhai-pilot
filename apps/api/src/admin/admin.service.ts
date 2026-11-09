@@ -463,4 +463,81 @@ export class AdminService {
     });
     return this.shapeAnnouncement(created);
   }
+
+  async seedLibraryMaterials(uploadedBy: string): Promise<{ migrated: boolean; inserted: number; skipped: number }> {
+    // Apply pending DDL (idempotent — IF NOT EXISTS guards)
+    let migrated = false;
+    try {
+      await this.prisma.$executeRawUnsafe(`ALTER TABLE "Notification" ADD COLUMN IF NOT EXISTS "actionButtons" JSONB`);
+      await this.prisma.$executeRawUnsafe(`ALTER TABLE "Notification" ADD COLUMN IF NOT EXISTS "priority" TEXT NOT NULL DEFAULT 'NORMAL'`);
+      await this.prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "DeviceToken" ("id" TEXT NOT NULL,"userId" TEXT NOT NULL,"token" TEXT NOT NULL,"platform" TEXT NOT NULL,"endpoint" TEXT,"p256dh" TEXT,"auth" TEXT,"userAgent" TEXT,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,CONSTRAINT "DeviceToken_pkey" PRIMARY KEY ("id"))`);
+      await this.prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "DeviceToken_token_key" ON "DeviceToken"("token")`);
+      await this.prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "DeviceToken_userId_idx" ON "DeviceToken"("userId")`);
+      await this.prisma.$executeRawUnsafe(`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='DeviceToken_userId_fkey') THEN ALTER TABLE "DeviceToken" ADD CONSTRAINT "DeviceToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE; END IF; END $$`);
+      await this.prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "LibraryMaterial" ("id" TEXT NOT NULL,"instituteId" TEXT,"uploadedBy" TEXT NOT NULL,"title" TEXT NOT NULL,"description" TEXT,"board" TEXT NOT NULL,"classLevel" TEXT,"subject" TEXT,"contentType" TEXT NOT NULL,"fileUrl" TEXT,"externalUrl" TEXT,"yearOrEdition" TEXT,"tags" TEXT[] DEFAULT ARRAY[]::TEXT[],"isApproved" BOOLEAN NOT NULL DEFAULT false,"viewCount" INTEGER NOT NULL DEFAULT 0,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,CONSTRAINT "LibraryMaterial_pkey" PRIMARY KEY ("id"))`);
+      await this.prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "LibraryMaterial_board_classLevel_subject_idx" ON "LibraryMaterial"("board","classLevel","subject")`);
+      await this.prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "LibraryMaterial_instituteId_idx" ON "LibraryMaterial"("instituteId")`);
+      await this.prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "LibraryMaterial_contentType_idx" ON "LibraryMaterial"("contentType")`);
+      await this.prisma.$executeRawUnsafe(`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='LibraryMaterial_uploadedBy_fkey') THEN ALTER TABLE "LibraryMaterial" ADD CONSTRAINT "LibraryMaterial_uploadedBy_fkey" FOREIGN KEY ("uploadedBy") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE; END IF; END $$`);
+      migrated = true;
+    } catch (e: any) {
+      // Log but continue to seed
+      console.error('Migration step error (may already be applied):', e.message);
+    }
+    const seeds = [
+      { title:'NCERT Class 6 All Subjects', board:'CBSE', classLevel:'6', subject:null as string|null, contentType:'TEXTBOOK', externalUrl:'https://ncert.nic.in/textbook.php', yearOrEdition:'2024', tags:['ncert','class6'] },
+      { title:'NCERT Class 7 All Subjects', board:'CBSE', classLevel:'7', subject:null, contentType:'TEXTBOOK', externalUrl:'https://ncert.nic.in/textbook.php', yearOrEdition:'2024', tags:['ncert','class7'] },
+      { title:'NCERT Class 8 All Subjects', board:'CBSE', classLevel:'8', subject:null, contentType:'TEXTBOOK', externalUrl:'https://ncert.nic.in/textbook.php', yearOrEdition:'2024', tags:['ncert','class8'] },
+      { title:'NCERT Class 9 Mathematics', board:'CBSE', classLevel:'9', subject:'Mathematics', contentType:'TEXTBOOK', externalUrl:'https://ncert.nic.in/textbook.php?iemh1=0-15', yearOrEdition:'2024', tags:['ncert','maths'] },
+      { title:'NCERT Class 9 Science', board:'CBSE', classLevel:'9', subject:'Science', contentType:'TEXTBOOK', externalUrl:'https://ncert.nic.in/textbook.php?iesc1=0-15', yearOrEdition:'2024', tags:['ncert','science'] },
+      { title:'NCERT Class 9 Social Science', board:'CBSE', classLevel:'9', subject:'Social Science', contentType:'TEXTBOOK', externalUrl:'https://ncert.nic.in/textbook.php?iess1=0-5', yearOrEdition:'2024', tags:['ncert','sst'] },
+      { title:'NCERT Class 9 English', board:'CBSE', classLevel:'9', subject:'English', contentType:'TEXTBOOK', externalUrl:'https://ncert.nic.in/textbook.php?iebs1=0-11', yearOrEdition:'2024', tags:['ncert','english'] },
+      { title:'NCERT Class 10 Mathematics', board:'CBSE', classLevel:'10', subject:'Mathematics', contentType:'TEXTBOOK', externalUrl:'https://ncert.nic.in/textbook.php?jemh1=0-15', yearOrEdition:'2024', tags:['ncert','maths','board'] },
+      { title:'NCERT Class 10 Science', board:'CBSE', classLevel:'10', subject:'Science', contentType:'TEXTBOOK', externalUrl:'https://ncert.nic.in/textbook.php?jesc1=0-16', yearOrEdition:'2024', tags:['ncert','science','board'] },
+      { title:'NCERT Class 10 English First Flight', board:'CBSE', classLevel:'10', subject:'English', contentType:'TEXTBOOK', externalUrl:'https://ncert.nic.in/textbook.php?jebf1=0-11', yearOrEdition:'2024', tags:['ncert','english','board'] },
+      { title:'NCERT Class 10 Social Science', board:'CBSE', classLevel:'10', subject:'Social Science', contentType:'TEXTBOOK', externalUrl:'https://ncert.nic.in/textbook.php?jess1=0-5', yearOrEdition:'2024', tags:['ncert','sst','board'] },
+      { title:'NCERT Class 11 Physics Part I', board:'CBSE', classLevel:'11', subject:'Physics', contentType:'TEXTBOOK', externalUrl:'https://ncert.nic.in/textbook.php?keph1=0-8', yearOrEdition:'2024', tags:['ncert','physics'] },
+      { title:'NCERT Class 11 Chemistry Part I', board:'CBSE', classLevel:'11', subject:'Chemistry', contentType:'TEXTBOOK', externalUrl:'https://ncert.nic.in/textbook.php?kech1=0-7', yearOrEdition:'2024', tags:['ncert','chemistry'] },
+      { title:'NCERT Class 11 Mathematics', board:'CBSE', classLevel:'11', subject:'Mathematics', contentType:'TEXTBOOK', externalUrl:'https://ncert.nic.in/textbook.php?kemh1=0-16', yearOrEdition:'2024', tags:['ncert','maths'] },
+      { title:'NCERT Class 11 Biology', board:'CBSE', classLevel:'11', subject:'Biology', contentType:'TEXTBOOK', externalUrl:'https://ncert.nic.in/textbook.php?kebo1=0-22', yearOrEdition:'2024', tags:['ncert','biology'] },
+      { title:'NCERT Class 12 Physics Part I', board:'CBSE', classLevel:'12', subject:'Physics', contentType:'TEXTBOOK', externalUrl:'https://ncert.nic.in/textbook.php?leph1=0-9', yearOrEdition:'2024', tags:['ncert','physics','board'] },
+      { title:'NCERT Class 12 Chemistry Part I', board:'CBSE', classLevel:'12', subject:'Chemistry', contentType:'TEXTBOOK', externalUrl:'https://ncert.nic.in/textbook.php?lech1=0-8', yearOrEdition:'2024', tags:['ncert','chemistry','board'] },
+      { title:'NCERT Class 12 Mathematics Part I', board:'CBSE', classLevel:'12', subject:'Mathematics', contentType:'TEXTBOOK', externalUrl:'https://ncert.nic.in/textbook.php?lemh1=0-6', yearOrEdition:'2024', tags:['ncert','maths','board'] },
+      { title:'NCERT Class 12 Biology', board:'CBSE', classLevel:'12', subject:'Biology', contentType:'TEXTBOOK', externalUrl:'https://ncert.nic.in/textbook.php?lebo1=0-16', yearOrEdition:'2024', tags:['ncert','biology','board'] },
+      { title:'CBSE Class 10 Question Papers 2024', board:'CBSE', classLevel:'10', subject:null, contentType:'QUESTION_PAPER', externalUrl:'https://cbse.gov.in/cbsenew/question-paper.html', yearOrEdition:'2024', tags:['cbse','board','pyq'] },
+      { title:'CBSE Class 12 Question Papers 2024', board:'CBSE', classLevel:'12', subject:null, contentType:'QUESTION_PAPER', externalUrl:'https://cbse.gov.in/cbsenew/question-paper.html', yearOrEdition:'2024', tags:['cbse','board','pyq'] },
+      { title:'CBSE Sample Papers 2024-25', board:'CBSE', classLevel:null, subject:null, contentType:'QUESTION_PAPER', externalUrl:'https://cbseacademic.nic.in/SQP_CLASSXII_2024-25.html', yearOrEdition:'2024-25', tags:['cbse','sample'] },
+      { title:'CBSE Syllabus 2024-25', board:'CBSE', classLevel:null, subject:null, contentType:'SYLLABUS', externalUrl:'https://cbseacademic.nic.in/Curriculum_2024-25.html', yearOrEdition:'2024-25', tags:['cbse','syllabus'] },
+      { title:'ICSE Specimen Papers 2025', board:'ICSE', classLevel:'10', subject:null, contentType:'QUESTION_PAPER', externalUrl:'https://www.cisce.org/specimen-question-papers.aspx', yearOrEdition:'2025', tags:['icse','specimen'] },
+      { title:'ISC Specimen Papers 2025', board:'ICSE', classLevel:'12', subject:null, contentType:'QUESTION_PAPER', externalUrl:'https://www.cisce.org/specimen-question-papers.aspx', yearOrEdition:'2025', tags:['isc','specimen'] },
+      { title:'RBSE Textbooks Rajasthan', board:'RBSE', classLevel:null, subject:null, contentType:'TEXTBOOK', externalUrl:'https://rajeduboard.rajasthan.gov.in/', yearOrEdition:'2024', tags:['rbse','rajasthan'] },
+      { title:'RBSE Old Question Papers', board:'RBSE', classLevel:null, subject:null, contentType:'QUESTION_PAPER', externalUrl:'https://rajeduboard.rajasthan.gov.in/', yearOrEdition:'2024', tags:['rbse','pyq'] },
+      { title:'Maharashtra SSC Board Resources', board:'MH_SSC', classLevel:'10', subject:null, contentType:'TEXTBOOK', externalUrl:'https://www.mahahsscboard.in/', yearOrEdition:'2024', tags:['maharashtra','ssc'] },
+      { title:'Maharashtra HSC Board Resources', board:'MH_HSC', classLevel:'12', subject:null, contentType:'TEXTBOOK', externalUrl:'https://www.mahahsscboard.in/', yearOrEdition:'2024', tags:['maharashtra','hsc'] },
+      { title:'UP Board Textbooks and Papers', board:'UPMSP', classLevel:null, subject:null, contentType:'TEXTBOOK', externalUrl:'https://upmsp.edu.in/', yearOrEdition:'2024', tags:['up','upmsp'] },
+      { title:'UP Board Previous Year Papers', board:'UPMSP', classLevel:null, subject:null, contentType:'QUESTION_PAPER', externalUrl:'https://upmsp.edu.in/', yearOrEdition:'2024', tags:['up','pyq'] },
+      { title:'West Bengal Board WBBSE Resources', board:'WBBSE', classLevel:null, subject:null, contentType:'TEXTBOOK', externalUrl:'https://wbbse.wb.gov.in/', yearOrEdition:'2024', tags:['wb','wbbse'] },
+      { title:'Bihar Board BSEB Resources', board:'BSEB', classLevel:null, subject:null, contentType:'TEXTBOOK', externalUrl:'https://biharboardonline.com/', yearOrEdition:'2024', tags:['bihar','bseb'] },
+      { title:'Bihar Board BSEB Previous Papers', board:'BSEB', classLevel:null, subject:null, contentType:'QUESTION_PAPER', externalUrl:'https://biharboardonline.com/', yearOrEdition:'2024', tags:['bihar','pyq'] },
+      { title:'Gujarat Board GSEB Resources', board:'GSEB', classLevel:null, subject:null, contentType:'TEXTBOOK', externalUrl:'https://gseb.org/', yearOrEdition:'2024', tags:['gseb','gujarat'] },
+      { title:'HP Board HPBOSE Resources', board:'HPBSE', classLevel:null, subject:null, contentType:'TEXTBOOK', externalUrl:'https://www.hpbose.org/', yearOrEdition:'2024', tags:['hp','hpbose'] },
+      { title:'Punjab Board PSEB Resources', board:'PSEB', classLevel:null, subject:null, contentType:'TEXTBOOK', externalUrl:'https://pseb.ac.in/', yearOrEdition:'2024', tags:['punjab','pseb'] },
+      { title:'MP Board MPBSE Resources', board:'MPBSE', classLevel:null, subject:null, contentType:'TEXTBOOK', externalUrl:'https://mpbse.nic.in/', yearOrEdition:'2024', tags:['mp','mpbse'] },
+      { title:'NCERT Solutions and Study Material', board:'CBSE', classLevel:null, subject:null, contentType:'SOLUTION', externalUrl:'https://ncert.nic.in/', yearOrEdition:'2024', tags:['ncert','solutions'] },
+      { title:'CBSE Official Website', board:'CBSE', classLevel:null, subject:null, contentType:'SYLLABUS', externalUrl:'https://cbse.gov.in/', yearOrEdition:'2024-25', tags:['cbse'] },
+    ];
+    let inserted = 0, skipped = 0;
+    for (const s of seeds) {
+      const key = Buffer.from(`${s.title}||${s.board}||${s.contentType}`).toString('base64').slice(0, 25).replace(/[^a-zA-Z0-9]/g, 'x');
+      try {
+        await this.prisma.libraryMaterial.upsert({
+          where: { id: key },
+          create: { id: key, uploadedBy, instituteId: null, isApproved: true, viewCount: 0, ...s },
+          update: { externalUrl: s.externalUrl, isApproved: true },
+        });
+        inserted++;
+      } catch { skipped++; }
+    }
+    return { migrated, inserted, skipped };
+  }
 }
