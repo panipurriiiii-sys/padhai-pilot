@@ -31,7 +31,13 @@ export default function Overview() {
   const health = useLoad(() => adminApi.getHealth());
   const analytics = useLoad(() => adminApi.getAdminAnalytics());
   const institutes = useLoad(() => adminApi.getInstitutes());
-  const revenue = useLoad(() => adminApi.getRevenueSummary());
+
+  const [revenueFilter, setRevenueFilter] = useState<{ from: string; to: string; instituteId: string }>({ from: '', to: '', instituteId: '' });
+  const revenue = useLoad(() => adminApi.getRevenueSummary({
+    from: revenueFilter.from || undefined,
+    to: revenueFilter.to || undefined,
+    instituteId: revenueFilter.instituteId || undefined,
+  }), [revenueFilter]);
 
   const reload = () => {
     health.reload();
@@ -121,7 +127,31 @@ export default function Overview() {
       </section>
 
       <section aria-label="Revenue" className="mb-6">
-        <h2 className="font-display font-bold text-lg mb-3">Platform revenue (all institutes)</h2>
+        <div className="flex flex-wrap items-end gap-3 mb-3">
+          <h2 className="font-display font-bold text-lg flex-1">Platform revenue</h2>
+          <div className="flex flex-wrap items-end gap-2 text-xs">
+            <label className="flex flex-col gap-1">
+              <span className="font-bold text-ink-muted">From</span>
+              <input type="date" className="input-paper py-1 text-xs" value={revenueFilter.from} onChange={(e) => setRevenueFilter((f) => ({ ...f, from: e.target.value }))} />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="font-bold text-ink-muted">To</span>
+              <input type="date" className="input-paper py-1 text-xs" value={revenueFilter.to} onChange={(e) => setRevenueFilter((f) => ({ ...f, to: e.target.value }))} />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="font-bold text-ink-muted">Institute</span>
+              <select className="input-paper py-1 text-xs" value={revenueFilter.instituteId} onChange={(e) => setRevenueFilter((f) => ({ ...f, instituteId: e.target.value }))}>
+                <option value="">All institutes</option>
+                {(institutes.data ?? []).map((inst) => (
+                  <option key={inst.id} value={inst.id}>{inst.name}</option>
+                ))}
+              </select>
+            </label>
+            {(revenueFilter.from || revenueFilter.to || revenueFilter.instituteId) && (
+              <button type="button" className="btn-secondary text-xs px-2 py-1" onClick={() => setRevenueFilter({ from: '', to: '', instituteId: '' })}>Clear</button>
+            )}
+          </div>
+        </div>
         {revenue.error ? (
           <ErrorState error={revenue.error} onRetry={revenue.reload} />
         ) : revenue.loading && !revenue.data ? (

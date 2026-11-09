@@ -96,12 +96,17 @@ export async function openRazorpayCheckout(options: RazorpayCheckoutOptions): Pr
 
   const apiBase = getApiBaseUrl();
 
+  // Include auth token so the guarded /create-order endpoint accepts the request.
+  const authToken = typeof window !== 'undefined' ? localStorage.getItem('padhaipilot_teacher_token') : null;
+  const authHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (authToken) authHeaders['Authorization'] = `Bearer ${authToken}`;
+
   // STEP 1: BACKEND - Create Order
   let orderData: { order_id: string; amount: number; currency: string; receipt?: string };
   try {
     const res = await fetch(`${apiBase}/create-order`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders,
       body: JSON.stringify({
         amount: amountInPaise,
         currency: options.currency || 'INR',
@@ -159,7 +164,7 @@ export async function openRazorpayCheckout(options: RazorpayCheckoutOptions): Pr
       try {
         const verifyRes = await fetch(`${apiBase}/verify-payment`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders,
           body: JSON.stringify({
             razorpay_order_id: response.razorpay_order_id,
             razorpay_payment_id: response.razorpay_payment_id,

@@ -12,6 +12,8 @@ import {
   Building2,
   GraduationCap,
   ShieldAlert,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { teacherApi } from '../lib/api';
 import type { UserSession } from '@padhai-pilot/shared';
@@ -37,6 +39,7 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   if (!isOpen) return null;
 
@@ -175,14 +178,24 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
                   Forgot password?
                 </button>
               </div>
-              <input
-                type="password"
-                required
-                placeholder="••••••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full input-paper"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  placeholder="••••••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full input-paper pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--ink-muted)] hover:text-[var(--ink-primary)] transition-colors"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             <button
@@ -278,15 +291,25 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
               <label className="block text-[var(--ink-secondary)] mb-1 font-['Raleway'] font-semibold">
                 Create Password (min 6 chars) *
               </label>
-              <input
-                type="password"
-                required
-                minLength={6}
-                placeholder="••••••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full input-paper"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  minLength={6}
+                  placeholder="••••••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full input-paper pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--ink-muted)] hover:text-[var(--ink-primary)] transition-colors"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             <button

@@ -379,10 +379,11 @@ class AdminApiClient {
     return this.send<{ success: boolean }>('DELETE', `/study-library/${encodeURIComponent(id)}`);
   }
 
-  getRevenueSummary(params?: { from?: string; to?: string }) {
+  getRevenueSummary(params?: { from?: string; to?: string; instituteId?: string }) {
     const qs = new URLSearchParams();
     if (params?.from) qs.set('from', params.from);
     if (params?.to) qs.set('to', params.to);
+    if (params?.instituteId) qs.set('instituteId', params.instituteId);
     const q = qs.toString();
     return this.send<{
       totalCollected: number;

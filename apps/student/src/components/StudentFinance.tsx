@@ -1,11 +1,24 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Receipt, CalendarOff } from 'lucide-react';
+import { Receipt, CalendarOff, CreditCard } from 'lucide-react';
 import { ErrorState, EmptyState } from '@padhai-pilot/ui';
 import type { StudentFeeLedger, StudentLeaveItem } from '@padhai-pilot/shared';
 import { studentApi } from '../lib/api';
 import { StudentFeeBreakdownCard } from './charts';
+
+function loadRazorpayScript(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined') { resolve(false); return; }
+    if ((window as any).Razorpay) { resolve(true); return; }
+    const s = document.createElement('script');
+    s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    s.async = true;
+    s.onload = () => resolve(true);
+    s.onerror = () => resolve(false);
+    document.body.appendChild(s);
+  });
+}
 
 const inr = (n: number) => `Rs ${n.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 const BADGE: Record<string, string> = {
@@ -26,6 +39,8 @@ export function StudentFeesPanel() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [docError, setDocError] = useState<string | null>(null);
+  const [payBusy, setPayBusy] = useState<string | null>(null); // feeRecordId being paid
+  const [payMsg, setPayMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -48,6 +63,47 @@ export function StudentFeesPanel() {
       await studentApi.openReceipt(id);
     } catch (e) {
       setDocError(e instanceof Error ? e.message : 'Could not open the receipt.');
+    }
+  };
+
+  const payOnline = async (feeId: string) => {
+    setPayBusy(feeId);
+    setPayMsg(null);
+    try {
+      const loaded = await loadRazorpayScript();
+      if (!loaded) throw new Error('Could not load Razorpay. Check your internet connection.');
+      const order = await studentApi.createRazorpayFeeOrder(feeId);
+      await new Promise<void>((resolve, reject) => {
+        const rzp = new (window as any).Razorpay({
+          key: order.key_id,
+          amount: order.amount,
+          currency: order.currency,
+          order_id: order.order_id,
+          name: 'PadhaiPilot',
+          description: 'Fee Payment',
+          handler: async (resp: any) => {
+            try {
+              await studentApi.verifyRazorpayFeePayment(feeId, {
+                razorpay_order_id: resp.razorpay_order_id,
+                razorpay_payment_id: resp.razorpay_payment_id,
+                razorpay_signature: resp.razorpay_signature,
+              });
+              setPayMsg({ type: 'success', text: 'Payment successful! Your fee record has been updated.' });
+              await load();
+              resolve();
+            } catch (e) {
+              reject(e);
+            }
+          },
+          modal: { ondismiss: () => resolve() },
+        });
+        rzp.on('payment.failed', (r: any) => reject(new Error(r?.error?.description || 'Payment failed')));
+        rzp.open();
+      });
+    } catch (e) {
+      setPayMsg({ type: 'error', text: e instanceof Error ? e.message : 'Payment could not be completed.' });
+    } finally {
+      setPayBusy(null);
     }
   };
 
@@ -81,12 +137,17 @@ export function StudentFeesPanel() {
       <StudentFeeBreakdownCard fee={{ totalFees: ledger.totalFees, paidAmount: ledger.paidAmount, balanceDue: ledger.balanceDue }} />
 
       {docError && <p role="alert" className="text-xs text-[var(--status-danger-text)]">{docError}</p>}
+      {payMsg && (
+        <p role={payMsg.type === 'error' ? 'alert' : 'status'} className={`text-xs ${payMsg.type === 'error' ? 'text-[var(--status-danger-text)]' : 'text-[var(--status-success-text)]'}`}>
+          {payMsg.text}
+        </p>
+      )}
 
       <div className="paper-card overflow-x-auto max-w-full">
-        <table className="w-full min-w-[560px] text-xs">
+        <table className="w-full min-w-[640px] text-xs">
           <thead>
             <tr className="text-left text-[var(--ink-muted)] border-b border-[var(--border-paper)]">
-              <th className="p-3">Fee</th><th className="p-3">Due</th><th className="p-3 text-right">Amount</th><th className="p-3 text-right">Paid</th><th className="p-3 text-right">Balance</th><th className="p-3">Status</th>
+              <th className="p-3">Fee</th><th className="p-3">Due</th><th className="p-3 text-right">Amount</th><th className="p-3 text-right">Paid</th><th className="p-3 text-right">Balance</th><th className="p-3">Status</th><th className="p-3"></th>
             </tr>
           </thead>
           <tbody>
@@ -98,6 +159,19 @@ export function StudentFeesPanel() {
                 <td className="p-3 text-right font-data">{inr(f.paidAmount)}</td>
                 <td className="p-3 text-right font-data font-bold">{inr(f.balanceDue)}</td>
                 <td className="p-3"><span className={badgeCls(f.status)}>{f.status}</span></td>
+                <td className="p-3">
+                  {['PENDING', 'PARTIAL', 'OVERDUE'].includes(f.status) && f.balanceDue > 0 && (
+                    <button
+                      type="button"
+                      disabled={payBusy === f.id}
+                      onClick={() => payOnline(f.id)}
+                      className="btn-primary text-xs px-3 py-1.5 min-h-[36px] flex items-center gap-1 whitespace-nowrap"
+                    >
+                      <CreditCard className="w-3 h-3" />
+                      {payBusy === f.id ? 'Opening...' : 'Pay Now'}
+                    </button>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>

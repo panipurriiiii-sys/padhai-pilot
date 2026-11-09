@@ -11,6 +11,7 @@ import Razorpay from 'razorpay';
 import crypto from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { RedisService } from '../redis/redis.service.js';
+import type { AuthenticatedUser } from '../common/types.js';
 
 export class CreateOrderDto {
   amount!: number; // in paise (e.g. 100 = 1 INR)
@@ -125,7 +126,7 @@ export class PaymentsService {
    * Algorithm: HMAC-SHA256(order_id + "|" + payment_id, KEY_SECRET)
    * Validates that received signature matches expected signature in constant time.
    */
-  async verifyPayment(input: VerifyPaymentDto): Promise<VerifyPaymentResult> {
+  async verifyPayment(input: VerifyPaymentDto, user?: AuthenticatedUser): Promise<VerifyPaymentResult> {
     const order_id = input.razorpay_order_id || input.order_id;
     const payment_id = input.razorpay_payment_id || input.payment_id;
     const signature = input.razorpay_signature || input.signature;
@@ -158,14 +159,21 @@ export class PaymentsService {
 
     this.logger.log(`Razorpay payment verified successfully for order ${order_id}, payment ${payment_id}`);
 
-    // If payment is for a subscription upgrade, apply the plan immediately
-    const targetPlan = input.plan || input.notes?.plan;
-    const targetInstituteId = input.instituteId || input.notes?.instituteId;
+    // Derive plan from Razorpay order notes (never trust client body for plan/instituteId).
     let upgradedPlan: string | undefined;
-
-    if (targetPlan && targetInstituteId) {
-      const upgradeRes = await this.upgradeInstitutePlan(targetInstituteId, targetPlan);
-      upgradedPlan = upgradeRes.plan;
+    try {
+      const rzp = this.getRazorpay();
+      const order = await rzp.orders.fetch(order_id);
+      const notes = (order as any).notes as Record<string, string> | undefined;
+      const targetPlan = notes?.plan;
+      // instituteId always comes from the authenticated JWT, never from the client request body.
+      const targetInstituteId = user?.instituteId;
+      if (targetPlan && targetInstituteId) {
+        const upgradeRes = await this.upgradeInstitutePlan(targetInstituteId, targetPlan);
+        upgradedPlan = upgradeRes.plan;
+      }
+    } catch (fetchErr: any) {
+      this.logger.warn(`Could not fetch Razorpay order ${order_id} for plan derivation: ${fetchErr?.message}`);
     }
 
     return {
@@ -205,17 +213,81 @@ export class PaymentsService {
     };
   }
 
+  async handleWebhook(signature: string, rawBody: string, parsedBody: any): Promise<{ status: string }> {
+    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+      this.logger.warn('RAZORPAY_WEBHOOK_SECRET not set — webhook ignored');
+      return { status: 'not configured' };
+    }
+
+    const expected = crypto.createHmac('sha256', webhookSecret).update(rawBody).digest('hex');
+    if (expected !== signature) {
+      this.logger.warn('Razorpay webhook signature mismatch');
+      throw new UnauthorizedException('Invalid webhook signature');
+    }
+
+    if (parsedBody?.event === 'payment.captured') {
+      const payment = parsedBody?.payload?.payment?.entity;
+      const feeRecordId = payment?.notes?.feeRecordId as string | undefined;
+      const paymentId = payment?.id as string | undefined;
+      const orderId = payment?.order_id as string | undefined;
+
+      if (feeRecordId && paymentId && this.prisma) {
+        // Idempotent: skip if already recorded for this Razorpay paymentId (stored in `reference`)
+        const existing = await this.prisma.feePayment.findFirst({
+          where: { feeRecordId, reference: paymentId },
+        });
+        if (!existing) {
+          const feeRecord = await this.prisma.studentFeeRecord.findUnique({ where: { id: feeRecordId } });
+          if (feeRecord && feeRecord.status !== 'PAID') {
+            const balance = feeRecord.totalAmount - feeRecord.paidAmount;
+            const paid = Math.min(balance, Math.round((payment?.amount ?? 0) / 100));
+            const newPaid = feeRecord.paidAmount + paid;
+            const newStatus = newPaid >= feeRecord.totalAmount ? 'PAID' : 'PARTIAL';
+            const receiptNum = `RZP-WH-${Date.now()}`;
+            await this.prisma.$transaction([
+              this.prisma.feePayment.create({
+                data: {
+                  instituteId: feeRecord.instituteId,
+                  feeRecordId,
+                  studentId: feeRecord.studentId,
+                  amount: paid,
+                  mode: 'RAZORPAY',
+                  paidOn: new Date(),
+                  receiptNumber: receiptNum,
+                  reference: paymentId,
+                  note: `Order ${orderId} (webhook recovery)`,
+                  recordedById: feeRecord.studentId,
+                },
+              }),
+              this.prisma.studentFeeRecord.update({
+                where: { id: feeRecordId },
+                data: { paidAmount: newPaid, status: newStatus },
+              }),
+            ]);
+            this.logger.log(`Webhook: recorded fee payment ${paymentId} for record ${feeRecordId}`);
+          }
+        }
+      }
+    }
+
+    return { status: 'ok' };
+  }
+
   getKeyId(): string {
     return process.env.RAZORPAY_KEY_ID || '';
   }
 
-  async getPlatformRevenueSummary(opts?: { from?: string; to?: string }) {
+  async getPlatformRevenueSummary(opts?: { from?: string; to?: string; instituteId?: string }) {
     if (!this.prisma) throw new Error('PrismaService not available');
     const where: any = { status: 'ISSUED' };
     if (opts?.from || opts?.to) {
       where.paidOn = {};
       if (opts?.from) where.paidOn.gte = new Date(opts.from);
       if (opts?.to) where.paidOn.lte = new Date(opts.to);
+    }
+    if (opts?.instituteId) {
+      where.studentFeeRecord = { batch: { instituteId: opts.instituteId } };
     }
     const payments = await this.prisma.feePayment.findMany({ where, select: { amount: true, mode: true, paidOn: true } });
     const totalCollected = payments.reduce((s, p) => s + p.amount, 0);

@@ -569,6 +569,14 @@ export const studentApi = {
     openBlob(await fetchDocumentBlob('/documents/attendance-report'), 'attendance-report.pdf');
   },
 
+  // 11b2. Razorpay online fee payment (student pays directly)
+  async createRazorpayFeeOrder(feeRecordId: string): Promise<{ order_id: string; amount: number; currency: string; key_id: string }> {
+    return request(`/student/finance/fees/${feeRecordId}/razorpay/create-order`, { method: 'POST' });
+  },
+  async verifyRazorpayFeePayment(feeRecordId: string, data: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }): Promise<unknown> {
+    return request(`/student/finance/fees/${feeRecordId}/razorpay/verify`, { method: 'POST', body: JSON.stringify(data) });
+  },
+
   // 11c. Leave applications
   async getLeaves(): Promise<StudentLeaveItem[]> {
     return request<StudentLeaveItem[]>('/student/leaves');

@@ -49,6 +49,8 @@ import {
   Square,
   RefreshCw,
   Menu,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import {
   StudentAssessmentResult,
@@ -314,9 +316,11 @@ function StudentPortal() {
   const [authMode, setAuthMode] = useState<'SIGN_IN' | 'REGISTER'>('SIGN_IN');
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [regFullName, setRegFullName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
+  const [showRegPassword, setShowRegPassword] = useState(false);
   const [regPhone, setRegPhone] = useState('');
   const [regInviteCode, setRegInviteCode] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
@@ -873,13 +877,21 @@ function StudentPortal() {
                 <div className="relative">
                   <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--ink-muted)]" />
                   <input
-                    type="password"
+                    type={showLoginPassword ? 'text' : 'password'}
                     required
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
                     placeholder="••••••••••••"
-                    className="w-full bg-[var(--bg-paper-warm)] border border-[var(--border-paper)] focus:border-[var(--brand-electric)] rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-[var(--ink-primary)] outline-none transition placeholder:text-[var(--ink-faint)]"
+                    className="w-full bg-[var(--bg-paper-warm)] border border-[var(--border-paper)] focus:border-[var(--brand-electric)] rounded-xl pl-10 pr-10 py-2.5 text-xs text-[var(--ink-primary)] outline-none transition placeholder:text-[var(--ink-faint)]"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowLoginPassword((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--ink-muted)] hover:text-[var(--ink-primary)] transition-colors"
+                    aria-label={showLoginPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
               </div>
 
@@ -927,15 +939,25 @@ function StudentPortal() {
                   <label className="block text-xs font-medium text-[var(--ink-secondary)] mb-1">
                     Password *
                   </label>
-                  <input
-                    type="password"
-                    required
-                    minLength={6}
-                    value={regPassword}
-                    onChange={(e) => setRegPassword(e.target.value)}
-                    placeholder="Min 6 chars"
-                    className="w-full bg-[var(--bg-paper-warm)] border border-[var(--border-paper)] focus:border-[var(--brand-electric)] rounded-xl px-3.5 py-2 text-xs text-[var(--ink-primary)] outline-none transition"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showRegPassword ? 'text' : 'password'}
+                      required
+                      minLength={6}
+                      value={regPassword}
+                      onChange={(e) => setRegPassword(e.target.value)}
+                      placeholder="Min 6 chars"
+                      className="w-full bg-[var(--bg-paper-warm)] border border-[var(--border-paper)] focus:border-[var(--brand-electric)] rounded-xl px-3.5 pr-9 py-2 text-xs text-[var(--ink-primary)] outline-none transition"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowRegPassword((v) => !v)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--ink-muted)] hover:text-[var(--ink-primary)] transition-colors"
+                      aria-label={showRegPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showRegPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-[var(--ink-secondary)] mb-1">

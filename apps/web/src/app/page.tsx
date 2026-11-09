@@ -55,12 +55,12 @@ const FEATURES_CREATIVE = [
   {
     icon: CreditCard,
     tag: 'FEE LEDGER & RECEIPT',
-    title: 'No more awkward fee calls. Clear ledgers and gentle alerts.',
-    desc: 'Set batch fees, record cash or UPI payments, and let students view their balance receipts. Reminders do the asking for you.',
+    title: 'No more awkward fee calls. Clear ledgers, gentle alerts and online payments.',
+    desc: 'Set batch fees, collect fees online via Razorpay, record cash or UPI payments, and let students view their balance receipts. Reminders do the asking for you.',
     accent: '#F59E0B',
     accentBg: '#FEF3C7',
     accentBorder: '#F6E09E',
-    pill: 'Cash & UPI Records',
+    pill: 'Online + Cash + UPI',
   },
   {
     icon: BookOpen,
@@ -548,7 +548,7 @@ export default function HomePage() {
             {[
               ['How do students join my batch?', 'Create a batch, copy its enrollment code or share link, and send it to your students. They register on the Student Portal and join with the code. You can change, revoke or set an expiry on a code at any time.'],
               ['Whose name is on report cards and receipts?', 'Your institute. Documents carry your institute name, logo, address and signatory, not ours.'],
-              ['Do I record fee payments in the app?', 'Yes. Fees start as pending, you record full or partial payments with the date and mode, and students see their balance and receipts in their portal.'],
+              ['Do I record fee payments in the app?', 'Yes. Fees start as pending. You can collect payments online directly via Razorpay (card, UPI, netbanking) or record cash, UPI or bank transfers manually. Students see their balance and receipts in their portal either way.'],
               ['Does it work on a phone?', 'Yes. The teacher and student portals are built to work on phones as well as laptops.'],
               ['How much does it cost?', 'The plans above list what is published. Where a price is not shown, contact us for details.'],
             ].map(([q, a]) => (
