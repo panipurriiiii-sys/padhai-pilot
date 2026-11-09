@@ -141,7 +141,7 @@ export class AdminController {
   @Get('audit-logs')
   async getAuditLogs(@Query('limit') limit?: string) {
     const data = await this.adminService.getAuditLogs(
-      limit ? parseInt(limit, 10) : 50,
+      limit ? Math.min(200, Math.max(1, parseInt(limit, 10) || 50)) : 50,
     );
     return {
       success: true,

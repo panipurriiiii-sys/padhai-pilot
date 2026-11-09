@@ -58,7 +58,7 @@ export class ThemeAdminController {
 
   @Get('history')
   async history(@Query('limit') limit?: string) {
-    return { success: true, data: await this.theme.history(limit ? parseInt(limit, 10) : 25) };
+    return { success: true, data: await this.theme.history(limit ? Math.min(100, Math.max(1, parseInt(limit, 10) || 25)) : 25) };
   }
 
   /** Dry run: validation errors/warnings, contrast report and the preview CSS. Stores nothing. */

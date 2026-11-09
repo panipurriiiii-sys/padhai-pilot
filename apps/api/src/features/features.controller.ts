@@ -136,7 +136,7 @@ export class FeaturesController {
     const logs = await this.featuresService.getAuditLogs({
       featureKey,
       instituteId,
-      limit: limit ? parseInt(limit, 10) : 50,
+      limit: limit ? Math.min(200, Math.max(1, parseInt(limit, 10) || 50)) : 50,
     });
 
     return {

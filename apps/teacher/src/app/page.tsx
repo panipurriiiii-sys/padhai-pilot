@@ -204,7 +204,12 @@ function TeacherApp() {
   }, []);
 
   const loadUserData = useCallback(async () => {
-    await Promise.all(ALL_RESOURCES.map((k) => loadResource(k)));
+    // Dashboard first — user sees useful content immediately
+    await loadResource('dashboard');
+    // Remaining resources load in background; UI shows each as it arrives
+    Promise.all(
+      ALL_RESOURCES.filter((k) => k !== 'dashboard').map((k) => loadResource(k)),
+    ).catch(() => undefined);
     try {
       const notifs = await teacherApi.getNotifications();
       setNotifications(notifs);

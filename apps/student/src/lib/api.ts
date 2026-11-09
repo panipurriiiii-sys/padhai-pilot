@@ -659,13 +659,9 @@ export const studentApi = {
 
   // 17. In-App & Out-App Notifications
   async getNotifications(category?: string): Promise<InAppNotification[]> {
-    try {
-      const url = category && category !== 'ALL' ? `/notifications?category=${encodeURIComponent(category)}` : '/notifications';
-      const res = await request<{ items: InAppNotification[] }>(url);
-      return res?.items ?? [];
-    } catch {
-      return await request<InAppNotification[]>('/assessment/student/notifications');
-    }
+    const url = category && category !== 'ALL' ? `/notifications?category=${encodeURIComponent(category)}` : '/notifications';
+    const res = await request<{ items: InAppNotification[] }>(url);
+    return res?.items ?? [];
   },
 
   async getUnreadNotificationCount(): Promise<number> {
@@ -678,11 +674,7 @@ export const studentApi = {
   },
 
   async markNotificationRead(id: string): Promise<void> {
-    try {
-      await request(`/notifications/${id}/read`, { method: 'PUT' });
-    } catch {
-      await request(`/assessment/student/notifications/${id}/read`, { method: 'PUT' });
-    }
+    await request(`/notifications/${id}/read`, { method: 'PUT' });
   },
 
   async markAllNotificationsRead(): Promise<void> {

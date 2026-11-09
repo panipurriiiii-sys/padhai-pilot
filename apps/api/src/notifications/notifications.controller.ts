@@ -48,8 +48,8 @@ export class NotificationsController {
     return this.notificationsService.getUserNotifications(user.id, {
       category,
       unreadOnly: unreadOnly === 'true',
-      limit: limit ? parseInt(limit, 10) : undefined,
-      offset: offset ? parseInt(offset, 10) : undefined,
+      limit: limit ? Math.min(100, Math.max(1, parseInt(limit, 10) || 20)) : undefined,
+      offset: offset ? Math.max(0, parseInt(offset, 10) || 0) : undefined,
     });
   }
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Alert, Share, View, StyleSheet } from 'react-native';
 import { Screen, SectionTitle } from '../../components/common/Screen';
 import { QueryBoundary } from '../../components/common/QueryBoundary';
@@ -193,6 +193,22 @@ const BatchManage: React.FC<{ batch: TeacherBatch }> = ({ batch }) => {
   );
 };
 
+const StudentCard = React.memo<{
+  s: { id: string; fullName: string; rollNumber: string; email: string };
+  batchId: string;
+  spacing: ReturnType<typeof useTheme>['spacing'];
+}>(({ s, batchId, spacing }) => (
+  <Card style={{ marginBottom: spacing.sm }}>
+    <Subtitle>{s.fullName}</Subtitle>
+    <Caption>{`Roll ${s.rollNumber} · ${s.email}`}</Caption>
+    <View style={{ flexDirection: 'row', gap: 8, marginTop: spacing.xs }}>
+      <Button title="Report card" size="sm" variant="outline" onPress={() => void openPdf(documentPaths.reportCard(s.id, batchId), `report-card-${s.rollNumber}`)} />
+      <Button title="Attendance" size="sm" variant="outline" onPress={() => void openPdf(documentPaths.attendanceReport({ batchId, studentId: s.id }), `attendance-${s.rollNumber}`)} />
+    </View>
+  </Card>
+));
+StudentCard.displayName = 'StudentCard';
+
 export const TeacherClassesScreen: React.FC = () => {
   const { spacing } = useTheme();
   const [batchId, setBatchId] = useState<string>();
@@ -203,6 +219,12 @@ export const TeacherClassesScreen: React.FC = () => {
   const { create } = useInvitationMutations();
   const active = tab === 'codes' ? invitations : roster;
   const selected = (batches.data ?? []).find((b) => b.id === batchId);
+
+  const renderStudent = useCallback(
+    (s: { id: string; fullName: string; rollNumber: string; email: string }) =>
+      batchId ? <StudentCard key={s.id} s={s} batchId={batchId} spacing={spacing} /> : null,
+    [batchId, spacing],
+  );
 
   return (
     <Screen
@@ -237,16 +259,7 @@ export const TeacherClassesScreen: React.FC = () => {
             {(r) => (
               <>
                 <Caption style={{ marginBottom: spacing.sm }}>{`${r.students.length} students`}</Caption>
-                {r.students.map((s) => (
-                  <Card key={s.id} style={{ marginBottom: spacing.sm }}>
-                    <Subtitle>{s.fullName}</Subtitle>
-                    <Caption>{`Roll ${s.rollNumber} · ${s.email}`}</Caption>
-                    <View style={{ flexDirection: 'row', gap: 8, marginTop: spacing.xs }}>
-                      <Button title="Report card" size="sm" variant="outline" onPress={() => void openPdf(documentPaths.reportCard(s.id, batchId), `report-card-${s.rollNumber}`)} />
-                      <Button title="Attendance" size="sm" variant="outline" onPress={() => void openPdf(documentPaths.attendanceReport({ batchId, studentId: s.id }), `attendance-${s.rollNumber}`)} />
-                    </View>
-                  </Card>
-                ))}
+                {r.students.map(renderStudent)}
               </>
             )}
           </QueryBoundary>
