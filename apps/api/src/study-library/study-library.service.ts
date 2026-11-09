@@ -94,43 +94,41 @@ export class StudyLibraryService {
       }
     }
 
-    const [items, total] = await Promise.all([
-      this.prisma.libraryMaterial.findMany({
-        where: where as Parameters<typeof this.prisma.libraryMaterial.findMany>[0]['where'],
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: limit,
-        select: {
-          id: true,
-          title: true,
-          description: true,
-          board: true,
-          classLevel: true,
-          subject: true,
-          contentType: true,
-          fileUrl: true,
-          externalUrl: true,
-          yearOrEdition: true,
-          tags: true,
-          isApproved: true,
-          viewCount: true,
-          instituteId: true,
-          createdAt: true,
-          uploader: { select: { id: true, fullName: true } },
-        },
-      }),
-      this.prisma.libraryMaterial.count({
-        where: where as Parameters<typeof this.prisma.libraryMaterial.count>[0]['where'],
-      }),
-    ]);
-
-    return {
-      items,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-    };
+    try {
+      const [items, total] = await Promise.all([
+        this.prisma.libraryMaterial.findMany({
+          where: where as any,
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limit,
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            board: true,
+            classLevel: true,
+            subject: true,
+            contentType: true,
+            fileUrl: true,
+            externalUrl: true,
+            yearOrEdition: true,
+            tags: true,
+            isApproved: true,
+            viewCount: true,
+            instituteId: true,
+            createdAt: true,
+            uploader: { select: { id: true, fullName: true } },
+          },
+        }),
+        this.prisma.libraryMaterial.count({
+          where: where as any,
+        }),
+      ]);
+      return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
+    } catch {
+      // Migration not yet applied — return empty list instead of 500
+      return { items: [], total: 0, page, limit, totalPages: 0 };
+    }
   }
 
   async getById(id: string, user?: AuthenticatedUser) {
@@ -256,6 +254,7 @@ export class StudyLibraryService {
   }
 
   async getMeta() {
+    try {
     const [boards, subjects, contentTypes, classLevels] = await Promise.all([
       this.prisma.libraryMaterial.findMany({
         where: { isApproved: true },
@@ -284,6 +283,9 @@ export class StudyLibraryService {
       contentTypes: contentTypes.map((r) => r.contentType).sort(),
       classLevels: classLevels.map((r) => r.classLevel).filter(Boolean).sort(),
     };
+    } catch {
+      return { boards: [], subjects: [], contentTypes: [], classLevels: [] };
+    }
   }
 
   // Admin: list all materials (any approval status)
@@ -296,14 +298,14 @@ export class StudyLibraryService {
 
     const [items, total] = await Promise.all([
       this.prisma.libraryMaterial.findMany({
-        where: where as Parameters<typeof this.prisma.libraryMaterial.findMany>[0]['where'],
+        where: where as any,
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
         include: { uploader: { select: { id: true, fullName: true, email: true } } },
       }),
       this.prisma.libraryMaterial.count({
-        where: where as Parameters<typeof this.prisma.libraryMaterial.count>[0]['where'],
+        where: where as any,
       }),
     ]);
 

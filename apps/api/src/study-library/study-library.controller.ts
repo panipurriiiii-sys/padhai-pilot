@@ -10,45 +10,60 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
-  Inject,
-  Optional,
+  Req,
 } from '@nestjs/common';
+import type { Request } from 'express';
+import jwt from 'jsonwebtoken';
 import { StudyLibraryService } from './study-library.service.js';
 import { AuthGuard } from '../common/guards/auth.guard.js';
 import { RolesGuard } from '../common/guards/roles.guard.js';
 import { Roles } from '../common/decorators/roles.decorator.js';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import type { AuthenticatedUser } from '../common/types.js';
+import { getJwtSecret } from '../common/security/runtime.js';
 import type { ListLibraryQuery, CreateLibraryMaterialDto, UpdateLibraryMaterialDto } from './study-library.service.js';
+
+/** Silently extract user from Bearer/cookie without throwing when absent. */
+function tryGetUser(req: Request): AuthenticatedUser | undefined {
+  try {
+    const header = req.headers?.authorization;
+    const cookie = (req as any).cookies?.token;
+    const token = header?.startsWith('Bearer ') ? header.slice(7) : cookie;
+    if (!token) return undefined;
+    return jwt.verify(token, getJwtSecret(), { algorithms: ['HS256'] }) as AuthenticatedUser;
+  } catch {
+    return undefined;
+  }
+}
 
 @Controller('study-library')
 export class StudyLibraryController {
-  constructor(
-    @Inject(StudyLibraryService) private readonly service: StudyLibraryService,
-  ) {}
+  constructor(private readonly service: StudyLibraryService) {}
 
   /** Public list – no auth required. Auth is optional to show institute materials. */
   @Get()
-  async list(
-    @Query() query: ListLibraryQuery,
-    @Optional() @CurrentUser() user?: AuthenticatedUser,
-  ) {
-    return this.service.list(query, user);
+  async list(@Query() query: ListLibraryQuery, @Req() req: Request) {
+    return this.service.list(query, tryGetUser(req));
   }
 
-  /** Meta for filter dropdowns */
+  /** Meta for filter dropdowns — no auth required */
   @Get('meta')
   async getMeta() {
     return this.service.getMeta();
   }
 
+  /** Admin list — SUPER_ADMIN only (must come before :id wildcard) */
+  @Get('admin/all')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN')
+  async adminList(@Query() query: ListLibraryQuery) {
+    return this.service.adminList(query);
+  }
+
   /** Single item (increments view count) */
   @Get(':id')
-  async getById(
-    @Param('id') id: string,
-    @Optional() @CurrentUser() user?: AuthenticatedUser,
-  ) {
-    return this.service.getById(id, user);
+  async getById(@Param('id') id: string, @Req() req: Request) {
+    return this.service.getById(id, tryGetUser(req));
   }
 
   /** Create – TEACHER or SUPER_ADMIN */
@@ -56,10 +71,7 @@ export class StudyLibraryController {
   @HttpCode(HttpStatus.CREATED)
   @UseGuards(AuthGuard, RolesGuard)
   @Roles('TEACHER', 'TUITION_OWNER', 'INSTITUTE_ADMIN', 'INSTITUTE_MANAGER', 'FACULTY', 'SUPER_ADMIN')
-  async create(
-    @Body() dto: CreateLibraryMaterialDto,
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
+  async create(@Body() dto: CreateLibraryMaterialDto, @CurrentUser() user: AuthenticatedUser) {
     return this.service.create(dto, user);
   }
 
@@ -79,10 +91,7 @@ export class StudyLibraryController {
   @Delete(':id')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles('TEACHER', 'TUITION_OWNER', 'INSTITUTE_ADMIN', 'INSTITUTE_MANAGER', 'FACULTY', 'SUPER_ADMIN')
-  async remove(
-    @Param('id') id: string,
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
+  async remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.service.remove(id, user);
   }
 
@@ -90,20 +99,7 @@ export class StudyLibraryController {
   @Put(':id/approve')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles('SUPER_ADMIN')
-  async approve(
-    @Param('id') id: string,
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
+  async approve(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.service.approve(id, user);
-  }
-
-  /** Admin list – all platform-level materials (any approval status) */
-  @Get('admin/all')
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('SUPER_ADMIN')
-  async adminList(
-    @Query() query: ListLibraryQuery,
-  ) {
-    return this.service.adminList(query);
   }
 }

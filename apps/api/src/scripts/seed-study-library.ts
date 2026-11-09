@@ -13,19 +13,25 @@
 
 import { PrismaClient } from '@prisma/client';
 
-const DIRECT_URL = process.env.DIRECT_URL;
-const SEEDER_USER_ID = process.env.SEEDER_USER_ID;
+import 'dotenv/config';
+
+const DIRECT_URL = process.env.DIRECT_URL || process.env.DATABASE_URL;
 
 if (!DIRECT_URL) {
-  console.error('ERROR: DIRECT_URL env var is required (direct postgres connection, not pooled).');
-  process.exit(1);
-}
-if (!SEEDER_USER_ID) {
-  console.error('ERROR: SEEDER_USER_ID env var is required (SUPER_ADMIN User.id).');
+  console.error('ERROR: DIRECT_URL or DATABASE_URL env var is required.');
   process.exit(1);
 }
 
 const prisma = new PrismaClient({ datasourceUrl: DIRECT_URL });
+
+// Auto-detect SUPER_ADMIN if SEEDER_USER_ID not supplied
+async function resolveUserId(): Promise<string> {
+  if (process.env.SEEDER_USER_ID) return process.env.SEEDER_USER_ID;
+  const admin = await prisma.user.findFirst({ where: { role: 'SUPER_ADMIN', isActive: true }, select: { id: true, email: true } });
+  if (!admin) throw new Error('No active SUPER_ADMIN found. Set SEEDER_USER_ID manually.');
+  console.log(`Auto-detected SUPER_ADMIN: ${admin.email} (${admin.id})`);
+  return admin.id;
+}
 
 interface SeedRecord {
   title: string;
@@ -411,6 +417,7 @@ const SEEDS: SeedRecord[] = [
 ];
 
 async function main() {
+  const userId = await resolveUserId();
   console.log(`Seeding ${SEEDS.length} LibraryMaterial records (platform-level)…`);
   let upserted = 0;
   let skipped = 0;
@@ -435,7 +442,7 @@ async function main() {
           yearOrEdition: seed.yearOrEdition,
           tags: seed.tags,
           instituteId: null, // platform-level
-          uploadedBy: SEEDER_USER_ID as string,
+          uploadedBy: userId,
           isApproved: true,
         },
         update: {
