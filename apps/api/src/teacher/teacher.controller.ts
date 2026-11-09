@@ -12,6 +12,7 @@ import {
   HttpCode,
   HttpStatus,
   Inject,
+  Res,
 } from '@nestjs/common';
 import { TeacherService } from './teacher.service.js';
 import { BatchesService } from './batches.service.js';
@@ -39,13 +40,24 @@ export class TeacherController {
 
   // 1. Dashboard Metrics
   @Get('dashboard')
-  getDashboard(@CurrentUser() user: AuthenticatedUser) {
+  getDashboard(@CurrentUser() user: AuthenticatedUser, @Res({ passthrough: true }) res?: any) {
+    if (res?.setHeader) {
+      res.setHeader('Cache-Control', 'private, max-age=60, stale-while-revalidate=120');
+    }
     return this.teacherService.getDashboardMetrics(user);
   }
 
   // 2. Batches & Roster
   @Get('batches')
-  getBatches(@CurrentUser() user: AuthenticatedUser, @Query('includeArchived') includeArchived?: string, @Query('limit') limit?: string) {
+  getBatches(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('includeArchived') includeArchived?: string,
+    @Query('limit') limit?: string,
+    @Res({ passthrough: true }) res?: any,
+  ) {
+    if (res?.setHeader) {
+      res.setHeader('Cache-Control', 'private, max-age=120, stale-while-revalidate=300');
+    }
     return this.batches.list(user, { includeArchived: includeArchived === 'true', limit });
   }
 

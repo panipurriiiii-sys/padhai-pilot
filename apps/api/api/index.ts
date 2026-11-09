@@ -34,6 +34,7 @@ export default async function handler(req: Request, res: Response) {
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', CORS_METHODS.join(','));
     res.setHeader('Access-Control-Allow-Headers', CORS_HEADERS.join(','));
+    res.setHeader('Access-Control-Max-Age', '86400');
   }
   if (req.method === 'OPTIONS') {
     res.status(origin && !isOriginAllowed(origin) ? 403 : 204).end();

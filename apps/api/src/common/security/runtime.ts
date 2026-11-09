@@ -76,4 +76,5 @@ export const corsOptions = {
   methods: CORS_METHODS,
   allowedHeaders: CORS_HEADERS,
   exposedHeaders: CORS_EXPOSED_HEADERS,
+  maxAge: 86400, // 24 hours browser preflight caching
 };

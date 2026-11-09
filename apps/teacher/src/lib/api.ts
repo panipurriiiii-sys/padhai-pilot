@@ -92,6 +92,26 @@ function getCleanApiBaseUrl(): string {
 
 let cachedToken: string | null = null;
 
+// Lightweight in-memory SWR / TTL cache to eliminate redundant API calls across teacher tabs
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+const teacherApiCache = new Map<string, CacheEntry<any>>();
+const CLIENT_CACHE_TTL_MS = 120_000; // 2 minutes
+
+export function invalidateTeacherApiCache(endpointPrefix?: string) {
+  if (!endpointPrefix) {
+    teacherApiCache.clear();
+    return;
+  }
+  for (const key of teacherApiCache.keys()) {
+    if (key.includes(endpointPrefix)) {
+      teacherApiCache.delete(key);
+    }
+  }
+}
+
 export function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
   if (!cachedToken) {
@@ -109,12 +129,16 @@ export function setAuthToken(token: string) {
 
 export function clearAuthToken() {
   cachedToken = null;
+  teacherApiCache.clear();
   if (typeof window !== 'undefined') {
     localStorage.removeItem('padhaipilot_teacher_token');
   }
 }
 
-async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+async function request<T>(
+  endpoint: string,
+  options: RequestInit & { bypassCache?: boolean } = {},
+): Promise<T> {
   const token = getAuthToken();
   const headers = new Headers(options.headers || {});
 
@@ -126,6 +150,17 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   const baseUrl = getCleanApiBaseUrl();
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   const url = endpoint.startsWith('http') ? endpoint : `${baseUrl}${cleanEndpoint}`;
+
+  const method = (options.method || 'GET').toUpperCase();
+  const isGet = method === 'GET';
+
+  // In-memory cache check to prevent repeated requests on tab switching
+  if (isGet && !options.bypassCache) {
+    const cached = teacherApiCache.get(cleanEndpoint);
+    if (cached && Date.now() - cached.timestamp < CLIENT_CACHE_TTL_MS) {
+      return cached.data as T;
+    }
+  }
 
   let res: Response;
   try {
@@ -150,7 +185,18 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   }
 
   if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
+  const data = (await res.json()) as T;
+
+  if (isGet) {
+    teacherApiCache.set(cleanEndpoint, { data, timestamp: Date.now() });
+  } else {
+    // Invalidate cached reads on any teacher mutation
+    invalidateTeacherApiCache('teacher');
+    invalidateTeacherApiCache('assessment');
+    invalidateTeacherApiCache('finance');
+  }
+
+  return data;
 }
 
 /** Fetches a server-rendered PDF (document routes need the bearer token) and returns it as a Blob. */
