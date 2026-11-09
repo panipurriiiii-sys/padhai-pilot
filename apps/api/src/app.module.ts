@@ -16,6 +16,7 @@ import { AnalyticsModule } from './analytics/analytics.module.js';
 import { FinanceModule } from './finance/finance.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
 import { PaymentsModule } from './payments/payments.module.js';
+import { StudyLibraryModule } from './study-library/study-library.module.js';
 import { HealthController } from './health/health.controller.js';
 import { InvitationsController } from './invitations/invitations.controller.js';
 import { AppController } from './app.controller.js';
@@ -40,6 +41,7 @@ import { RateLimitFilter } from './common/filters/rate-limit.filter.js';
     FinanceModule,
     NotificationsModule,
     PaymentsModule,
+    StudyLibraryModule,
   ],
   controllers: [
     AppController,

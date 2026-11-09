@@ -107,6 +107,7 @@ model Institute {
   teachingDiaries      DailyTeachingDiary[]
   studyMaterials       StudyMaterial[]
   studentFeeRecords    StudentFeeRecord[]
+  libraryMaterials     LibraryMaterial[]
 
   // Back-relations for the T-03 additions (see section at the end of this file)
   batchFaculty          BatchFaculty[]
@@ -162,6 +163,7 @@ model User {
   teachingDiaries       DailyTeachingDiary[]      @relation("FacultyTeachingDiaries")
   studyMaterials        StudyMaterial[]           @relation("FacultyStudyMaterials")
   studentFeeRecords     StudentFeeRecord[]        @relation("StudentFeeRecords")
+  libraryMaterials      LibraryMaterial[]         @relation("UploaderLibraryMaterials")
 
   // Back-relations for the T-03 additions
   batchAssignments      BatchFaculty[]
@@ -1327,4 +1329,40 @@ model StudentLeaveApplication {
   @@index([instituteId, status])
   @@index([studentId, createdAt])
   @@index([batchId, status])
+}
+
+// ==========================================================================
+// study-library: platform-level + institute-scoped resource library.
+// Migration: 20261109000100_study_library
+// ==========================================================================
+
+/// Platform-level or institute-scoped study resource (textbook, paper, notes, etc.)
+/// instituteId null  → platform-level material (all tenants see it once approved)
+/// instituteId set   → institute-scoped (auto-approved, visible to that institute only)
+model LibraryMaterial {
+  id            String   @id @default(cuid())
+  instituteId   String?  // null = platform-level (all tenants see it)
+  uploadedBy    String   // User.id
+  title         String
+  description   String?
+  board         String   // CBSE | ICSE | SSC | RBSE | MPBSE | HPBSE | PSEB | UPMSP | WBBSE | BSEB | GSEB | MH_SSC | MH_HSC | OTHER | GENERAL
+  classLevel    String?  // "1"-"12" or null = all classes
+  subject       String?  // null = all subjects
+  contentType   String   // TEXTBOOK | SOLUTION | QUESTION_PAPER | NOTES | SYLLABUS | OTHER
+  fileUrl       String?  // uploaded file URL
+  externalUrl   String?  // official board / NCERT link
+  yearOrEdition String?  // "2024" or "2023-24"
+  tags          String[]
+  isApproved    Boolean  @default(false) // SUPER_ADMIN approves platform-level; institute materials auto-approved
+  viewCount     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  institute Institute? @relation(fields: [instituteId], references: [id], onDelete: Cascade)
+  uploader  User       @relation("UploaderLibraryMaterials", fields: [uploadedBy], references: [id], onDelete: Cascade)
+
+  @@index([board, classLevel, subject])
+  @@index([instituteId])
+  @@index([contentType])
+  @@index([isApproved])
 }
