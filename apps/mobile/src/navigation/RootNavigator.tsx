@@ -27,6 +27,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { isStaffRole } from '../lib/format';
 import { resolveDeepLinkTab, subscribeDeepLinks } from '../lib/deepLinks';
 import { loadPush } from '../services/push';
+import { notificationService } from '../services/notification/NotificationService';
 
 export const RootNavigator: React.FC = () => {
   const { colors } = useTheme();
@@ -108,9 +109,11 @@ export const RootNavigator: React.FC = () => {
     };
     const unsubLinks = subscribeDeepLinks(open);
     const unsubPush = loadPush().onMessage(open);
+    const unsubNotifee = notificationService.registerPressHandler(open);
     return () => {
       unsubLinks();
       unsubPush();
+      unsubNotifee();
     };
   }, [isAuthenticated, isTeacher, setTab]);
 

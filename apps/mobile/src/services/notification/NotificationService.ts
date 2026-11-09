@@ -7,7 +7,13 @@ import notifee, {
 } from '@notifee/react-native';
 import { Platform } from 'react-native';
 
-export type NotificationChannelType = 'default' | 'academic' | 'announcements' | 'fees';
+export type NotificationChannelType =
+  | 'default'
+  | 'academic'
+  | 'announcements'
+  | 'fees'
+  | 'attendance'
+  | 'leaves';
 
 export interface DisplayNotificationOptions {
   id?: string;
@@ -15,6 +21,10 @@ export interface DisplayNotificationOptions {
   body: string;
   channel?: NotificationChannelType;
   data?: Record<string, string | number | boolean>;
+  actions?: Array<{
+    id: string;
+    title: string;
+  }>;
 }
 
 export class NotificationService {
@@ -92,6 +102,28 @@ export class NotificationService {
         name: 'Fees & Finance',
         importance: AndroidImportance.DEFAULT,
         sound: 'default',
+        lights: true,
+        lightColor: AndroidColor.GREEN,
+      });
+
+      await notifee.createChannel({
+        id: 'attendance',
+        name: 'Attendance & Absences',
+        importance: AndroidImportance.HIGH,
+        sound: 'default',
+        vibration: true,
+        lights: true,
+        lightColor: AndroidColor.RED,
+      });
+
+      await notifee.createChannel({
+        id: 'leaves',
+        name: 'Leave Requests & Approvals',
+        importance: AndroidImportance.HIGH,
+        sound: 'default',
+        vibration: true,
+        lights: true,
+        lightColor: AndroidColor.PURPLE,
       });
 
       await notifee.createChannel({
@@ -114,6 +146,13 @@ export class NotificationService {
 
       const channelId = opts.channel || 'default';
 
+      const androidActions = opts.actions?.map((act) => ({
+        title: act.title,
+        pressAction: {
+          id: act.id,
+        },
+      }));
+
       const notificationId = await notifee.displayNotification({
         id: opts.id,
         title: opts.title,
@@ -124,6 +163,7 @@ export class NotificationService {
           pressAction: {
             id: 'default',
           },
+          actions: androidActions,
           importance: AndroidImportance.HIGH,
           color: '#1677FF',
         },
@@ -157,6 +197,34 @@ export class NotificationService {
       await notifee.cancelAllNotifications();
     } catch {
       // safe fallback
+    }
+  }
+
+  /**
+   * Registers foreground and initial launch notification press handlers for deep linking.
+   */
+  public registerPressHandler(callback: (link: string | null) => void): () => void {
+    try {
+      // 1. Check if app was launched by tapping a notification
+      notifee.getInitialNotification().then((initial) => {
+        if (initial?.notification?.data?.link) {
+          callback(String(initial.notification.data.link));
+        }
+      }).catch(() => {});
+
+      // 2. Foreground press handler
+      const unsub = notifee.onForegroundEvent((event) => {
+        if (event.type === EventType.PRESS || event.type === EventType.ACTION_PRESS) {
+          const link = event.detail.notification?.data?.link;
+          if (link) {
+            callback(String(link));
+          }
+        }
+      });
+
+      return unsub;
+    } catch {
+      return () => {};
     }
   }
 

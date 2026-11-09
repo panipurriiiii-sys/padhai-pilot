@@ -25,6 +25,7 @@ import {
   FileCheck2,
   Sparkles,
   X,
+  Bell,
 } from 'lucide-react';
 
 export type NavTab =
@@ -59,6 +60,8 @@ interface SidebarProps {
   onOpenAuthModal: () => void;
   isOpenMobile?: boolean;
   onCloseMobile?: () => void;
+  onOpenNotifications?: () => void;
+  unreadNotificationCount?: number;
 }
 
 export function Sidebar({
@@ -70,6 +73,8 @@ export function Sidebar({
   onOpenAuthModal,
   isOpenMobile = false,
   onCloseMobile,
+  onOpenNotifications,
+  unreadNotificationCount = 0,
 }: SidebarProps) {
   // Contextually filter sections by user role (Tuition Owner vs Faculty Member)
   const isOwner = userRole === 'TUITION_OWNER' || userRole === 'INSTITUTE_ADMIN';
@@ -137,19 +142,36 @@ export function Sidebar({
     <aside className="hidden lg:flex w-64 h-screen sticky top-0 flex-col bg-[var(--bg-surface-subtle)] border-r border-[var(--border-paper)] shadow-[2px_0_12px_rgba(60,52,40,0.03)] select-none z-30 shrink-0">
       {/* Brand & Studio Header */}
       <div className="p-4 border-b border-[var(--border-paper)] bg-[var(--bg-paper-warm)]">
-        <div className="flex items-center gap-3 mb-2">
-          {/* Logo Badge in AK Electric Blue */}
-          <img src="/logo.png" alt="PadhaiPilot" className="w-9 h-9 rounded-xl object-contain" />
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="font-['Playfair_Display'] font-bold text-base tracking-tight text-[var(--ink-primary)]">
-                PadhaiPilot
-              </span>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            {/* Logo Badge in AK Electric Blue */}
+            <img src="/logo.png" alt="PadhaiPilot" className="w-9 h-9 rounded-xl object-contain" />
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="font-['Playfair_Display'] font-bold text-base tracking-tight text-[var(--ink-primary)]">
+                  PadhaiPilot
+                </span>
+              </div>
+              <p className="text-[10px] font-['Raleway'] font-bold text-[var(--brand-electric)] uppercase tracking-widest">
+                Teacher Portal
+              </p>
             </div>
-            <p className="text-[10px] font-['Raleway'] font-bold text-[var(--brand-electric)] uppercase tracking-widest">
-              Teacher Portal
-            </p>
           </div>
+
+          {onOpenNotifications && (
+            <button
+              onClick={onOpenNotifications}
+              className="relative p-2 rounded-xl bg-[var(--bg-paper)] border border-[var(--border-paper)] text-[var(--ink-secondary)] hover:text-[var(--brand-electric)] transition shadow-2xs"
+              title="Notifications"
+            >
+              <Bell className="w-4 h-4" />
+              {unreadNotificationCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white rounded-full text-[9px] font-bold flex items-center justify-center animate-pulse">
+                  {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
+                </span>
+              )}
+            </button>
+          )}
         </div>
 
         {/* Institute Info Tag */}
@@ -251,13 +273,32 @@ export function Sidebar({
                   </p>
                 </div>
               </div>
-              <button
-                onClick={onCloseMobile}
-                className="p-1.5 rounded-lg text-[var(--ink-muted)] hover:text-[var(--ink-primary)] hover:bg-[var(--bg-paper)] transition"
-                aria-label="Close menu"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-1.5">
+                {onOpenNotifications && (
+                  <button
+                    onClick={() => {
+                      onOpenNotifications();
+                      onCloseMobile?.();
+                    }}
+                    className="relative p-2 rounded-xl bg-[var(--bg-paper)] border border-[var(--border-paper)] text-[var(--ink-secondary)] hover:text-[var(--brand-electric)] transition"
+                    title="Notifications"
+                  >
+                    <Bell className="w-4 h-4" />
+                    {unreadNotificationCount > 0 && (
+                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white rounded-full text-[9px] font-bold flex items-center justify-center">
+                        {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
+                      </span>
+                    )}
+                  </button>
+                )}
+                <button
+                  onClick={onCloseMobile}
+                  className="p-1.5 rounded-lg text-[var(--ink-muted)] hover:text-[var(--ink-primary)] hover:bg-[var(--bg-paper)] transition"
+                  aria-label="Close menu"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Institute Info Tag */}

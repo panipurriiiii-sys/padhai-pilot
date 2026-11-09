@@ -591,12 +591,80 @@ export const studentApi = {
     });
   },
 
-  // 17. In-App Notifications
-  async getNotifications(): Promise<InAppNotification[]> {
-    return await request<InAppNotification[]>('/assessment/student/notifications');
+  // 17. In-App & Out-App Notifications
+  async getNotifications(category?: string): Promise<InAppNotification[]> {
+    try {
+      const url = category && category !== 'ALL' ? `/notifications?category=${encodeURIComponent(category)}` : '/notifications';
+      const res = await request<{ items: InAppNotification[] }>(url);
+      return res?.items ?? [];
+    } catch {
+      return await request<InAppNotification[]>('/assessment/student/notifications');
+    }
+  },
+
+  async getUnreadNotificationCount(): Promise<number> {
+    try {
+      const res = await request<{ unreadCount: number }>('/notifications/unread-count');
+      return res?.unreadCount ?? 0;
+    } catch {
+      return 0;
+    }
   },
 
   async markNotificationRead(id: string): Promise<void> {
-    await request(`/assessment/student/notifications/${id}/read`, { method: 'PUT' });
+    try {
+      await request(`/notifications/${id}/read`, { method: 'PUT' });
+    } catch {
+      await request(`/assessment/student/notifications/${id}/read`, { method: 'PUT' });
+    }
+  },
+
+  async markAllNotificationsRead(): Promise<void> {
+    try {
+      await request('/notifications/read-all', { method: 'PUT' });
+    } catch {
+      // safe fallback
+    }
+  },
+
+  async getVapidPublicKey(): Promise<string | null> {
+    try {
+      const res = await request<{ publicKey: string }>('/notifications/vapid-public-key');
+      return res?.publicKey ?? null;
+    } catch {
+      return null;
+    }
+  },
+
+  async registerDeviceToken(payload: { token: string; platform: 'ANDROID' | 'IOS' | 'WEB'; endpoint?: string; p256dh?: string; auth?: string; userAgent?: string }): Promise<void> {
+    try {
+      await request('/notifications/device-token', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    } catch {
+      // safe fallback
+    }
+  },
+
+  async removeDeviceToken(token: string): Promise<void> {
+    try {
+      await request(`/notifications/device-token?token=${encodeURIComponent(token)}`, {
+        method: 'DELETE',
+      });
+    } catch {
+      // safe fallback
+    }
+  },
+
+  async getNotificationPreferences(): Promise<any> {
+    return await request('/notifications/preferences');
+  },
+
+  async updateNotificationPreferences(prefs: any): Promise<any> {
+    return await request('/notifications/preferences', {
+      method: 'PUT',
+      body: JSON.stringify(prefs),
+    });
   },
 };

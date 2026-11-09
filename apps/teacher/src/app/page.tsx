@@ -27,6 +27,8 @@ import { LoadError } from '../components/LoadError';
 import { AuthModal } from '../components/AuthModal';
 import { AuthWelcomeScreen } from '../components/AuthWelcomeScreen';
 import { GetStartedView } from '../components/GetStartedView';
+import { NotificationDrawer } from '../components/NotificationDrawer';
+import { useWebPush } from '../hooks/useWebPush';
 import { teacherApi, getAuthToken, clearAuthToken } from '../lib/api';
 import type {
   TeacherDashboardMetrics,
@@ -41,8 +43,9 @@ import type {
   TeacherReports,
   UserSession,
   TeacherAnalyticsSummary,
+  InAppNotification,
 } from '@padhai-pilot/shared';
-import { Loader2, Menu, LayoutDashboard, NotebookPen, CalendarCheck, Users } from 'lucide-react';
+import { Loader2, Menu, LayoutDashboard, NotebookPen, CalendarCheck, Users, Bell } from 'lucide-react';
 import { MotionProvider, ToastProvider } from '@padhai-pilot/ui';
 
 type ResourceKey = 'dashboard' | 'batches' | 'invitations' | 'assignments' | 'tests' | 'lessonPlans' | 'timetable' | 'announcements' | 'reports' | 'analytics';
@@ -77,10 +80,13 @@ function TeacherApp() {
   const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
   const [reports, setReports] = useState<TeacherReports | null>(null);
   const [analytics, setAnalytics] = useState<TeacherAnalyticsSummary | null>(null);
+  const [notifications, setNotifications] = useState<InAppNotification[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const [isLoading, setIsLoading] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { isSubscribed, subscribeToPush, isRegistering: isPushRegistering } = useWebPush(!!user);
   const [sessionNotice, setSessionNotice] = useState<string | null>(null);
   const [showGetStarted, setShowGetStarted] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -129,6 +135,12 @@ function TeacherApp() {
 
   const loadUserData = useCallback(async () => {
     await Promise.all(ALL_RESOURCES.map((k) => loadResource(k)));
+    try {
+      const notifs = await teacherApi.getNotifications();
+      setNotifications(notifs);
+    } catch {
+      // safe fallback
+    }
   }, [loadResource]);
 
   useEffect(() => {
@@ -362,13 +374,27 @@ function TeacherApp() {
             </p>
           </div>
         </div>
-        <button
-          onClick={() => setMobileMenuOpen(true)}
-          className="p-2 rounded-xl bg-[var(--bg-paper-warm)] border border-[var(--border-paper)] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] transition"
-          aria-label="Open navigation menu"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowNotifications(true)}
+            className="relative p-2 rounded-xl bg-[var(--bg-paper-warm)] border border-[var(--border-paper)] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] transition"
+            title="Notifications"
+          >
+            <Bell className="w-4 h-4" />
+            {notifications.filter((n) => !n.isRead).length > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white rounded-full text-[9px] font-bold flex items-center justify-center animate-pulse">
+                {notifications.filter((n) => !n.isRead).length > 9 ? '9+' : notifications.filter((n) => !n.isRead).length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            className="p-2 rounded-xl bg-[var(--bg-paper-warm)] border border-[var(--border-paper)] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] transition"
+            aria-label="Open navigation menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
       {/* Primary Sidebar & Mobile Drawer */}
@@ -381,6 +407,8 @@ function TeacherApp() {
         onOpenAuthModal={() => setShowAuthModal(true)}
         isOpenMobile={mobileMenuOpen}
         onCloseMobile={() => setMobileMenuOpen(false)}
+        onOpenNotifications={() => setShowNotifications(true)}
+        unreadNotificationCount={notifications.filter((n) => !n.isRead).length}
       />
 
 
@@ -581,6 +609,30 @@ function TeacherApp() {
           <span>More</span>
         </button>
       </nav>
+
+      {/* Interactive Notification Drawer */}
+      <NotificationDrawer
+        isOpen={showNotifications}
+        onClose={() => setShowNotifications(false)}
+        notifications={notifications}
+        onMarkRead={async (id) => {
+          await teacherApi.markNotificationRead(id);
+          setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
+        }}
+        onMarkAllRead={async () => {
+          await teacherApi.markAllNotificationsRead();
+          setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+        }}
+        onNavigate={(url) => {
+          const tab = url.replace(/^\//, '');
+          if (tab) {
+            setCurrentTab(tab as any);
+          }
+        }}
+        isSubscribedToPush={isSubscribed}
+        onEnablePush={subscribeToPush}
+        isPushRegistering={isPushRegistering}
+      />
 
       {/* Authentication & Profile Modal */}
       <AuthModal

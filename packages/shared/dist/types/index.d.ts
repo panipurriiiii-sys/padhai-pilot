@@ -303,6 +303,13 @@ export interface StudentAssessmentResult {
     feedback?: string;
     publishedAt?: string;
 }
+export type NotificationCategory = 'ALL' | 'ACADEMICS' | 'FEES' | 'NOTICES' | 'LEAVES' | 'ATTENDANCE' | 'GENERAL';
+export interface NotificationActionButton {
+    id: string;
+    title: string;
+    actionUrl: string;
+    icon?: string;
+}
 export interface InAppNotification {
     id: string;
     instituteId: string;
@@ -310,9 +317,33 @@ export interface InAppNotification {
     title: string;
     message: string;
     type: string;
+    category?: NotificationCategory;
     link?: string;
+    actionButtons?: NotificationActionButton[];
+    priority?: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
     isRead: boolean;
     createdAt: string;
+}
+export interface NotificationPreferences {
+    inApp: boolean;
+    push: boolean;
+    email: boolean;
+    attendance: boolean;
+    results: boolean;
+    fees: boolean;
+    homework: boolean;
+    diary: boolean;
+    announcements: boolean;
+    leaves: boolean;
+    sound: boolean;
+}
+export interface DeviceTokenPayload {
+    token: string;
+    platform: 'ANDROID' | 'IOS' | 'WEB';
+    endpoint?: string;
+    p256dh?: string;
+    auth?: string;
+    userAgent?: string;
 }
 export declare function calculateGradeAndPercentage(obtainedMarks: number | null | undefined, maxMarks: number): {
     percentage: number | null;

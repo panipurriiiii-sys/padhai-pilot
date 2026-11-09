@@ -116,4 +116,14 @@ export const studentService = {
   getNotifications: async () =>
     list(await apiClient.get<InAppNotification[]>('/assessment/student/notifications')),
   markNotificationRead: (id: string) => apiClient.put<unknown>(`/assessment/student/notifications/${id}/read`, {}),
+  getUnifiedNotifications: async (category?: string) => {
+    try {
+      const q = category && category !== 'ALL' ? `?category=${category}` : '';
+      const res = await apiClient.get<any>(`/notifications${q}`);
+      return list(res?.items || res);
+    } catch {
+      return list(await apiClient.get<InAppNotification[]>('/assessment/student/notifications'));
+    }
+  },
+  markAllNotificationsRead: () => apiClient.put<unknown>('/notifications/read-all', {}),
 };

@@ -1,5 +1,7 @@
 import { apiClient } from './client';
 import { tokenStorage } from '../storage/secureStorage';
+import { loadPush } from '../push';
+import { Platform } from 'react-native';
 
 export interface MobileUserSession {
   token: string;
@@ -54,6 +56,20 @@ function acceptSession(data: MobileUserSession): MobileUserSession {
   }
   apiClient.setAuthToken(data.token);
   void tokenStorage.setSession(data).catch(() => {});
+
+  // Register mobile device push token with backend if available
+  void loadPush()
+    .getToken()
+    .then((fcmToken) => {
+      if (fcmToken) {
+        return apiClient.post('/notifications/device-token', {
+          token: fcmToken,
+          platform: Platform.OS === 'ios' ? 'IOS' : 'ANDROID',
+        });
+      }
+    })
+    .catch(() => {});
+
   return data;
 }
 

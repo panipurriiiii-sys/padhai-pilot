@@ -56,6 +56,8 @@ import {
   StudyMaterialItem,
   StudentAnalyticsSummary,
 } from '@padhai-pilot/shared';
+import { NotificationDrawer } from '../components/NotificationDrawer';
+import { useWebPush } from '../hooks/useWebPush';
 import {
   studentApi,
   clearAuthToken,
@@ -134,6 +136,7 @@ function StudentPortal() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showNotifications, setShowNotifications] = useState<boolean>(false);
+  const { isSubscribed, subscribeToPush, isRegistering: isPushRegistering } = useWebPush(!!student);
 
   // Core Data States
   const [dashboardData, setDashboardData] = useState<any>(null);
@@ -2391,58 +2394,28 @@ function StudentPortal() {
       -------------------------------------------------------------------------- */}
 
       {/* 1. NOTIFICATIONS DRAWER */}
-      {showNotifications && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex justify-end">
-          <div className="w-full max-w-md bg-[var(--bg-paper)] h-full border-l border-[var(--border-paper)] p-4 sm:p-6 overflow-y-auto flex flex-col justify-between shadow-2xl">
-            <div>
-              <div className="flex items-center justify-between pb-4 border-b border-[var(--border-paper)]">
-                <div className="flex items-center gap-2">
-                  <Bell className="w-4 h-4 text-[var(--brand-electric)]" />
-                  <h3 className="font-['Raleway'] font-bold text-base text-[var(--ink-primary)]">
-                    Notifications
-                  </h3>
-                </div>
-                <button
-                  onClick={() => setShowNotifications(false)}
-                  className="p-1 rounded-lg text-[var(--ink-muted)] hover:bg-[var(--bg-paper-warm)]"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="space-y-3 mt-4 overflow-y-auto max-h-[75vh] pr-1">
-                {notifications.map((notif) => (
-                  <div
-                    key={notif.id}
-                    className={`p-3.5 rounded-xl border transition space-y-1 ${
-                      notif.isRead
-                        ? 'bg-[var(--bg-paper-warm)]/40 border-[var(--border-paper)] text-[var(--ink-muted)]'
-                        : 'bg-[var(--bg-paper-warm)] border-[rgba(22,119,255,0.3)] text-[var(--ink-primary)]'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between text-[10px] text-[var(--ink-muted)]">
-                      <span className="font-semibold text-[var(--brand-electric)]">{notif.type.replace(/_/g, ' ').toLowerCase().replace(/^./, (c) => c.toUpperCase())}</span>
-                      <span>{new Date(notif.createdAt).toLocaleDateString()}</span>
-                    </div>
-                    <div className="text-xs font-bold">{notif.title}</div>
-                    <p className="text-[11px] text-[var(--ink-secondary)]">{notif.message}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <button
-              onClick={() => {
-                setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-                setShowNotifications(false);
-              }}
-              className="w-full py-2.5 rounded-xl bg-[var(--bg-paper-warm)] hover:bg-[var(--bg-surface-subtle)] border border-[var(--border-paper)] text-xs font-semibold text-[var(--ink-primary)] transition"
-            >
-              Mark All as Read
-            </button>
-          </div>
-        </div>
-      )}
+      <NotificationDrawer
+        isOpen={showNotifications}
+        onClose={() => setShowNotifications(false)}
+        notifications={notifications}
+        onMarkRead={async (id) => {
+          await studentApi.markNotificationRead(id);
+          setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
+        }}
+        onMarkAllRead={async () => {
+          await studentApi.markAllNotificationsRead();
+          setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+        }}
+        onNavigate={(url) => {
+          const tab = url.replace(/^\//, '').toUpperCase();
+          if (['OVERVIEW', 'RESULTS', 'ATTENDANCE', 'MATERIALS', 'TIMETABLE', 'DIARY', 'ASSIGNMENTS', 'TESTS', 'QUERIES', 'TASKS', 'FEES', 'NOTICES', 'PROFILE', 'DOCUMENTS', 'ANALYTICS'].includes(tab)) {
+            setActiveTab(tab as any);
+          }
+        }}
+        isSubscribedToPush={isSubscribed}
+        onEnablePush={subscribeToPush}
+        isPushRegistering={isPushRegistering}
+      />
 
       {/* 2. SUBMIT ASSIGNMENT MODAL */}
       {selectedAssignment && (

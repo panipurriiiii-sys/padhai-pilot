@@ -154,6 +154,7 @@ model User {
   createdAssessments    ClassroomAssessment[]     @relation("CreatedClassroomAssessments")
   studentMarks          AssessmentMark[]          @relation("StudentAssessmentMarks")
   notifications         Notification[]
+  deviceTokens          DeviceToken[]
   facultyProfiles       FacultyProfile[]
   salaryRecords         SalaryRecord[]            @relation("FacultySalaryRecords")
   leaveApplications     FacultyLeaveApplication[] @relation("FacultyLeaveApplications")
@@ -631,16 +632,18 @@ model AssessmentAudit {
 }
 
 model Notification {
-  id          String   @id @default(cuid())
-  instituteId String
-  userId      String
-  title       String
-  message     String
-  type        String   @default("RESULT_PUBLISHED")
-  link        String?
-  isRead      Boolean  @default(false)
-  dedupeKey   String?
-  createdAt   DateTime @default(now())
+  id            String   @id @default(cuid())
+  instituteId   String
+  userId        String
+  title         String
+  message       String
+  type          String   @default("RESULT_PUBLISHED")
+  link          String?
+  actionButtons Json?
+  priority      String   @default("NORMAL")
+  isRead        Boolean  @default(false)
+  dedupeKey     String?
+  createdAt     DateTime @default(now())
 
   institute Institute @relation(fields: [instituteId], references: [id], onDelete: Cascade)
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -650,6 +653,24 @@ model Notification {
   @@index([userId])
   @@index([instituteId])
   @@index([isRead])
+}
+
+model DeviceToken {
+  id          String   @id @default(cuid())
+  userId      String
+  token       String   @unique
+  platform    String   // ANDROID, IOS, WEB
+  endpoint    String?  // W3C Web Push endpoint
+  p256dh      String?  // Web Push public key
+  auth        String?  // Web Push auth secret
+  userAgent   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([platform])
 }
 
 // --------------------------------------------------------------------------

@@ -781,4 +781,81 @@ export const teacherApi = {
       body: JSON.stringify(dto),
     });
   },
+
+  // Notification API Methods
+  async getNotifications(category?: string): Promise<any[]> {
+    try {
+      const q = category && category !== 'ALL' ? `?category=${encodeURIComponent(category)}` : '';
+      const res = await request<{ items: any[] }>(`/notifications${q}`);
+      return res?.items ?? [];
+    } catch {
+      return [];
+    }
+  },
+
+  async getUnreadNotificationCount(): Promise<number> {
+    try {
+      const res = await request<{ unreadCount: number }>('/notifications/unread-count');
+      return res?.unreadCount ?? 0;
+    } catch {
+      return 0;
+    }
+  },
+
+  async markNotificationRead(id: string): Promise<void> {
+    try {
+      await request(`/notifications/${id}/read`, { method: 'PUT' });
+    } catch {
+      // safe fallback
+    }
+  },
+
+  async markAllNotificationsRead(): Promise<void> {
+    try {
+      await request('/notifications/read-all', { method: 'PUT' });
+    } catch {
+      // safe fallback
+    }
+  },
+
+  async getVapidPublicKey(): Promise<string | null> {
+    try {
+      const res = await request<{ publicKey: string }>('/notifications/vapid-public-key');
+      return res?.publicKey ?? null;
+    } catch {
+      return null;
+    }
+  },
+
+  async registerDeviceToken(payload: { token: string; platform: 'ANDROID' | 'IOS' | 'WEB'; endpoint?: string; p256dh?: string; auth?: string; userAgent?: string }): Promise<void> {
+    try {
+      await request('/notifications/device-token', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    } catch {
+      // safe fallback
+    }
+  },
+
+  async removeDeviceToken(token: string): Promise<void> {
+    try {
+      await request(`/notifications/device-token?token=${encodeURIComponent(token)}`, {
+        method: 'DELETE',
+      });
+    } catch {
+      // safe fallback
+    }
+  },
+
+  async getNotificationPreferences(): Promise<any> {
+    return await request('/notifications/preferences');
+  },
+
+  async updateNotificationPreferences(prefs: any): Promise<any> {
+    return await request('/notifications/preferences', {
+      method: 'PUT',
+      body: JSON.stringify(prefs),
+    });
+  },
 };
