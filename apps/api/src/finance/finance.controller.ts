@@ -63,6 +63,25 @@ export class FinanceController {
     return this.finance.sendReminders(u, body);
   }
 
+  // ------------------------------------------------------------------ Razorpay online fee collection
+
+  @Post('fees/:feeRecordId/razorpay/create-order')
+  @HttpCode(HttpStatus.OK)
+  createRazorpayFeeOrder(@CurrentUser() u: AuthenticatedUser, @Param('feeRecordId') id: string) {
+    return this.finance.createRazorpayFeeOrder(u, id);
+  }
+
+  @Post('fees/:feeRecordId/razorpay/verify')
+  @HttpCode(HttpStatus.OK)
+  verifyRazorpayFeePayment(@CurrentUser() u: AuthenticatedUser, @Param('feeRecordId') id: string, @Body() body: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) {
+    return this.finance.verifyAndRecordRazorpayFeePayment(u, id, body);
+  }
+
+  @Get('revenue')
+  getRevenue(@CurrentUser() u: AuthenticatedUser, @Query('from') from?: string, @Query('to') to?: string, @Query('batchId') batchId?: string) {
+    return this.finance.getRevenueSummary(u, { from, to, batchId });
+  }
+
   @Get('leaves')
   listLeaves(@CurrentUser() u: AuthenticatedUser, @Query('status') status?: string, @Query('batchId') batchId?: string) {
     return this.leaves.list(u, { status, batchId });
@@ -87,6 +106,18 @@ export class StudentFinanceController {
   @Get('finance/fees')
   fees(@CurrentUser() u: AuthenticatedUser) {
     return this.finance.studentLedger(u);
+  }
+
+  @Post('finance/fees/:feeRecordId/razorpay/create-order')
+  @HttpCode(HttpStatus.OK)
+  createStudentRazorpayOrder(@CurrentUser() u: AuthenticatedUser, @Param('feeRecordId') id: string) {
+    return this.finance.createRazorpayFeeOrder(u, id);
+  }
+
+  @Post('finance/fees/:feeRecordId/razorpay/verify')
+  @HttpCode(HttpStatus.OK)
+  verifyStudentRazorpayPayment(@CurrentUser() u: AuthenticatedUser, @Param('feeRecordId') id: string, @Body() body: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) {
+    return this.finance.verifyAndRecordRazorpayFeePayment(u, id, body);
   }
 
   @Get('leaves')

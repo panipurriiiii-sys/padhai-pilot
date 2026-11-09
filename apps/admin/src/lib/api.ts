@@ -378,6 +378,21 @@ class AdminApiClient {
   deleteLibraryMaterial(id: string) {
     return this.send<{ success: boolean }>('DELETE', `/study-library/${encodeURIComponent(id)}`);
   }
+
+  getRevenueSummary(params?: { from?: string; to?: string }) {
+    const qs = new URLSearchParams();
+    if (params?.from) qs.set('from', params.from);
+    if (params?.to) qs.set('to', params.to);
+    const q = qs.toString();
+    return this.send<{
+      totalCollected: number;
+      totalDue: number;
+      totalOverdue: number;
+      byMode: Record<string, number>;
+      monthlyTrend: { month: string; amount: number }[];
+      recentPayments?: { studentName?: string; amount: number; mode: string; paidOn: string; receiptNumber: string }[];
+    }>('GET', `/payments/revenue${q ? `?${q}` : ''}`);
+  }
 }
 
 export const adminApi = new AdminApiClient();

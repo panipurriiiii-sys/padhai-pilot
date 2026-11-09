@@ -1,4 +1,6 @@
-import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Inject, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import Razorpay from 'razorpay';
+import crypto from 'node:crypto';
 import { AccessService } from '../common/access/access.service.js';
 import { clampLimit, optionalString, requireString } from '../common/db/db.js';
 import type { AuthenticatedUser } from '../common/types.js';
@@ -22,7 +24,7 @@ import {
   type ScheduleEntry,
 } from './fee-core.js';
 
-const MODES: PaymentMode[] = ['CASH', 'UPI', 'BANK_TRANSFER', 'CHEQUE', 'CARD', 'OTHER'];
+const MODES: PaymentMode[] = ['CASH', 'UPI', 'BANK_TRANSFER', 'CHEQUE', 'CARD', 'OTHER', 'RAZORPAY'];
 const dayStr = (d: Date): string => d.toISOString().slice(0, 10);
 
 const toPayment = (p: any, recordedByName?: string): FeePaymentItem => ({
@@ -517,4 +519,159 @@ export class FinanceService {
 
   /** Re-exported so enrolment flows (join code, roster add, batch promotion) can reuse one implementation. */
   inheritForEnrollment = inheritBatchFees;
+
+  // ------------------------------------------------------------------ Razorpay online fee collection
+
+  private getRazorpay(): Razorpay {
+    const key_id = process.env.RAZORPAY_KEY_ID;
+    const key_secret = process.env.RAZORPAY_KEY_SECRET;
+    if (!key_id || !key_secret) throw new InternalServerErrorException('Razorpay is not configured.');
+    return new Razorpay({ key_id, key_secret });
+  }
+
+  /**
+   * Creates a Razorpay order for the outstanding balance of a fee record.
+   * Called by both staff (on behalf of a student) and the student themselves.
+   * Amount is always taken from the DB — never trusted from the client.
+   */
+  async createRazorpayFeeOrder(user: AuthenticatedUser, feeRecordId: string): Promise<{ order_id: string; amount: number; currency: string; key_id: string }> {
+    const db = this.access.db();
+    await this.access.assertActiveMembership(user);
+    const fee = await db.studentFeeRecord.findFirst({ where: { id: feeRecordId, instituteId: user.instituteId, voidedAt: null } });
+    if (!fee) throw new NotFoundException('Fee record not found.');
+    const balance = round2(fee.totalAmount - fee.paidAmount);
+    if (balance <= 0) throw new BadRequestException('Fee is already fully paid.');
+    const amountPaise = Math.round(balance * 100);
+    if (amountPaise < 100) throw new BadRequestException('Outstanding balance is below the minimum chargeable amount (₹1).');
+
+    try {
+      const rzp = this.getRazorpay();
+      const order = await rzp.orders.create({
+        amount: amountPaise,
+        currency: 'INR',
+        receipt: `fee-${feeRecordId.slice(-8)}-${Date.now().toString(36)}`,
+        notes: { feeRecordId, instituteId: user.instituteId, studentId: fee.studentId },
+      });
+      return { order_id: order.id, amount: Number(order.amount), currency: order.currency, key_id: process.env.RAZORPAY_KEY_ID! };
+    } catch (err: any) {
+      throw new InternalServerErrorException(err?.error?.description || err?.message || 'Could not create payment order.');
+    }
+  }
+
+  /**
+   * Verifies Razorpay signature (HMAC-SHA256) and, if valid, records the payment.
+   * The amount is re-read from the DB — the client cannot influence the amount.
+   */
+  async verifyAndRecordRazorpayFeePayment(
+    user: AuthenticatedUser,
+    feeRecordId: string,
+    body: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string },
+  ): Promise<FeePaymentItem> {
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = body;
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      throw new BadRequestException('Missing razorpay_order_id, razorpay_payment_id, or razorpay_signature.');
+    }
+
+    const key_secret = process.env.RAZORPAY_KEY_SECRET;
+    if (!key_secret) throw new InternalServerErrorException('Razorpay is not configured.');
+
+    const expected = crypto.createHmac('sha256', key_secret).update(`${razorpay_order_id}|${razorpay_payment_id}`).digest('hex');
+    const eBuf = Buffer.from(expected, 'utf8');
+    const rBuf = Buffer.from(razorpay_signature, 'utf8');
+    if (eBuf.length !== rBuf.length || !crypto.timingSafeEqual(eBuf, rBuf)) {
+      throw new BadRequestException('Payment verification failed: signature mismatch.');
+    }
+
+    // Signature verified — record payment at the DB balance (never trust client amount)
+    const db = this.access.db();
+    await this.access.assertActiveMembership(user);
+    const fee = await db.studentFeeRecord.findFirst({ where: { id: feeRecordId, instituteId: user.instituteId, voidedAt: null } });
+    if (!fee) throw new NotFoundException('Fee record not found.');
+    const balance = round2(fee.totalAmount - fee.paidAmount);
+    if (balance <= 0) throw new ConflictException('Fee has already been paid.');
+
+    return this.recordPayment(user, feeRecordId, {
+      amount: balance,
+      paidOn: new Date().toISOString().slice(0, 10),
+      mode: 'RAZORPAY',
+      reference: razorpay_payment_id,
+      note: `Order ${razorpay_order_id}`,
+    });
+  }
+
+  /** Revenue summary for the authenticated institute (staff only). */
+  async getRevenueSummary(
+    user: AuthenticatedUser,
+    opts: { from?: string; to?: string; batchId?: string } = {},
+  ): Promise<{
+    totalCollected: number;
+    totalDue: number;
+    totalOverdue: number;
+    byMode: Record<string, number>;
+    recentPayments: FeePaymentItem[];
+    monthlyTrend: { month: string; amount: number }[];
+  }> {
+    const db = this.access.db();
+    await this.access.assertActiveMembership(user);
+
+    const fromDate = opts.from ? new Date(`${opts.from}T00:00:00.000Z`) : new Date(Date.now() - 365 * 24 * 3600 * 1000);
+    const toDate = opts.to ? new Date(`${opts.to}T23:59:59.999Z`) : new Date();
+
+    const payWhere: any = {
+      instituteId: user.instituteId,
+      status: 'ISSUED',
+      paidOn: { gte: fromDate, lte: toDate },
+    };
+    if (opts.batchId) {
+      await this.access.assertBatchAccess(user, opts.batchId);
+      payWhere.feeRecord = { batchId: opts.batchId };
+    }
+
+    const [payments, feeAgg] = await Promise.all([
+      db.feePayment.findMany({
+        where: payWhere,
+        orderBy: { paidOn: 'desc' },
+        take: 50,
+      }),
+      db.studentFeeRecord.aggregate({
+        where: { instituteId: user.instituteId, voidedAt: null, ...(opts.batchId ? { batchId: opts.batchId } : {}) },
+        _sum: { totalAmount: true, paidAmount: true },
+      }),
+    ]);
+
+    const totalCollected = round2(payments.reduce((s, p) => s + p.amount, 0));
+    const totalFees = round2(feeAgg._sum.totalAmount ?? 0);
+    const totalPaid = round2(feeAgg._sum.paidAmount ?? 0);
+    const now = new Date();
+
+    const byMode: Record<string, number> = {};
+    for (const p of payments) {
+      byMode[p.mode] = round2((byMode[p.mode] ?? 0) + p.amount);
+    }
+
+    // Monthly trend (last 12 months)
+    const monthMap: Record<string, number> = {};
+    for (const p of payments) {
+      const mo = p.paidOn.toISOString().slice(0, 7);
+      monthMap[mo] = round2((monthMap[mo] ?? 0) + p.amount);
+    }
+    const monthlyTrend = Object.entries(monthMap).sort(([a], [b]) => a.localeCompare(b)).map(([month, amount]) => ({ month, amount }));
+
+    // Overdue
+    const overdueRows = await db.studentFeeRecord.findMany({
+      where: { instituteId: user.instituteId, voidedAt: null, dueDate: { lt: now }, ...(opts.batchId ? { batchId: opts.batchId } : {}) },
+      select: { totalAmount: true, paidAmount: true },
+      take: 2000,
+    });
+    const totalOverdue = round2(overdueRows.reduce((s, r) => s + Math.max(0, r.totalAmount - r.paidAmount), 0));
+
+    return {
+      totalCollected,
+      totalDue: round2(Math.max(0, totalFees - totalPaid)),
+      totalOverdue,
+      byMode,
+      recentPayments: payments.slice(0, 10).map((p) => toPayment(p)),
+      monthlyTrend,
+    };
+  }
 }

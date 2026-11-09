@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { Database, RefreshCw, Server, Users, GraduationCap, Building2, Activity } from 'lucide-react';
+import React, { useState } from 'react';
+import { Database, RefreshCw, Server, Users, GraduationCap, Building2, Activity, IndianRupee, TrendingUp, CreditCard } from 'lucide-react';
 import { adminApi } from '../lib/api';
 import { ErrorState, LoadingBlock, PageHeader, StatusBadge, useLoad } from '../components/ui';
 
@@ -25,15 +25,19 @@ function fmtUptime(s: number) {
   return d ? `${d}d ${h}h` : h ? `${h}h ${m}m` : `${m}m`;
 }
 
+const inr = (n: number) => `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+
 export default function Overview() {
   const health = useLoad(() => adminApi.getHealth());
   const analytics = useLoad(() => adminApi.getAdminAnalytics());
   const institutes = useLoad(() => adminApi.getInstitutes());
+  const revenue = useLoad(() => adminApi.getRevenueSummary());
 
   const reload = () => {
     health.reload();
     analytics.reload();
     institutes.reload();
+    revenue.reload();
   };
 
   const byStatus = (institutes.data ?? []).reduce<Record<string, number>>((a, i) => {
@@ -111,6 +115,61 @@ export default function Overview() {
                   </ul>
                 )}
               </div>
+            </div>
+          </>
+        ) : null}
+      </section>
+
+      <section aria-label="Revenue" className="mb-6">
+        <h2 className="font-display font-bold text-lg mb-3">Platform revenue (all institutes)</h2>
+        {revenue.error ? (
+          <ErrorState error={revenue.error} onRetry={revenue.reload} />
+        ) : revenue.loading && !revenue.data ? (
+          <LoadingBlock rows={1} />
+        ) : revenue.data ? (
+          <>
+            <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-3">
+              <Kpi icon={IndianRupee} label="Total collected" value={inr(revenue.data.totalCollected)} />
+              <Kpi icon={TrendingUp} label="Total outstanding" value={inr(revenue.data.totalDue)} />
+              <Kpi icon={Activity} label="Overdue" value={inr(revenue.data.totalOverdue)} />
+              <Kpi icon={CreditCard} label="Online (Razorpay)" value={inr(revenue.data.byMode['RAZORPAY'] ?? 0)} hint="Collected via Razorpay" />
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              {Object.keys(revenue.data.byMode).length > 0 && (
+                <div className="paper-card p-4">
+                  <h3 className="font-primary font-bold text-sm mb-3">Collections by payment mode</h3>
+                  <ul className="space-y-1.5">
+                    {Object.entries(revenue.data.byMode).sort(([, a], [, b]) => b - a).map(([mode, amount]) => (
+                      <li key={mode} className="flex justify-between items-center text-sm gap-3">
+                        <span className="font-primary text-ink-secondary">{mode.replace(/_/g, ' ')}</span>
+                        <span className="font-data font-bold text-ink-primary">{inr(amount)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {revenue.data.monthlyTrend.length > 0 && (
+                <div className="paper-card p-4">
+                  <h3 className="font-primary font-bold text-sm mb-3">Monthly trend (last {Math.min(6, revenue.data.monthlyTrend.length)} months)</h3>
+                  {(() => {
+                    const trend = revenue.data!.monthlyTrend.slice(-6);
+                    const max = Math.max(1, ...trend.map((t) => t.amount));
+                    return (
+                      <ul className="space-y-1.5">
+                        {trend.map(({ month, amount }) => (
+                          <li key={month} className="grid grid-cols-[5rem_1fr_5rem] items-center gap-2 text-xs">
+                            <span className="font-data text-ink-muted">{month}</span>
+                            <span className="h-2 rounded-full bg-chip overflow-hidden">
+                              <span className="block h-full bg-electric rounded-full" style={{ width: `${(amount / max) * 100}%` }} />
+                            </span>
+                            <span className="font-data text-right font-bold text-ink-primary">{inr(amount)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
           </>
         ) : null}

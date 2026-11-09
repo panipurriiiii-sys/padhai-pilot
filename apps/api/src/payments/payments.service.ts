@@ -208,4 +208,33 @@ export class PaymentsService {
   getKeyId(): string {
     return process.env.RAZORPAY_KEY_ID || '';
   }
+
+  async getPlatformRevenueSummary(opts?: { from?: string; to?: string }) {
+    if (!this.prisma) throw new Error('PrismaService not available');
+    const where: any = { status: 'ISSUED' };
+    if (opts?.from || opts?.to) {
+      where.paidOn = {};
+      if (opts?.from) where.paidOn.gte = new Date(opts.from);
+      if (opts?.to) where.paidOn.lte = new Date(opts.to);
+    }
+    const payments = await this.prisma.feePayment.findMany({ where, select: { amount: true, mode: true, paidOn: true } });
+    const totalCollected = payments.reduce((s, p) => s + p.amount, 0);
+    const byMode: Record<string, number> = {};
+    for (const p of payments) {
+      byMode[p.mode] = (byMode[p.mode] ?? 0) + p.amount;
+    }
+    const trendMap: Record<string, number> = {};
+    for (const p of payments) {
+      const month = p.paidOn.toISOString().slice(0, 7);
+      trendMap[month] = (trendMap[month] ?? 0) + p.amount;
+    }
+    const monthlyTrend = Object.entries(trendMap)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, amount]) => ({ month, amount }));
+    const overdueResult = await this.prisma.studentFeeRecord.aggregate({ where: { status: 'OVERDUE' }, _sum: { totalAmount: true, paidAmount: true } });
+    const totalOverdue = Math.max(0, (overdueResult._sum.totalAmount ?? 0) - (overdueResult._sum.paidAmount ?? 0));
+    const dueResult = await this.prisma.studentFeeRecord.aggregate({ where: { status: { notIn: ['PAID', 'VOID'] } }, _sum: { totalAmount: true, paidAmount: true } });
+    const totalDue = Math.max(0, (dueResult._sum.totalAmount ?? 0) - (dueResult._sum.paidAmount ?? 0));
+    return { totalCollected, totalDue, totalOverdue, byMode, monthlyTrend };
+  }
 }

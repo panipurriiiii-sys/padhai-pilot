@@ -1,10 +1,12 @@
-import { Controller, Post, Get, Body, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Body, HttpCode, HttpStatus, Query, UseGuards } from '@nestjs/common';
 import {
   PaymentsService,
   CreateOrderDto,
   VerifyPaymentDto,
 } from './payments.service.js';
 import { AuthGuard } from '../common/guards/auth.guard.js';
+import { RolesGuard } from '../common/guards/roles.guard.js';
+import { Roles } from '../common/decorators/roles.decorator.js';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import type { AuthenticatedUser } from '../common/types.js';
 
@@ -76,5 +78,13 @@ export class PaymentsController {
   ) {
     const instituteId = body.instituteId || user.instituteId;
     return this.paymentsService.upgradeInstitutePlan(instituteId, body.plan);
+  }
+
+  /** Platform-wide revenue summary: total collected, by mode, monthly trend (SUPER_ADMIN only). */
+  @Get('payments/revenue')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN')
+  getPlatformRevenue(@Query('from') from?: string, @Query('to') to?: string) {
+    return this.paymentsService.getPlatformRevenueSummary({ from, to });
   }
 }

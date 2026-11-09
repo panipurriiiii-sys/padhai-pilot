@@ -15,7 +15,7 @@ import type { FeeLedgerItem, FeePaymentItem } from '../../services/api/financeSe
 import type { PaymentMode } from '@padhai-pilot/shared';
 
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
-const MODES: PaymentMode[] = ['CASH', 'UPI', 'BANK_TRANSFER', 'CHEQUE', 'CARD', 'OTHER'];
+const MODES: PaymentMode[] = ['CASH', 'UPI', 'BANK_TRANSFER', 'CHEQUE', 'CARD', 'OTHER', 'RAZORPAY'];
 const STATUS_VARIANT = { PAID: 'success', PARTIAL: 'warning', PENDING: 'neutral', OVERDUE: 'error', VOID: 'neutral' } as const;
 
 type BillingCycle = 'MONTHLY' | 'HALF_YEARLY' | 'YEARLY' | 'ONE_TIME';

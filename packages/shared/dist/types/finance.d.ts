@@ -1,5 +1,5 @@
 export type FeeRecordStatus = 'PENDING' | 'PARTIAL' | 'PAID' | 'OVERDUE' | 'VOID';
-export type PaymentMode = 'CASH' | 'UPI' | 'BANK_TRANSFER' | 'CHEQUE' | 'CARD' | 'OTHER';
+export type PaymentMode = 'CASH' | 'UPI' | 'BANK_TRANSFER' | 'CHEQUE' | 'CARD' | 'OTHER' | 'RAZORPAY';
 export interface FeeInstalmentInput {
     label?: string;
     amount: number;
