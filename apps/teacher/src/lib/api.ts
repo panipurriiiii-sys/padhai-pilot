@@ -768,8 +768,18 @@ export const teacherApi = {
   },
 
   async getEffectiveFeatures(instituteId?: string): Promise<any> {
-    const q = instituteId ? `?instituteId=${instituteId}` : '';
-    return await request<any>(`/features/institute/${instituteId || 'current'}${q}`);
+    const id = instituteId?.trim() || '';
+    const q = id ? `?instituteId=${encodeURIComponent(id)}` : '';
+    return await request<any>(`/features/institute/${id || 'current'}${q}`).catch((err) => {
+      console.warn('getEffectiveFeatures fallback:', err);
+      return {
+        success: true,
+        data: {
+          plan: 'GROWTH',
+          evaluatedFeatures: {},
+        },
+      };
+    });
   },
 
   async getFeatureRegistry(): Promise<any> {

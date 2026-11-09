@@ -560,6 +560,14 @@ function TeacherApp() {
 
           {currentTab === 'reports' && reports && <ReportsView reports={reports} />}
 
+          {currentTab === 'subscription' && (
+            <SubscriptionView
+              instituteName={user?.instituteName || 'Your Institute'}
+              instituteId={user?.instituteId}
+              userRole={user?.role}
+            />
+          )}
+
           {currentTab === 'settings' && user && (
             <SettingsView
               user={user}

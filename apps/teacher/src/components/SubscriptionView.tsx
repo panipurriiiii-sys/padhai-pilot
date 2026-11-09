@@ -22,6 +22,7 @@ import { RazorpayCheckoutButton } from './RazorpayCheckoutButton';
 
 interface SubscriptionViewProps {
   instituteName?: string;
+  instituteId?: string;
   userRole?: string;
 }
 
@@ -135,6 +136,7 @@ const PLAN_TIERS: PlanTier[] = [
 
 export function SubscriptionView({
   instituteName = 'Your Institute',
+  instituteId,
   userRole = 'TUITION_OWNER',
 }: SubscriptionViewProps) {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('annual');
@@ -147,7 +149,7 @@ export function SubscriptionView({
     let isMounted = true;
     async function loadPlanData() {
       try {
-        const res = await teacherApi.getEffectiveFeatures();
+        const res = await teacherApi.getEffectiveFeatures(instituteId);
         if (isMounted && res?.data) {
           if (res.data.plan) {
             setCurrentPlan(res.data.plan);
@@ -156,8 +158,9 @@ export function SubscriptionView({
             setEffectiveFeatures(res.data.evaluatedFeatures);
           }
         }
-      } catch {
-        // Fallback gracefully to default Growth tier if offline or mock-free preview
+      } catch (e) {
+        // Fallback gracefully to default tier if offline
+        console.warn('Could not load plan data from server:', e);
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -166,7 +169,7 @@ export function SubscriptionView({
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [instituteId]);
 
   const isOwner = userRole === 'TUITION_OWNER' || userRole === 'INSTITUTE_ADMIN';
 

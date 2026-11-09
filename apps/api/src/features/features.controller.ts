@@ -10,6 +10,8 @@ import {
   ForbiddenException,
   Inject,
 } from '@nestjs/common';
+import jwt from 'jsonwebtoken';
+import { getJwtSecret } from '../common/security/runtime.js';
 import { FeaturesService } from './features.service.js';
 import { getAllRegisteredFeatures } from './features.registry.js';
 import { AuthGuard } from '../common/guards/auth.guard.js';
@@ -64,17 +66,42 @@ export class FeaturesController {
   }
 
   /**
-   * Super Admin / Institute Admin: Get complete effective feature matrix for an institute
+   * Super Admin / Institute Admin / Teacher: Get complete effective feature matrix for an institute
    */
   @Get('institute/:instituteId')
   async getInstituteEffectiveFeatures(
     @Param('instituteId') instituteId: string,
     @Req() req?: any,
   ) {
-    const user = req?.user;
+    let resolvedId = instituteId;
+    let userRole = req?.user?.role;
+
+    if (req?.headers?.authorization) {
+      try {
+        const raw = req.headers.authorization.replace(/^Bearer\s+/i, '');
+        const decoded = jwt.verify(raw, getJwtSecret(), { algorithms: ['HS256'] }) as any;
+        if (decoded?.instituteId) {
+          if (!resolvedId || resolvedId === 'current' || resolvedId === 'me') {
+            resolvedId = decoded.instituteId;
+          }
+          userRole = decoded.role;
+        }
+      } catch {
+        // Fallback gracefully to public/anonymous evaluation
+      }
+    } else if (req?.user?.instituteId) {
+      if (!resolvedId || resolvedId === 'current' || resolvedId === 'me') {
+        resolvedId = req.user.instituteId;
+      }
+    }
+
+    if (!resolvedId || resolvedId === 'current' || resolvedId === 'me') {
+      resolvedId = 'inst_default';
+    }
+
     const result = await this.featuresService.evaluateAllFeaturesForInstitute(
-      instituteId,
-      user?.role,
+      resolvedId,
+      userRole,
     );
 
     return {

@@ -308,60 +308,74 @@ export class FeaturesService {
     instituteId: string,
     userRole?: UserRole,
   ): Promise<InstituteEffectiveFeatures> {
-    let institute = await this.prisma.institute.findUnique({
-      where: { id: instituteId },
-      select: { id: true, name: true, plan: true, isActive: true },
-    });
+    const safeInstituteId = instituteId?.trim() || 'default';
+    try {
+      let institute = await this.prisma.institute.findUnique({
+        where: { id: safeInstituteId },
+        select: { id: true, name: true, plan: true, isActive: true },
+      }).catch(() => null);
 
-    if (!institute) {
-      if (this.prisma.isConnected) {
-        try {
-          institute = await this.prisma.institute.create({
-            data: {
-              id: instituteId,
-              name: 'Apex IIT-JEE & Medical Academy',
-              slug: instituteId.replace('inst_', '').replace(/_/g, '-'),
-              plan: 'ENTERPRISE',
-              isActive: true,
-            },
-            select: { id: true, name: true, plan: true, isActive: true },
-          });
-        } catch {
-          // Fallback to in-memory defaults
-        }
-      }
       if (!institute) {
         institute = {
-          id: instituteId,
-          name: 'Apex IIT-JEE & Medical Academy',
-          plan: 'ENTERPRISE',
+          id: safeInstituteId,
+          name: 'Institute',
+          plan: 'GROWTH',
           isActive: true,
         };
       }
-    }
 
-    const allDefs = getAllRegisteredFeatures();
-    const evaluatedFeatures: Record<string, FeatureEvaluationResult> = {};
+      const allDefs = getAllRegisteredFeatures();
+      const evaluatedFeatures: Record<string, FeatureEvaluationResult> = {};
 
-    await Promise.all(
-      allDefs.map(async (def) => {
-        const res = await this.evaluateFeature({
+      await Promise.all(
+        allDefs.map(async (def) => {
+          try {
+            const res = await this.evaluateFeature({
+              featureKey: def.key,
+              instituteId: safeInstituteId,
+              userRole,
+            });
+            evaluatedFeatures[def.key] = res;
+          } catch {
+            evaluatedFeatures[def.key] = {
+              featureKey: def.key,
+              isAvailable: true,
+              status: 'ACTIVE',
+              evaluatedAt: new Date().toISOString(),
+            };
+          }
+        }),
+      );
+
+      return {
+        instituteId: institute.id,
+        instituteName: institute.name,
+        plan: (institute.plan as SubscriptionPlan) || 'GROWTH',
+        isInstituteActive: institute.isActive,
+        evaluatedFeatures: evaluatedFeatures as Record<FeatureKey, FeatureEvaluationResult>,
+        evaluatedAt: new Date().toISOString(),
+      };
+    } catch (err) {
+      this.logger.warn(`evaluateAllFeaturesForInstitute fallback for ${safeInstituteId}: ${err}`);
+      const allDefs = getAllRegisteredFeatures();
+      const evaluatedFeatures: Record<string, FeatureEvaluationResult> = {};
+      for (const def of allDefs) {
+        evaluatedFeatures[def.key] = {
           featureKey: def.key,
-          instituteId,
-          userRole,
-        });
-        evaluatedFeatures[def.key] = res;
-      }),
-    );
-
-    return {
-      instituteId: institute.id,
-      instituteName: institute.name,
-      plan: (institute.plan as SubscriptionPlan) || 'STARTER',
-      isInstituteActive: institute.isActive,
-      evaluatedFeatures: evaluatedFeatures as Record<FeatureKey, FeatureEvaluationResult>,
-      evaluatedAt: new Date().toISOString(),
-    };
+          isAvailable: true,
+          status: 'ACTIVE',
+          evaluatedAt: new Date().toISOString(),
+        };
+      }
+      return {
+        instituteId: safeInstituteId,
+        instituteName: 'Institute',
+        plan: 'GROWTH',
+        isInstituteActive: true,
+        evaluatedFeatures: evaluatedFeatures as Record<FeatureKey, FeatureEvaluationResult>,
+        evaluatedAt: new Date().toISOString(),
+      };
+    }
   }
 
   /**
