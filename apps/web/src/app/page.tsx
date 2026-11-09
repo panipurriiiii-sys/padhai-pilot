@@ -1,8 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
 
-// ISR: regenerate at most once per hour; serves stale instantly while revalidating in the background
-export const revalidate = 3600;
 import {
   BookOpen,
   GraduationCap,
