@@ -40,6 +40,26 @@ export const DashboardScreen: React.FC = () => {
       <QueryBoundary query={query}>
         {(d) => (
           <>
+            {d.isFrozen && (
+              <Card tone="amber" style={{ marginBottom: 12 }}>
+                <View style={{ gap: 6 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Text style={{ ...typography.caption, fontWeight: '700', color: colors.statusWarning }}>
+                      ACCOUNT FROZEN • PREMIUM REQUIRED
+                    </Text>
+                    <Badge label="INACTIVE" tone="amber" />
+                  </View>
+                  <Text style={{ ...typography.h3, color: colors.inkPrimary }}>
+                    Tuition Subscription Inactive
+                  </Text>
+                  <Text style={{ ...typography.caption, color: colors.inkSecondary, lineHeight: 18 }}>
+                    {d.freezeMessage ||
+                      'Your tuition is on the Free Starter plan. Student portal and app access is frozen until your tuition upgrades to a Premium plan.'}
+                  </Text>
+                </View>
+              </Card>
+            )}
+
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
               <KpiCard
                 label="Attendance"

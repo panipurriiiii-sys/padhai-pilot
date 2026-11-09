@@ -4,9 +4,13 @@ import {
   InternalServerErrorException,
   UnauthorizedException,
   Logger,
+  Optional,
+  Inject,
 } from '@nestjs/common';
 import Razorpay from 'razorpay';
 import crypto from 'node:crypto';
+import { PrismaService } from '../prisma/prisma.service.js';
+import { RedisService } from '../redis/redis.service.js';
 
 export class CreateOrderDto {
   amount!: number; // in paise (e.g. 100 = 1 INR)
@@ -29,6 +33,9 @@ export class VerifyPaymentDto {
   payment_id?: string;
   razorpay_signature?: string;
   signature?: string;
+  plan?: string;
+  instituteId?: string;
+  notes?: Record<string, string>;
 }
 
 export interface VerifyPaymentResult {
@@ -36,12 +43,18 @@ export interface VerifyPaymentResult {
   message: string;
   order_id: string;
   payment_id: string;
+  upgradedPlan?: string;
 }
 
 @Injectable()
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
   private razorpayInstance: Razorpay | null = null;
+
+  constructor(
+    @Optional() @Inject(PrismaService) private readonly prisma?: PrismaService,
+    @Optional() @Inject(RedisService) private readonly redis?: RedisService,
+  ) {}
 
   private getRazorpay(): Razorpay {
     const key_id = process.env.RAZORPAY_KEY_ID;
@@ -145,11 +158,50 @@ export class PaymentsService {
 
     this.logger.log(`Razorpay payment verified successfully for order ${order_id}, payment ${payment_id}`);
 
+    // If payment is for a subscription upgrade, apply the plan immediately
+    const targetPlan = input.plan || input.notes?.plan;
+    const targetInstituteId = input.instituteId || input.notes?.instituteId;
+    let upgradedPlan: string | undefined;
+
+    if (targetPlan && targetInstituteId) {
+      const upgradeRes = await this.upgradeInstitutePlan(targetInstituteId, targetPlan);
+      upgradedPlan = upgradeRes.plan;
+    }
+
     return {
       success: true,
       message: 'Payment verified successfully.',
       order_id,
       payment_id,
+      upgradedPlan,
+    };
+  }
+
+  async upgradeInstitutePlan(
+    instituteId: string,
+    plan: string,
+  ): Promise<{ success: boolean; instituteId: string; plan: string }> {
+    if (!instituteId) throw new BadRequestException('Institute ID is required.');
+    const normalizedPlan = (plan || 'GROWTH').toUpperCase();
+    if (!['STARTER', 'GROWTH', 'PRO', 'ENTERPRISE'].includes(normalizedPlan)) {
+      throw new BadRequestException(`Invalid subscription plan: ${plan}`);
+    }
+
+    if (this.prisma) {
+      await this.prisma.institute.update({
+        where: { id: instituteId },
+        data: { plan: normalizedPlan, status: 'ACTIVE', isActive: true },
+      });
+      if (this.redis) {
+        await this.redis.invalidateTenant(instituteId).catch(() => {});
+      }
+    }
+
+    this.logger.log(`Institute ${instituteId} subscription upgraded to ${normalizedPlan}`);
+    return {
+      success: true,
+      instituteId,
+      plan: normalizedPlan,
     };
   }
 

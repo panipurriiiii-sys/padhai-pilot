@@ -92,6 +92,45 @@ export class StudentService {
   // ==========================================================================
   async getDashboard(user: AuthenticatedUser) {
     const profile = await this.getStudentProfile(user);
+
+    if (profile.isFrozen) {
+      return {
+        student: {
+          id: user.id,
+          fullName: profile.fullName,
+          email: profile.email,
+          rollNumber: profile.rollNumber,
+          instituteName: profile.instituteName,
+          batchName: profile.batchName,
+          academicYear: profile.academicYear,
+          isFrozen: true,
+          freezeReason: profile.freezeReason,
+          freezeMessage: profile.freezeMessage,
+          institutePlan: profile.institutePlan,
+        },
+        stats: {
+          totalTests: 0,
+          avgPercentage: 0,
+          attendanceRate: 0,
+          totalMaterials: 0,
+          pendingAssignments: 0,
+          feeBalance: 0,
+          classesAttended: 0,
+          totalClasses: 0,
+          upcomingTests: 0,
+        },
+        recentResults: [],
+        recentMaterials: [],
+        recentDiaries: [],
+        upcomingAssignments: [],
+        announcements: [],
+        timetable: [],
+        isFrozen: true,
+        freezeReason: profile.freezeReason,
+        freezeMessage: profile.freezeMessage,
+      };
+    }
+
     const [results, materials, attendance, announcements, fees, diaries, assignments, tests, timetable] = await Promise.all([
       this.assessmentService.getStudentPublishedResults(user),
       this.assessmentService.getStudentStudyMaterials(user),
@@ -312,15 +351,26 @@ export class StudentService {
             joinedAt: true,
             batchId: true,
             batch: { select: { name: true, subject: true } },
-            institute: { select: { id: true, name: true, academicYear: true } },
+            institute: { select: { id: true, name: true, academicYear: true, plan: true, status: true, isActive: true } },
           },
         })
       : null;
     const institute =
       enrollment?.institute ??
       (user.instituteId
-        ? await db.institute.findUnique({ where: { id: user.instituteId }, select: { id: true, name: true, academicYear: true } })
+        ? await db.institute.findUnique({
+            where: { id: user.instituteId },
+            select: { id: true, name: true, academicYear: true, plan: true, status: true, isActive: true },
+          })
         : null);
+
+    const plan = ((institute as any)?.plan || 'STARTER').toUpperCase();
+    const isPremium = ['GROWTH', 'PRO', 'ENTERPRISE'].includes(plan);
+    const isFrozen = !isPremium || (institute as any)?.status === 'FROZEN' || (institute as any)?.isActive === false;
+    const freezeReason = isFrozen ? 'TUITION_PREMIUM_REQUIRED' : undefined;
+    const freezeMessage = isFrozen
+      ? `Your tuition (${institute?.name || 'Your Institute'}) is on the Free Starter plan. Student portal access is frozen until your tuition upgrades to a Premium plan (Growth or Pro).`
+      : undefined;
 
     const prefs = (dbUser.notificationPreferences ?? {}) as Partial<typeof DEFAULT_NOTIFICATION_PREFS>;
     return {
@@ -339,6 +389,10 @@ export class StudentService {
       academicYear: institute?.academicYear || '',
       joinedAt: (enrollment?.joinedAt ?? dbUser.createdAt).toISOString(),
       notificationPreferences: { ...DEFAULT_NOTIFICATION_PREFS, ...prefs },
+      isFrozen,
+      freezeReason,
+      freezeMessage,
+      institutePlan: plan,
     };
   }
 

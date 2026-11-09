@@ -228,6 +228,21 @@ export function SubscriptionView({
         </div>
       )}
 
+      {/* Student Accounts Freeze Alert for Starter Plan */}
+      {currentPlan === 'STARTER' && (
+        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-3 shadow-xs">
+          <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <div className="font-bold text-xs uppercase tracking-wider text-amber-800">
+              Student Accounts Frozen (Premium Required)
+            </div>
+            <p className="text-[11px] text-amber-700 mt-1 leading-relaxed">
+              Your tuition center is currently on the Free Starter plan. Access for all student web portals and mobile app accounts is <strong>frozen</strong> until you upgrade to a Premium plan (<strong>Growth Academy</strong> or <strong>Pro Institute</strong>). Upgrading immediately restores full access for all enrolled students.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* 2. Quota Usage Overview (Live Metrics) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Metric 1: Students */}
@@ -440,16 +455,21 @@ export function SubscriptionView({
                   ) : tier.id === 'STARTER' ? (
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={async () => {
                         if (!isOwner) {
                           alert('Only Tuition Owners and Institute Admins can alter subscription tiers.');
                           return;
                         }
+                        try {
+                          await teacherApi.upgradeSubscriptionPlan('STARTER');
+                        } catch (err: any) {
+                          console.warn('Backend plan update:', err?.message);
+                        }
                         setCurrentPlan(tier.id);
                         setActionSuccess(
-                          `Switched institute to Free Starter. Entitlements updated.`,
+                          `Switched institute to Free Starter. Note: Student accounts are now frozen until a Premium tier is activated.`,
                         );
-                        setTimeout(() => setActionSuccess(null), 5000);
+                        setTimeout(() => setActionSuccess(null), 6000);
                       }}
                       className="w-full py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 bg-stone-900 hover:bg-black text-white"
                     >
@@ -471,12 +491,17 @@ export function SubscriptionView({
                           ? 'bg-[var(--brand-electric)] hover:bg-brand-hover text-white shadow-sm'
                           : 'bg-stone-900 hover:bg-black text-white'
                       }`}
-                      onPaymentSuccess={(res) => {
+                      onPaymentSuccess={async (res) => {
+                        try {
+                          await teacherApi.upgradeSubscriptionPlan(tier.id);
+                        } catch (err: any) {
+                          console.warn('Backend upgrade plan sync:', err?.message);
+                        }
                         setCurrentPlan(tier.id);
                         setActionSuccess(
-                          `Payment verified via Razorpay! Upgraded institute to ${tier.name}. Payment ID: ${res.razorpay_payment_id}`,
+                          `Payment verified via Razorpay! Upgraded institute to ${tier.name}. All student accounts have been unfrozen! Payment ID: ${res.razorpay_payment_id}`,
                         );
-                        setTimeout(() => setActionSuccess(null), 6000);
+                        setTimeout(() => setActionSuccess(null), 8000);
                       }}
                     />
                   )}

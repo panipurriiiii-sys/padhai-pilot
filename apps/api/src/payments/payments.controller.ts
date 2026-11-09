@@ -1,9 +1,17 @@
-import { Controller, Post, Get, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Get, Body, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
 import {
   PaymentsService,
   CreateOrderDto,
   VerifyPaymentDto,
 } from './payments.service.js';
+import { AuthGuard } from '../common/guards/auth.guard.js';
+import { CurrentUser } from '../common/decorators/current-user.decorator.js';
+import type { AuthenticatedUser } from '../common/types.js';
+
+export class UpgradePlanDto {
+  plan!: string;
+  instituteId?: string;
+}
 
 @Controller()
 export class PaymentsController {
@@ -53,5 +61,20 @@ export class PaymentsController {
   @Get('payments/key')
   getKey() {
     return { key_id: this.paymentsService.getKeyId() };
+  }
+
+  /**
+   * Upgrades the institute's subscription plan.
+   * Accessible by authenticated tuition owners and institute admins.
+   */
+  @Post('payments/upgrade-plan')
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async upgradePlan(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() body: UpgradePlanDto,
+  ) {
+    const instituteId = body.instituteId || user.instituteId;
+    return this.paymentsService.upgradeInstitutePlan(instituteId, body.plan);
   }
 }

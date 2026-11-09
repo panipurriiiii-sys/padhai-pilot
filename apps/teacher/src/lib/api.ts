@@ -58,6 +58,7 @@ import {
   CreateBatchFeeStructureRequest,
   BatchFeeStructureItem,
   FeeLedgerItem,
+  SubscriptionPlan,
   BatchFeeSummary,
   RecordFeePaymentRequest,
   FeePaymentItem,
@@ -773,6 +774,13 @@ export const teacherApi = {
 
   async getFeatureRegistry(): Promise<any> {
     return await request<any>('/features/registry');
+  },
+
+  async upgradeSubscriptionPlan(plan: SubscriptionPlan): Promise<{ success: boolean; plan: SubscriptionPlan }> {
+    return await request<{ success: boolean; plan: SubscriptionPlan }>('/payments/upgrade-plan', {
+      method: 'POST',
+      body: JSON.stringify({ plan }),
+    });
   },
 
   async dispatchFeeReminder(dto: DispatchFeeReminderDto): Promise<{ success: boolean; message: string; reminderId: string }> {

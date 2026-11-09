@@ -147,6 +147,10 @@ export interface StudentProfile {
         results: boolean;
         fees: boolean;
     };
+    isFrozen?: boolean;
+    freezeReason?: string;
+    freezeMessage?: string;
+    institutePlan?: string;
 }
 export interface StudentTestQuestion {
     id: string;
@@ -182,6 +186,10 @@ export interface StudentDashboard {
         instituteName: string;
         batchName: string;
         academicYear: string;
+        isFrozen?: boolean;
+        freezeReason?: string;
+        freezeMessage?: string;
+        institutePlan?: string;
     };
     stats: {
         totalTests: number;
@@ -200,6 +208,9 @@ export interface StudentDashboard {
     upcomingAssignments: StudentAssignmentItem[];
     announcements: StudentAnnouncementItem[];
     timetable: StudentTimetableSlot[];
+    isFrozen?: boolean;
+    freezeReason?: string;
+    freezeMessage?: string;
 }
 /** Response of POST /student/join-batch. `token`/`user` are a fresh session scoped to the joined institute. */
 export interface StudentJoinBatchResult {

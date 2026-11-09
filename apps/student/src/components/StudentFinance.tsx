@@ -6,7 +6,6 @@ import { ErrorState, EmptyState } from '@padhai-pilot/ui';
 import type { StudentFeeLedger, StudentLeaveItem } from '@padhai-pilot/shared';
 import { studentApi } from '../lib/api';
 import { StudentFeeBreakdownCard } from './charts';
-import { RazorpayCheckoutButton } from './RazorpayCheckoutButton';
 
 const inr = (n: number) => `Rs ${n.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 const BADGE: Record<string, string> = {
@@ -81,32 +80,13 @@ export function StudentFeesPanel() {
 
       <StudentFeeBreakdownCard fee={{ totalFees: ledger.totalFees, paidAmount: ledger.paidAmount, balanceDue: ledger.balanceDue }} />
 
-      {/* Quick Pay Banner for outstanding balance */}
-      {ledger.balanceDue > 0 && (
-        <div className="paper-card p-4 flex flex-wrap items-center justify-between gap-4 border-l-4 border-l-[var(--brand-primary)] bg-[var(--surface-subtle)]">
-          <div>
-            <div className="font-bold text-sm text-[var(--ink-primary)]">Total Outstanding Balance: {inr(ledger.balanceDue)}</div>
-            <p className="text-xs text-[var(--ink-muted)] mt-0.5">Pay tuition fee securely online using Razorpay UPI, Cards, or Netbanking.</p>
-          </div>
-          <RazorpayCheckoutButton
-            amount={ledger.balanceDue}
-            description="PadhaiPilot Tuition Fee Payment"
-            notes={{ studentId: ledger.fees[0]?.studentId || '', type: 'TOTAL_BALANCE' }}
-            buttonText={`Pay Total ${inr(ledger.balanceDue)}`}
-            onPaymentSuccess={() => {
-              load();
-            }}
-          />
-        </div>
-      )}
-
       {docError && <p role="alert" className="text-xs text-[var(--status-danger-text)]">{docError}</p>}
 
       <div className="paper-card overflow-x-auto max-w-full">
         <table className="w-full min-w-[560px] text-xs">
           <thead>
             <tr className="text-left text-[var(--ink-muted)] border-b border-[var(--border-paper)]">
-              <th className="p-3">Fee</th><th className="p-3">Due</th><th className="p-3 text-right">Amount</th><th className="p-3 text-right">Paid</th><th className="p-3 text-right">Balance</th><th className="p-3">Status</th><th className="p-3 text-right">Action</th>
+              <th className="p-3">Fee</th><th className="p-3">Due</th><th className="p-3 text-right">Amount</th><th className="p-3 text-right">Paid</th><th className="p-3 text-right">Balance</th><th className="p-3">Status</th>
             </tr>
           </thead>
           <tbody>
@@ -118,22 +98,6 @@ export function StudentFeesPanel() {
                 <td className="p-3 text-right font-data">{inr(f.paidAmount)}</td>
                 <td className="p-3 text-right font-data font-bold">{inr(f.balanceDue)}</td>
                 <td className="p-3"><span className={badgeCls(f.status)}>{f.status}</span></td>
-                <td className="p-3 text-right">
-                  {f.balanceDue > 0 ? (
-                    <RazorpayCheckoutButton
-                      amount={f.balanceDue}
-                      description={`Tuition Fee: ${f.feeTitle}${f.instalmentNo > 1 ? ` #${f.instalmentNo}` : ''}`}
-                      notes={{ feeId: f.id, instalmentNo: String(f.instalmentNo) }}
-                      buttonText={`Pay ${inr(f.balanceDue)}`}
-                      className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--brand-primary)] hover:opacity-90 text-white font-bold text-xs shadow-xs transition"
-                      onPaymentSuccess={() => {
-                        load();
-                      }}
-                    />
-                  ) : (
-                    <span className="text-xs text-emerald-600 font-semibold">Cleared</span>
-                  )}
-                </td>
               </tr>
             ))}
           </tbody>

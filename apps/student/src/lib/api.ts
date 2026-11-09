@@ -151,6 +151,10 @@ export interface StudentProfileData {
     results: boolean;
     fees: boolean;
   };
+  isFrozen?: boolean;
+  freezeReason?: string;
+  freezeMessage?: string;
+  institutePlan?: string;
 }
 
 export interface TeachingDiaryEntry {

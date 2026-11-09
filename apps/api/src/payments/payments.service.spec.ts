@@ -120,4 +120,33 @@ describe('PaymentsService - Razorpay Standard Checkout', () => {
       ).rejects.toThrow(BadRequestException);
     });
   });
+
+  describe('upgradeInstitutePlan', () => {
+    it('should reject invalid subscription plan', async () => {
+      await expect(
+        service.upgradeInstitutePlan('inst_test', 'SUPER_TIER_INVALID'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should update institute plan in database when prisma is present', async () => {
+      const mockPrisma = {
+        institute: {
+          update: vi.fn().mockResolvedValue({ id: 'inst_test', plan: 'GROWTH' }),
+        },
+      };
+      const mockRedis = {
+        invalidateTenant: vi.fn().mockResolvedValue(true),
+      };
+      const svc = new PaymentsService(mockPrisma as any, mockRedis as any);
+      const res = await svc.upgradeInstitutePlan('inst_test', 'GROWTH');
+      expect(res.success).toBe(true);
+      expect(res.plan).toBe('GROWTH');
+      expect(mockPrisma.institute.update).toHaveBeenCalledWith({
+        where: { id: 'inst_test' },
+        data: { plan: 'GROWTH', status: 'ACTIVE', isActive: true },
+      });
+      expect(mockRedis.invalidateTenant).toHaveBeenCalledWith('inst_test');
+    });
+  });
 });
+

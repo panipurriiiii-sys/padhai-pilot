@@ -84,6 +84,7 @@ import {
 } from '../components/charts';
 import { EmptyState, ErrorState, MotionProvider, ToastProvider } from '@padhai-pilot/ui';
 import { StudentFeesPanel, StudentLeavesPanel } from '../components/StudentFinance';
+import { FrozenAccountView } from '../components/FrozenAccountView';
 
 type PortalTab =
   | 'OVERVIEW'
@@ -931,6 +932,50 @@ function StudentPortal() {
   // --------------------------------------------------------------------------
   // LOGGED-IN PORTAL INTERFACE
   // --------------------------------------------------------------------------
+  const isAccountFrozen = Boolean(profileData?.isFrozen || dashboardData?.student?.isFrozen);
+
+  if (isAccountFrozen) {
+    return (
+      <div className="min-h-screen bg-[var(--bg-desk)] text-[var(--ink-primary)] flex flex-col font-['Raleway']">
+        <header className="sticky top-0 z-40 bg-[var(--bg-paper)]/90 backdrop-blur-md border-b border-[var(--border-paper)]">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 shrink-0 rounded-xl bg-[var(--bg-paper-warm)] border border-[var(--border-paper)] flex items-center justify-center text-amber-600 shadow-inner">
+                <GraduationCap className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <span className="font-['Playfair_Display'] font-bold text-sm sm:text-base text-[var(--ink-primary)] truncate block">
+                  {student.instituteName || profileData?.instituteName || 'PadhaiPilot Institute'}
+                </span>
+                <span className="text-[10px] text-amber-700 font-bold uppercase tracking-wider">
+                  Tuition Subscription Inactive
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="py-1.5 px-3 rounded-lg border border-[var(--border-paper)] text-xs text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] flex items-center gap-1.5 transition"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Sign Out</span>
+            </button>
+          </div>
+        </header>
+        <main className="flex-1 flex items-center justify-center p-4">
+          <FrozenAccountView
+            instituteName={student.instituteName || profileData?.instituteName}
+            freezeMessage={profileData?.freezeMessage || dashboardData?.student?.freezeMessage}
+            onRefresh={async () => {
+              await loadAllStudentData();
+            }}
+            onSignOut={handleLogout}
+          />
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[var(--bg-desk)] text-[var(--ink-primary)] flex flex-col font-['Raleway']">
       {/* TOP HEADER */}
