@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import {
   Award,
   Bell,
@@ -58,6 +59,16 @@ import {
 } from '@padhai-pilot/shared';
 import { NotificationDrawer } from '../components/NotificationDrawer';
 import { useWebPush } from '../hooks/useWebPush';
+// Non-default heavy views — lazy loaded to reduce initial JS bundle
+const LibraryView = dynamic(
+  () => import('../components/LibraryView').then((m) => ({ default: m.LibraryView })),
+  { ssr: false },
+);
+const FrozenAccountView = dynamic(
+  () => import('../components/FrozenAccountView').then((m) => ({ default: m.FrozenAccountView })),
+  { ssr: false },
+);
+import { cached, invalidate } from '../lib/cache';
 import {
   studentApi,
   clearAuthToken,
@@ -84,8 +95,7 @@ import {
 } from '../components/charts';
 import { EmptyState, ErrorState, MotionProvider, ToastProvider } from '@padhai-pilot/ui';
 import { StudentFeesPanel, StudentLeavesPanel } from '../components/StudentFinance';
-import { FrozenAccountView } from '../components/FrozenAccountView';
-import { LibraryView } from '../components/LibraryView';
+// FrozenAccountView and LibraryView are dynamically imported above
 
 type PortalTab =
   | 'OVERVIEW'
@@ -374,26 +384,27 @@ function StudentPortal() {
     }
 
     // Always verify stored token with server on refresh
-    studentApi
-      .getCurrentUser()
+    cached('student:currentUser', 5 * 60 * 1000, () => studentApi.getCurrentUser())
       .then((auth) => {
         if (auth && auth.user) {
           setStudent(auth.user);
           return loadAllStudentData();
         } else {
           clearAuthToken();
+          invalidate('student:currentUser');
           setStudent(null);
         }
       })
       .catch((err: any) => {
         console.warn("Session verification check:", err);
+        invalidate('student:currentUser');
         if (err?.status === 401) {
           clearAuthToken();
           setStudent(null);
         } else {
-          const cached = studentApi.getStudentSession();
-          if (cached) {
-            setStudent(cached);
+          const session = studentApi.getStudentSession();
+          if (session) {
+            setStudent(session);
             return loadAllStudentData();
           }
         }
@@ -450,6 +461,7 @@ function StudentPortal() {
   };
 
   const handleLogout = () => {
+    invalidate('student:currentUser');
     clearAuthToken();
     setStudent(null);
     setDashboardData(null);

@@ -8,6 +8,7 @@ import {
   Query,
   Body,
   UseGuards,
+  Header,
 } from '@nestjs/common';
 import { AuthGuard } from '../common/guards/auth.guard.js';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
@@ -27,6 +28,7 @@ export class NotificationsController {
    * Public endpoint to get VAPID public key for browser push registration.
    */
   @Get('vapid-public-key')
+  @Header('Cache-Control', 'public, s-maxage=86400')
   getVapidPublicKey() {
     return { publicKey: this.webPushService.getPublicKey() };
   }

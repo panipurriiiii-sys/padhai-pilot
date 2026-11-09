@@ -53,18 +53,32 @@ export class NotificationsService {
 
     let items: any[] = [], unreadCount = 0, total = 0;
     try {
-      [items, unreadCount, total] = await Promise.all([
-        this.prisma.notification.findMany({
-          where,
-          orderBy: { createdAt: 'desc' },
-          take: limit,
-          skip: offset,
-        }),
-        this.prisma.notification.count({
-          where: { userId, isRead: false },
-        }),
-        this.prisma.notification.count({ where }),
-      ]);
+      if (query.unreadOnly) {
+        // `where` already has isRead:false, so unreadCount === total — save one COUNT query
+        [items, total] = await Promise.all([
+          this.prisma.notification.findMany({
+            where,
+            orderBy: { createdAt: 'desc' },
+            take: limit,
+            skip: offset,
+          }),
+          this.prisma.notification.count({ where }),
+        ]);
+        unreadCount = total;
+      } else {
+        [items, unreadCount, total] = await Promise.all([
+          this.prisma.notification.findMany({
+            where,
+            orderBy: { createdAt: 'desc' },
+            take: limit,
+            skip: offset,
+          }),
+          this.prisma.notification.count({
+            where: { userId, isRead: false },
+          }),
+          this.prisma.notification.count({ where }),
+        ]);
+      }
     } catch {
       // Migration pending — return empty list rather than 500
       return { items: [], unreadCount: 0, total: 0 };

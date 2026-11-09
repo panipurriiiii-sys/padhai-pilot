@@ -1,36 +1,105 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { Sidebar, NavTab } from '../components/Sidebar';
+// Default tab — eagerly loaded
 import { DashboardView } from '../components/DashboardView';
-import { BulkMarksEntryView } from '../components/BulkMarksEntryView';
-import { BatchesView } from '../components/BatchesView';
-import { AttendanceView } from '../components/AttendanceView';
-import { AssignmentsView } from '../components/AssignmentsView';
-import { TestsView } from '../components/TestsView';
-import { LessonPlansView } from '../components/LessonPlansView';
-import { InvitationsView } from '../components/InvitationsView';
-import { TimetableView } from '../components/TimetableView';
-import { AnnouncementsView } from '../components/AnnouncementsView';
-import { ReportsView } from '../components/ReportsView';
-import { SettingsView } from '../components/SettingsView';
-import { DailyTeachingDiaryView } from '../components/DailyTeachingDiaryView';
-import { FacultyManagementView } from '../components/FacultyManagementView';
-import { FacultySalaryView } from '../components/FacultySalaryView';
-import { FacultyLeaveView } from '../components/FacultyLeaveView';
-import { StudyMaterialView } from '../components/StudyMaterialView';
-import { LibraryView } from '../components/LibraryView';
-import { BatchFeesView } from '../components/BatchFeesView';
-import { StudentLeavesView } from '../components/StudentLeavesView';
-import { TuitionBrandingView } from '../components/TuitionBrandingView';
-import { SubscriptionView } from '../components/SubscriptionView';
+// Always-visible chrome — eagerly loaded
 import { LoadError } from '../components/LoadError';
 import { AuthModal } from '../components/AuthModal';
 import { AuthWelcomeScreen } from '../components/AuthWelcomeScreen';
 import { GetStartedView } from '../components/GetStartedView';
 import { NotificationDrawer } from '../components/NotificationDrawer';
+
+// Non-default views — lazy loaded to reduce initial JS bundle
+const BulkMarksEntryView = dynamic(
+  () => import('../components/BulkMarksEntryView').then((m) => ({ default: m.BulkMarksEntryView })),
+  { ssr: false },
+);
+const BatchesView = dynamic(
+  () => import('../components/BatchesView').then((m) => ({ default: m.BatchesView })),
+  { ssr: false },
+);
+const AttendanceView = dynamic(
+  () => import('../components/AttendanceView').then((m) => ({ default: m.AttendanceView })),
+  { ssr: false },
+);
+const AssignmentsView = dynamic(
+  () => import('../components/AssignmentsView').then((m) => ({ default: m.AssignmentsView })),
+  { ssr: false },
+);
+const TestsView = dynamic(
+  () => import('../components/TestsView').then((m) => ({ default: m.TestsView })),
+  { ssr: false },
+);
+const LessonPlansView = dynamic(
+  () => import('../components/LessonPlansView').then((m) => ({ default: m.LessonPlansView })),
+  { ssr: false },
+);
+const InvitationsView = dynamic(
+  () => import('../components/InvitationsView').then((m) => ({ default: m.InvitationsView })),
+  { ssr: false },
+);
+const TimetableView = dynamic(
+  () => import('../components/TimetableView').then((m) => ({ default: m.TimetableView })),
+  { ssr: false },
+);
+const AnnouncementsView = dynamic(
+  () => import('../components/AnnouncementsView').then((m) => ({ default: m.AnnouncementsView })),
+  { ssr: false },
+);
+const ReportsView = dynamic(
+  () => import('../components/ReportsView').then((m) => ({ default: m.ReportsView })),
+  { ssr: false },
+);
+const SettingsView = dynamic(
+  () => import('../components/SettingsView').then((m) => ({ default: m.SettingsView })),
+  { ssr: false },
+);
+const DailyTeachingDiaryView = dynamic(
+  () => import('../components/DailyTeachingDiaryView').then((m) => ({ default: m.DailyTeachingDiaryView })),
+  { ssr: false },
+);
+const FacultyManagementView = dynamic(
+  () => import('../components/FacultyManagementView').then((m) => ({ default: m.FacultyManagementView })),
+  { ssr: false },
+);
+const FacultySalaryView = dynamic(
+  () => import('../components/FacultySalaryView').then((m) => ({ default: m.FacultySalaryView })),
+  { ssr: false },
+);
+const FacultyLeaveView = dynamic(
+  () => import('../components/FacultyLeaveView').then((m) => ({ default: m.FacultyLeaveView })),
+  { ssr: false },
+);
+const StudyMaterialView = dynamic(
+  () => import('../components/StudyMaterialView').then((m) => ({ default: m.StudyMaterialView })),
+  { ssr: false },
+);
+const LibraryView = dynamic(
+  () => import('../components/LibraryView').then((m) => ({ default: m.LibraryView })),
+  { ssr: false },
+);
+const BatchFeesView = dynamic(
+  () => import('../components/BatchFeesView').then((m) => ({ default: m.BatchFeesView })),
+  { ssr: false },
+);
+const StudentLeavesView = dynamic(
+  () => import('../components/StudentLeavesView').then((m) => ({ default: m.StudentLeavesView })),
+  { ssr: false },
+);
+const TuitionBrandingView = dynamic(
+  () => import('../components/TuitionBrandingView').then((m) => ({ default: m.TuitionBrandingView })),
+  { ssr: false },
+);
+const SubscriptionView = dynamic(
+  () => import('../components/SubscriptionView').then((m) => ({ default: m.SubscriptionView })),
+  { ssr: false },
+);
 import { useWebPush } from '../hooks/useWebPush';
 import { teacherApi, getAuthToken, clearAuthToken } from '../lib/api';
+import { cached, invalidate } from '../lib/cache';
 import type {
   TeacherDashboardMetrics,
   BatchSummary,
@@ -166,18 +235,20 @@ function TeacherApp() {
       }
 
       try {
-        const auth = await teacherApi.getCurrentUser();
+        const auth = await cached('teacher:currentUser', 5 * 60 * 1000, () => teacherApi.getCurrentUser());
         if (auth && auth.user) {
           setUser(auth.user);
           await loadUserData();
         } else {
           clearAuthToken();
+          invalidate('teacher:currentUser');
           setUser(null);
           setShowAuthModal(true);
         }
       } catch (err) {
         console.warn('Session verification failed, prompting login:', err);
         clearAuthToken();
+        invalidate('teacher:currentUser');
         setUser(null);
         setShowAuthModal(true);
       } finally {
@@ -294,6 +365,7 @@ function TeacherApp() {
   };
 
   const handleLogout = async () => {
+    invalidate('teacher:currentUser');
     try {
       await teacherApi.logout();
     } catch {

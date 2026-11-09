@@ -11,6 +11,7 @@ import {
   HttpCode,
   HttpStatus,
   Req,
+  Header,
 } from '@nestjs/common';
 import type { Request } from 'express';
 import jwt from 'jsonwebtoken';
@@ -42,12 +43,14 @@ export class StudyLibraryController {
 
   /** Public list – no auth required. Auth is optional to show institute materials. */
   @Get()
+  @Header('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
   async list(@Query() query: ListLibraryQuery, @Req() req: Request) {
     return this.service.list(query, tryGetUser(req));
   }
 
   /** Meta for filter dropdowns — no auth required */
   @Get('meta')
+  @Header('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
   async getMeta() {
     return this.service.getMeta();
   }

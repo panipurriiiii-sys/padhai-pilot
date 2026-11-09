@@ -9,6 +9,7 @@ import {
   UseGuards,
   ForbiddenException,
   Inject,
+  Header,
 } from '@nestjs/common';
 import jwt from 'jsonwebtoken';
 import { getJwtSecret } from '../common/security/runtime.js';
@@ -34,6 +35,7 @@ export class FeaturesController {
    * Public / Authenticated: Get canonical registry of all supported platform features
    */
   @Get('registry')
+  @Header('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
   getRegistry() {
     return {
       success: true,
