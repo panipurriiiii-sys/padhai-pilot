@@ -45,6 +45,14 @@ export function BatchesView({
   const [gradeLevel, setGradeLevel] = useState('Class 12');
   const [room, setRoom] = useState('');
 
+  const existingSubjects = React.useMemo(() => {
+    const set = new Set<string>();
+    batches.forEach((b) => {
+      if (b.subject?.trim()) set.add(b.subject.trim());
+    });
+    return Array.from(set);
+  }, [batches]);
+
   const activeBatch = batches.find((b) => b.id === (selectedBatchId || batches[0]?.id)) || batches[0];
 
   const filteredStudents = students.filter(
@@ -321,11 +329,17 @@ export function BatchesView({
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Mathematics"
+                    list="batch-existing-subjects"
+                    placeholder="Enter subject (e.g. Science, Coding, Accounts)"
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
                     className="input-paper w-full"
                   />
+                  <datalist id="batch-existing-subjects">
+                    {existingSubjects.map((s) => (
+                      <option key={s} value={s} />
+                    ))}
+                  </datalist>
                 </div>
                 <div>
                   <label className="block text-[var(--ink-primary)] mb-1 font-bold">Batch Code</label>

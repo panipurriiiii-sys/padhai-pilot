@@ -72,11 +72,10 @@ export function BulkMarksEntryView({
 
   // Multi-Subject Configuration State
   const [isMultiSubject, setIsMultiSubject] = useState(false);
-  const [subjects, setSubjects] = useState<SubjectScoreConfig[]>([
-    { name: 'Physics', maxMarks: 50 },
-    { name: 'Chemistry', maxMarks: 50 },
-    { name: 'Mathematics', maxMarks: 100 },
-  ]);
+  const [subjects, setSubjects] = useState<SubjectScoreConfig[]>(() => {
+    const initialBatch = batches.find((b) => b.id === (initialBatchId || batches[0]?.id));
+    return [{ name: initialBatch?.subject || 'Subject 1', maxMarks: 50 }];
+  });
 
   // 2. Marks Roster Table State
   const [roster, setRoster] = useState<AssessmentMarkItem[]>([]);
@@ -128,6 +127,7 @@ export function BulkMarksEntryView({
             setSubjects(first.subjects);
           } else {
             setIsMultiSubject(false);
+            setSubjects([{ name: first.subject || 'Subject 1', maxMarks: first.maxMarks || 50 }]);
           }
 
           // Load details
@@ -135,6 +135,12 @@ export function BulkMarksEntryView({
           setRoster(details.roster);
         } else {
           // Initialize fresh roster from students
+          const curB = batches.find((b) => b.id === selectedBatchId);
+          setSubject(curB?.subject || '');
+          setAssessmentTitle(`Assessment - ${curB?.name || 'Class'}`);
+          setSubjects([{ name: curB?.subject || 'Subject 1', maxMarks: 50 }]);
+          setIsMultiSubject(false);
+
           const initialTable: AssessmentMarkItem[] = rosterData.students.map((s) => ({
             studentId: s.id,
             studentName: s.fullName,
@@ -200,6 +206,11 @@ export function BulkMarksEntryView({
     setCurrentAssessmentId('');
     setAssessmentTitle(`Class Assessment #${assessmentList.length + 1} — ${new Date().toLocaleDateString()}`);
     setAssessmentStatus('DRAFT');
+    const curB = batches.find((b) => b.id === selectedBatchId);
+    if (curB?.subject) {
+      setSubject(curB.subject);
+      setSubjects([{ name: curB.subject, maxMarks: 50 }]);
+    }
     if (isMultiSubject) {
       setMaxMarks(subjects.reduce((sum, s) => sum + s.maxMarks, 0));
     } else {
@@ -970,6 +981,7 @@ export function BulkMarksEntryView({
               type="text"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
+              placeholder="Enter subject name"
               className="w-full bg-paper-warm border border-border-paper rounded-xl px-3 py-2 text-xs font-medium text-stone-900 focus:outline-none focus:border-electric"
             />
           </div>

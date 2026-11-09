@@ -59,11 +59,11 @@ export function FacultyManagementView({
     email: '',
     phone: '',
     staffId: `FAC-${Math.floor(100 + Math.random() * 900)}`,
-    designation: 'Faculty in Mathematics',
+    designation: 'Faculty',
     compensationType: 'FIXED_MONTHLY',
     baseSalary: 65000,
     hourlyRate: 1500,
-    assignedSubjects: ['Mathematics'],
+    assignedSubjects: [],
     delegatedPermissions: ['MANAGE_ATTENDANCE', 'MANAGE_MARKS', 'PUBLISH_DIARY'],
     batchIds: [],
   });
@@ -494,9 +494,30 @@ export function FacultyManagementView({
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Senior Faculty & HOD Mathematics"
+                  placeholder="e.g. Senior Faculty / Teacher"
                   value={newFaculty.designation}
                   onChange={(e) => setNewFaculty({ ...newFaculty, designation: e.target.value })}
+                  className="input-paper w-full text-xs font-['Raleway'] py-2"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-['Raleway'] font-bold text-[var(--ink-secondary)] mb-1">
+                  Assigned Subjects (comma-separated, optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Science, Accounts, Coding, History"
+                  value={newFaculty.assignedSubjects?.join(', ') || ''}
+                  onChange={(e) =>
+                    setNewFaculty({
+                      ...newFaculty,
+                      assignedSubjects: e.target.value
+                        .split(',')
+                        .map((s) => s.trim())
+                        .filter(Boolean),
+                    })
+                  }
                   className="input-paper w-full text-xs font-['Raleway'] py-2"
                 />
               </div>

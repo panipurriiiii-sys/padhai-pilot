@@ -233,6 +233,22 @@ function StudentPortal() {
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
+  const availableSubjects = useMemo(() => {
+    const subs = new Set<string>();
+    diaries.forEach((d) => { if (d.subject?.trim()) subs.add(d.subject.trim()); });
+    materials.forEach((m) => { if (m.subject?.trim()) subs.add(m.subject.trim()); });
+    results.forEach((r) => { if (r.subject?.trim()) subs.add(r.subject.trim()); });
+    assignments.forEach((a) => { if (a.subject?.trim()) subs.add(a.subject.trim()); });
+    tests.forEach((t) => { if (t.subject?.trim()) subs.add(t.subject.trim()); });
+    timetable.forEach((day) => {
+      day.slots?.forEach((s) => { if (s.subject?.trim()) subs.add(s.subject.trim()); });
+    });
+    attendanceData.records?.forEach((rec) => {
+      if (rec.subjectName?.trim()) subs.add(rec.subjectName.trim());
+    });
+    return ['ALL', ...Array.from(subs)];
+  }, [diaries, materials, results, assignments, tests, timetable, attendanceData]);
+
   // Modals & Interactive States
   const [selectedResult, setSelectedResult] = useState<StudentAssessmentResult | null>(null);
   const [selectedDiary, setSelectedDiary] = useState<TeachingDiaryEntry | null>(null);
@@ -255,14 +271,14 @@ function StudentPortal() {
 
   // Ask Academic Doubt Modal
   const [showQueryModal, setShowQueryModal] = useState(false);
-  const [querySubject, setQuerySubject] = useState('Mathematics');
+  const [querySubject, setQuerySubject] = useState('');
   const [queryTopic, setQueryTopic] = useState('');
   const [queryText, setQueryText] = useState('');
   const [isSubmittingQuery, setIsSubmittingQuery] = useState(false);
 
   // New Study Task Input
   const [newTaskTitle, setNewTaskTitle] = useState('');
-  const [newTaskSubject, setNewTaskSubject] = useState('Mathematics');
+  const [newTaskSubject, setNewTaskSubject] = useState('General');
   const [newTaskPriority, setNewTaskPriority] = useState<'NORMAL' | 'HIGH' | 'LOW'>('NORMAL');
 
   // Join Institute / Invitation State
@@ -1429,7 +1445,7 @@ function StudentPortal() {
 
                 {/* Subject Filter Pills */}
                 <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                  {['ALL', 'Mathematics', 'Physics', 'Chemistry'].map((sub) => (
+                  {availableSubjects.map((sub) => (
                     <button
                       key={sub}
                       onClick={() => setSelectedSubject(sub)}
@@ -2132,16 +2148,20 @@ function StudentPortal() {
                     placeholder="e.g. Solve 30 Questions on Definite Integrals DPP 14"
                     className="flex-1 w-full bg-[var(--bg-paper-warm)] border border-[var(--border-paper)] rounded-xl px-3.5 py-2.5 text-xs text-[var(--ink-primary)] outline-none focus:border-[var(--brand-electric)]"
                   />
-                  <select
+                  <input
+                    type="text"
+                    list="student-task-subjects"
                     value={newTaskSubject}
                     onChange={(e) => setNewTaskSubject(e.target.value)}
+                    placeholder="Subject"
                     className="w-full sm:w-36 bg-[var(--bg-paper-warm)] border border-[var(--border-paper)] rounded-xl px-3 py-2.5 text-xs text-[var(--ink-primary)] outline-none"
-                  >
-                    <option value="Mathematics">Mathematics</option>
-                    <option value="Physics">Physics</option>
-                    <option value="Chemistry">Chemistry</option>
-                    <option value="General Study">General</option>
-                  </select>
+                  />
+                  <datalist id="student-task-subjects">
+                    {availableSubjects.filter((s) => s !== 'ALL').map((sub) => (
+                      <option key={sub} value={sub} />
+                    ))}
+                    <option value="General" />
+                  </datalist>
                   <select
                     value={newTaskPriority}
                     onChange={(e) => setNewTaskPriority(e.target.value as any)}
@@ -2718,15 +2738,20 @@ function StudentPortal() {
                 <label className="block text-xs font-semibold text-[var(--ink-secondary)] mb-1">
                   Subject *
                 </label>
-                <select
+                <input
+                  type="text"
+                  list="student-query-subjects"
                   value={querySubject}
                   onChange={(e) => setQuerySubject(e.target.value)}
+                  placeholder="Enter subject"
+                  required
                   className="w-full bg-[var(--bg-paper-warm)] border border-[var(--border-paper)] rounded-xl px-3 py-2 text-xs text-[var(--ink-primary)] outline-none"
-                >
-                  <option value="Mathematics">Mathematics</option>
-                  <option value="Physics">Physics</option>
-                  <option value="Chemistry">Chemistry</option>
-                </select>
+                />
+                <datalist id="student-query-subjects">
+                  {availableSubjects.filter((s) => s !== 'ALL').map((sub) => (
+                    <option key={sub} value={sub} />
+                  ))}
+                </datalist>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-[var(--ink-secondary)] mb-1">
