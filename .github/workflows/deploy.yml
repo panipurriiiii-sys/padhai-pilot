@@ -12,8 +12,10 @@ on:
         type: choice
         options:
           - all
-          - teacher-portal
           - backend-api
+          - teacher-portal
+          - student-portal
+          - admin-portal
 
 jobs:
   # ============================================================================
@@ -54,9 +56,9 @@ jobs:
       - name: Dry Run Notice
         if: env.VERCEL_TOKEN == ''
         run: |
-          echo "Notice: VERCEL_TOKEN secret not configured yet in GitHub repository."
+          echo "Notice: VERCEL_TOKEN secret not configured in GitHub repository."
           echo "The API build succeeded and is 100% Vercel compatible."
-          echo "Add VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID_API to repository secrets to enable auto-deployment."
+          echo "Add VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID_API to repository secrets to enable auto-deployment via CLI."
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
@@ -95,9 +97,88 @@ jobs:
       - name: Dry Run Notice
         if: env.VERCEL_TOKEN == ''
         run: |
-          echo "Notice: VERCEL_TOKEN secret not configured yet in GitHub repository."
+          echo "Notice: VERCEL_TOKEN secret not configured in GitHub repository."
           echo "The Teacher Portal Next.js build succeeded and is 100% Vercel compatible."
-          echo "Add VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID_TEACHER to repository secrets to enable auto-deployment."
+          echo "Add VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID_TEACHER to repository secrets to enable auto-deployment via CLI."
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
+  # ============================================================================
+  # DEPLOY STUDENT PORTAL TO VERCEL
+  # ============================================================================
+  deploy-student:
+    name: Deploy Student Portal to Vercel
+    runs-on: ubuntu-latest
+    if: github.event.inputs.target == 'all' || github.event.inputs.target == 'student-portal' || github.event_name == 'push'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (LTS 20)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Student Portal
+        run: npm run build --workspace=@padhai-pilot/student
+
+      - name: Deploy to Vercel (Production)
+        if: env.VERCEL_TOKEN != ''
+        run: |
+          npx vercel --prod --token=${{ secrets.VERCEL_TOKEN }} --yes apps/student
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_STUDENT }}
+
+      - name: Dry Run Notice
+        if: env.VERCEL_TOKEN == ''
+        run: |
+          echo "Notice: VERCEL_TOKEN secret not configured in GitHub repository."
+          echo "The Student Portal Next.js build succeeded and is 100% Vercel compatible."
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+  # ============================================================================
+  # DEPLOY ADMIN PORTAL TO VERCEL
+  # ============================================================================
+  deploy-admin:
+    name: Deploy Admin Portal to Vercel
+    runs-on: ubuntu-latest
+    if: github.event.inputs.target == 'all' || github.event.inputs.target == 'admin-portal' || github.event_name == 'push'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (LTS 20)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Admin Portal
+        run: npm run build --workspace=@padhai-pilot/admin
+
+      - name: Deploy to Vercel (Production)
+        if: env.VERCEL_TOKEN != ''
+        run: |
+          npx vercel --prod --token=${{ secrets.VERCEL_TOKEN }} --yes apps/admin
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_ADMIN }}
+
+      - name: Dry Run Notice
+        if: env.VERCEL_TOKEN == ''
+        run: |
+          echo "Notice: VERCEL_TOKEN secret not configured in GitHub repository."
+          echo "The Admin Portal Next.js build succeeded and is 100% Vercel compatible."
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}

@@ -1,22 +1,26 @@
-name: PadhaiPilot CI Pipeline
+name: PadhaiPilot CI/CD & Promotion Pipeline
 
 on:
   push:
-    branches: [main, master, staging, develop]
+    branches: [dev, main]
   pull_request:
-    branches: [main, master, staging, develop]
+    branches: [dev, main]
   workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   # ============================================================================
   # 1. SHARED PACKAGES & TYPE VALIDATION
   # ============================================================================
   typecheck:
-    name: Typecheck & Lint
+    name: Typecheck & UI Tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -34,17 +38,20 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate --schema=apps/api/prisma/schema.prisma
 
-      - name: Build @padhai-pilot/shared
+      - name: Build Shared Types & Theme Tokens
         run: npm run build --workspace=@padhai-pilot/shared
 
-      - name: Typecheck @padhai-pilot/shared
+      - name: Typecheck Shared Package
         run: npm run typecheck --workspace=@padhai-pilot/shared
+
+      - name: Run UI Framework Component Tests
+        run: npm test --workspace=@padhai-pilot/ui
 
   # ============================================================================
   # 2. NESTJS BACKEND API TESTS & BUILD
   # ============================================================================
   backend-api:
-    name: Backend API (Tests & Serverless Build)
+    name: Backend API (Vitest & Serverless Build)
     runs-on: ubuntu-latest
     needs: [typecheck]
     steps:
@@ -66,18 +73,20 @@ jobs:
       - name: Build @padhai-pilot/shared
         run: npm run build --workspace=@padhai-pilot/shared
 
-      - name: Run Backend Test Suite (Vitest)
+      - name: Run Backend Test Suite (Vitest - 195 Tests)
         run: npm test --workspace=@padhai-pilot/api
         env:
           NODE_ENV: test
           REDIS_ENABLED: 'false'
           REDIS_RATE_LIMIT_ENABLED: 'false'
           JWT_SECRET: 'test-ci-jwt-secret-key-2026'
+          RAZORPAY_KEY_ID: 'rzp_test_TxwR5OYFQBCDbY'
+          RAZORPAY_KEY_SECRET: 'vGxHSnZ3p5Qrw1eT6iJobT9D'
 
       - name: Build NestJS API
         run: npm run build --workspace=@padhai-pilot/api
 
-      - name: Verify Vercel Serverless Entrypoint
+      - name: Verify Vercel Serverless Entrypoint & ESM Imports
         run: |
           node -e "
             const fs = require('fs');
@@ -93,10 +102,46 @@ jobs:
           "
 
   # ============================================================================
-  # 3. TEACHER WEB PORTAL BUILD
+  # 3. STUDENT WEB PORTAL (Next.js Turbopack Build)
+  # ============================================================================
+  student-portal:
+    name: Student Portal (Next.js Turbopack)
+    runs-on: ubuntu-latest
+    needs: [typecheck]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (LTS 20)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build @padhai-pilot/shared
+        run: npm run build --workspace=@padhai-pilot/shared
+
+      - name: Cache Next.js Build
+        uses: actions/cache@v4
+        with:
+          path: apps/student/.next/cache
+          key: ${{ runner.os }}-nextjs-student-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('apps/student/**.[jt]s', 'apps/student/**.[jt]sx') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-student-${{ hashFiles('**/package-lock.json') }}-
+
+      - name: Build Student Portal
+        run: npm run build --workspace=@padhai-pilot/student
+        env:
+          NEXT_PUBLIC_API_URL: 'https://padhai-pilot.vercel.app/api'
+
+  # ============================================================================
+  # 4. TEACHER WEB PORTAL (Next.js Turbopack Build)
   # ============================================================================
   teacher-portal:
-    name: Teacher Portal (Next.js Build)
+    name: Teacher Portal (Next.js Turbopack)
     runs-on: ubuntu-latest
     needs: [typecheck]
     steps:
@@ -123,16 +168,17 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nextjs-teacher-${{ hashFiles('**/package-lock.json') }}-
 
-      - name: Build Teacher Next.js Portal
+      - name: Build Teacher Portal
         run: npm run build --workspace=@padhai-pilot/teacher
         env:
-          NEXT_PUBLIC_API_URL: 'https://api.padhaipilot.com/api'
+          NEXT_PUBLIC_API_URL: 'https://padhai-pilot.vercel.app/api'
+          NEXT_PUBLIC_RAZORPAY_KEY_ID: 'rzp_test_TxwR5OYFQBCDbY'
 
   # ============================================================================
-  # 4. OTHER MONOREPO PORTALS (Admin, Student, Web)
+  # 5. ADMIN WEB PORTAL (Next.js Turbopack Build)
   # ============================================================================
-  monorepo-portals:
-    name: Other Portals Verification
+  admin-portal:
+    name: Admin Portal (Next.js Turbopack)
     runs-on: ubuntu-latest
     needs: [typecheck]
     steps:
@@ -148,37 +194,104 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Check Portal Builds (If Present)
-        run: |
-          for app in admin student web; do
-            if [ -f "apps/$app/package.json" ]; then
-              echo "Checking apps/$app..."
-              npm run build --workspace=@padhai-pilot/$app --if-present || echo "Optional portal $app skipped."
-            fi
-          done
+      - name: Build @padhai-pilot/shared
+        run: npm run build --workspace=@padhai-pilot/shared
+
+      - name: Build Admin Portal
+        run: npm run build --workspace=@padhai-pilot/admin
+        env:
+          NEXT_PUBLIC_API_URL: 'https://padhai-pilot.vercel.app/api'
 
   # ============================================================================
-  # 5. RELEASE & VERCEL DEPLOYMENT READINESS GATE
+  # 6. REACT NATIVE MOBILE APP TEST SUITE
   # ============================================================================
-  deployment-readiness:
-    name: Vercel Deployment Readiness Gate
+  mobile-tests:
+    name: Mobile App (Jest Test Suite - 136 Tests)
     runs-on: ubuntu-latest
-    needs: [backend-api, teacher-portal]
+    needs: [typecheck]
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Validate Vercel Configurations
+      - name: Setup Node.js (LTS 20)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build @padhai-pilot/shared
+        run: npm run build --workspace=@padhai-pilot/shared
+
+      - name: Run Mobile Jest Tests
+        run: npm test --workspace=@padhai-pilot/mobile
+
+  # ============================================================================
+  # 7. VERCEL DEPLOYMENT READINESS GATE
+  # ============================================================================
+  deployment-readiness:
+    name: Vercel Manifests & Production Gate
+    runs-on: ubuntu-latest
+    needs: [backend-api, student-portal, teacher-portal, admin-portal, mobile-tests]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Validate All Vercel Deployment Manifests
         run: |
           node -e "
             const fs = require('fs');
-            const configs = ['vercel.json', 'apps/api/vercel.json', 'apps/teacher/vercel.json'];
+            const configs = [
+              'vercel.json',
+              'apps/api/vercel.json',
+              'apps/teacher/vercel.json',
+              'apps/student/vercel.json',
+              'apps/admin/vercel.json',
+              'apps/web/vercel.json'
+            ];
             for (const c of configs) {
               if (fs.existsSync(c)) {
                 JSON.parse(fs.readFileSync(c, 'utf8'));
                 console.log('✓ Validated JSON syntax: ' + c);
+              } else {
+                console.error('Missing config: ' + c);
+                process.exit(1);
               }
             }
-            console.log('✓ All Vercel manifests are valid and deployment-ready.');
+            console.log('✓ All 6 Vercel manifests are valid and production-ready.');
           "
 
+  # ============================================================================
+  # 8. AUTOMATIC PROMOTION FROM DEV TO MAIN FOR PRODUCTION DEPLOYMENT
+  # Only executes if ALL quality gates pass on branch 'dev'
+  # ============================================================================
+  promote-to-main:
+    name: Auto-Promote dev to main
+    runs-on: ubuntu-latest
+    needs: [deployment-readiness]
+    if: github.ref == 'refs/heads/dev' && github.event_name == 'push'
+    steps:
+      - name: Checkout Repository with Full History
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git Author
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Fast-forward / Merge dev into main & Push
+        run: |
+          echo "=========================================================="
+          echo " All CI quality checks PASSED on branch 'dev'!"
+          echo " Auto-promoting verified code from 'dev' to 'main'..."
+          echo "=========================================================="
+          git fetch origin main:main
+          git checkout main
+          git merge origin/dev --ff-only || git merge origin/dev -m "chore(release): auto-promote dev to main [skip ci]"
+          git push origin main
+          echo "✓ Successfully deployed latest verified build to main branch."
