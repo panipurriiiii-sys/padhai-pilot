@@ -84,6 +84,8 @@ export class AuthService {
       { id: 'usr_admin_malhotra', email: 'super@padhaipilot.com', passwordHash, fullName: 'Dr. Vikram Malhotra (Platform Owner)', role: 'SUPER_ADMIN', instituteId: PLATFORM_INSTITUTE_ID, instituteName: PLATFORM_INSTITUTE_NAME, phone: '+91 99000 88776' },
       { id: 'usr_admin_aditya', email: 'aditya@gmail.com', passwordHash: await hashPassword('Password@123'), fullName: 'Aditya Kashid (Platform Owner)', role: 'SUPER_ADMIN', instituteId: PLATFORM_INSTITUTE_ID, instituteName: PLATFORM_INSTITUTE_NAME, phone: '+91 99000 88776' },
       { id: 'std_01', email: 'student@padhaipilot.com', passwordHash, fullName: 'Aarav Patel', role: 'STUDENT', ...apex, phone: '+91 98111 22334' },
+      { id: 'usr_teacher_adi', email: 'adi@gmail.com', passwordHash: await hashPassword('Password@123'), fullName: 'Aditya (Teacher)', role: 'TEACHER', ...apex, phone: '+91 99000 00001' },
+      { id: 'std_testing', email: 'testing@gmail.com', passwordHash: await hashPassword('Password@123'), fullName: 'Testing Student', role: 'STUDENT', ...apex, phone: '+91 99000 00002' },
     ];
     for (const u of seed) this.memoryUsers.set(u.email, u);
     this.memoryUsers.set('admin@padhaipilot.com', { ...seed[2], email: 'admin@padhaipilot.com' });

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Animated, StyleProp, ViewStyle } from 'react-native';
+import { View, Animated, StyleProp, ViewStyle, Easing } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 
 export interface SkeletonProps {
@@ -16,41 +16,52 @@ export const Skeleton: React.FC<SkeletonProps> = ({
   style,
 }) => {
   const { colors, radii } = useTheme();
-  const opacity = useRef(new Animated.Value(0.3)).current;
+  const shimmer = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    const pulse = Animated.loop(
+    const anim = Animated.loop(
       Animated.sequence([
-        Animated.timing(opacity, {
-          toValue: 0.7,
-          duration: 800,
+        Animated.timing(shimmer, {
+          toValue: 1,
+          duration: 900,
+          easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
-        Animated.timing(opacity, {
-          toValue: 0.3,
-          duration: 800,
+        Animated.timing(shimmer, {
+          toValue: 0,
+          duration: 900,
+          easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
       ]),
     );
-    pulse.start();
+    anim.start();
+    return () => anim.stop();
+  }, [shimmer]);
 
-    return () => pulse.stop();
-  }, [opacity]);
+  const opacity = shimmer.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1] });
 
   return (
-    <Animated.View
+    <View
       style={[
         {
           width: width as any,
           height,
           borderRadius: borderRadius ?? radii.sm,
-          backgroundColor: colors.border,
-          opacity,
+          backgroundColor: colors.borderSubtle,
+          overflow: 'hidden',
         },
         style,
       ]}
-    />
+    >
+      <Animated.View
+        style={{
+          flex: 1,
+          backgroundColor: colors.border,
+          opacity,
+        }}
+      />
+    </View>
   );
 };
 
@@ -66,26 +77,30 @@ export const CardSkeleton: React.FC<{ style?: StyleProp<ViewStyle> }> = ({ style
           backgroundColor: colors.surface,
           borderWidth: 1,
           borderColor: colors.border,
-          gap: 12,
+          gap: 14,
         },
         style,
       ]}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Skeleton width={80} height={18} borderRadius={radii.full} />
-        <Skeleton width={60} height={14} />
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <Skeleton width={36} height={36} borderRadius={radii.full} />
+        <View style={{ flex: 1, gap: 6 }}>
+          <Skeleton width="55%" height={14} />
+          <Skeleton width="35%" height={11} />
+        </View>
+        <Skeleton width={56} height={22} borderRadius={radii.full} />
       </View>
-      <Skeleton width="85%" height={20} />
-      <Skeleton width="60%" height={14} />
-      <View style={{ paddingTop: 8, borderTopWidth: 1, borderTopColor: colors.border, flexDirection: 'row', justifyContent: 'space-between' }}>
-        <Skeleton width={100} height={14} />
-        <Skeleton width={70} height={28} borderRadius={radii.sm} />
+      <Skeleton width="90%" height={18} />
+      <Skeleton width="65%" height={13} />
+      <View style={{ paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.borderSubtle, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Skeleton width={90} height={12} />
+        <Skeleton width={72} height={30} borderRadius={radii.md} />
       </View>
     </View>
   );
 };
 
-/** Repeated list row skeleton for flatlists */
+/** Repeated list row skeleton */
 export const ListRowSkeleton: React.FC<{ count?: number }> = ({ count = 3 }) => {
   const { colors, radii } = useTheme();
   return (
@@ -104,19 +119,19 @@ export const ListRowSkeleton: React.FC<{ count?: number }> = ({ count = 3 }) => 
             gap: 12,
           }}
         >
-          <Skeleton width={40} height={40} borderRadius={radii.full} />
-          <View style={{ flex: 1, gap: 6 }}>
-            <Skeleton width="70%" height={16} />
-            <Skeleton width="45%" height={12} />
+          <Skeleton width={42} height={42} borderRadius={radii.full} />
+          <View style={{ flex: 1, gap: 7 }}>
+            <Skeleton width="68%" height={15} />
+            <Skeleton width="42%" height={11} />
           </View>
-          <Skeleton width={24} height={24} borderRadius={radii.full} />
+          <Skeleton width={22} height={22} borderRadius={radii.full} />
         </View>
       ))}
     </View>
   );
 };
 
-/** 2x2 or 4-grid KPI Metrics Skeleton */
+/** 2x2 KPI grid skeleton */
 export const MetricsGridSkeleton: React.FC = () => {
   const { colors, radii } = useTheme();
   return (
@@ -132,16 +147,14 @@ export const MetricsGridSkeleton: React.FC = () => {
             backgroundColor: colors.surface,
             borderWidth: 1,
             borderColor: colors.border,
-            gap: 8,
+            gap: 10,
           }}
         >
-          <Skeleton width={28} height={28} borderRadius={radii.sm} />
-          <Skeleton width="50%" height={12} />
-          <Skeleton width="80%" height={22} />
+          <Skeleton width={30} height={30} borderRadius={radii.sm} />
+          <Skeleton width="52%" height={11} />
+          <Skeleton width="75%" height={22} />
         </View>
       ))}
     </View>
   );
 };
-
-
