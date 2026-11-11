@@ -15,6 +15,7 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "bootstrap:admin": "node dist/scripts/bootstrap-super-admin.js",
+    "seed:test-accounts": "node dist/scripts/seed-test-accounts.js",
     "lint": "oxlint src/",
     "test": "vitest run"
   },
