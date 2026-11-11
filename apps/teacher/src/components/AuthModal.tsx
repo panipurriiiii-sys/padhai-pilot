@@ -207,17 +207,7 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
               <span>{isLoading ? 'Authenticating...' : 'Sign In'}</span>
             </button>
 
-            <div className="pt-2 flex items-center justify-between text-[11px] font-['Raleway']">
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail('teacher@padhaipilot.com');
-                  setPassword('password123');
-                }}
-                className="text-[var(--brand-electric)] hover:underline flex items-center gap-1 font-semibold"
-              >
-                Fill Faculty Credentials
-              </button>
+            <div className="pt-2 flex items-center justify-end text-[11px] font-['Raleway']">
               <button
                 type="button"
                 onClick={() => setMode('register')}
@@ -390,14 +380,25 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
               <label className="block text-[var(--ink-secondary)] mb-1 font-['Raleway'] font-semibold">
                 New Password (min 6 chars) *
               </label>
-              <input
-                type="password"
-                required
-                minLength={6}
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full input-paper"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  minLength={6}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full input-paper pr-9"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--ink-muted)] hover:text-[var(--ink-primary)] transition"
+                  tabIndex={-1}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             <button
