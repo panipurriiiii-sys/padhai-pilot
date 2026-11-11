@@ -105,6 +105,7 @@ export class AssessmentController {
     @Res() res: Response,
   ) {
     const sheet = await this.assessmentService.exportResultSheet(id, user);
+    if (typeof sheet === 'string') return res.send(sheet);
     res.setHeader('Content-Type', sheet.contentType);
     res.setHeader('Content-Disposition', `attachment; filename="${sheet.filename}"`);
     return res.send(sheet.data);

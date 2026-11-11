@@ -183,7 +183,6 @@ export class TeacherService {
           select: {
             id: true,
             fullName: true,
-            rollNumber: true,
             email: true,
             phone: true,
           },
@@ -197,7 +196,7 @@ export class TeacherService {
       students: enrollments.map((e) => ({
         id: e.student.id,
         fullName: e.student.fullName,
-        rollNumber: e.rollNumber || e.student.rollNumber || '',
+        rollNumber: e.rollNumber || '',
         email: e.student.email,
         phone: e.student.phone,
       })),
@@ -362,7 +361,7 @@ export class TeacherService {
       include: {
         records: {
           include: {
-            student: { select: { fullName: true, rollNumber: true } },
+            student: { select: { fullName: true } },
           },
         },
       },
@@ -376,7 +375,7 @@ export class TeacherService {
           status: 'ACTIVE',
         },
         include: {
-          student: { select: { id: true, fullName: true, rollNumber: true } },
+          student: { select: { id: true, fullName: true } },
         },
         orderBy: { student: { fullName: 'asc' } },
       });
@@ -384,7 +383,7 @@ export class TeacherService {
       const defaultRecords = enrollments.map((e) => ({
         studentId: e.student.id,
         studentName: e.student.fullName,
-        rollNumber: e.rollNumber || e.student.rollNumber || '',
+        rollNumber: e.rollNumber || '',
         status: 'PRESENT',
         note: '',
       }));
@@ -402,7 +401,7 @@ export class TeacherService {
       sessionId: r.sessionId,
       studentId: r.studentId,
       studentName: r.student.fullName,
-      rollNumber: r.student.rollNumber || '',
+      rollNumber: '',
       status: r.status,
       note: r.note || '',
       correctionReason: r.correctionReason,
@@ -619,7 +618,6 @@ export class TeacherService {
           select: {
             id: true,
             fullName: true,
-            rollNumber: true,
             email: true,
           },
         },
@@ -632,7 +630,7 @@ export class TeacherService {
       submissions: submissions.map((s) => ({
         ...s,
         studentName: s.student.fullName,
-        rollNumber: s.student.rollNumber || '',
+        rollNumber: '',
       })),
     };
   }

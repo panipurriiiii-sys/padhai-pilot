@@ -387,6 +387,7 @@ export class TuitionService {
         paymentReference: r.paymentReference || undefined,
         remarks: r.remarks || undefined,
         createdAt: r.createdAt.toISOString(),
+        updatedAt: r.updatedAt.toISOString(),
       };
     });
   }
@@ -480,10 +481,11 @@ export class TuitionService {
       netPayable: record.netPayable,
       status: record.status as any,
       paymentDate: record.paymentDate ? record.paymentDate.toISOString() : undefined,
-      paymentMode: record.paymentMode as any,
-      transactionRef: record.transactionRef || undefined,
+      paymentMethod: record.paymentMethod || undefined,
+      paymentReference: record.paymentReference || undefined,
       remarks: record.remarks || undefined,
       createdAt: record.createdAt.toISOString(),
+      updatedAt: record.updatedAt.toISOString(),
     };
   }
 
@@ -510,8 +512,8 @@ export class TuitionService {
       data: {
         status: 'PAID',
         paymentDate: new Date(dto.paymentDate),
-        paymentMethod: (dto.paymentMethod || dto.paymentMode) as any,
-        paymentReference: dto.paymentReference || dto.transactionRef,
+        paymentMethod: dto.paymentMethod as any,
+        paymentReference: dto.paymentReference,
         remarks: dto.remarks || existing.remarks,
       },
       include: {
@@ -546,10 +548,11 @@ export class TuitionService {
       netPayable: updated.netPayable,
       status: updated.status as any,
       paymentDate: updated.paymentDate ? updated.paymentDate.toISOString() : undefined,
-      paymentMethod: (updated as any).paymentMethod || (updated as any).paymentMode || undefined,
-      paymentReference: (updated as any).paymentReference || (updated as any).transactionRef || undefined,
+      paymentMethod: updated.paymentMethod || undefined,
+      paymentReference: updated.paymentReference || undefined,
       remarks: updated.remarks || undefined,
       createdAt: updated.createdAt.toISOString(),
+      updatedAt: updated.updatedAt.toISOString(),
     };
   }
 
@@ -1296,7 +1299,7 @@ export class TuitionService {
       balanceDue: Math.max(0, f.totalAmount - f.paidAmount),
       dueDate: f.dueDate.toISOString(),
       status: f.status as any,
-      academicYear: f.academicYear,
+      academicYear: f.academicYear || '',
       reminderCount: f._count.reminders,
       createdAt: f.createdAt.toISOString(),
     }));

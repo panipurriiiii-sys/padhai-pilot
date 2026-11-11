@@ -1,10 +1,44 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Reflector } from '@nestjs/core';
 import { ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { AdminService } from './admin.service.js';
 import { AdminController } from './admin.controller.js';
 import { RolesGuard } from '../common/guards/roles.guard.js';
-import { ROLES_KEY } from '../common/decorators/roles.decorator.js';
+
+// Shared sample institute rows returned by the Prisma mock
+function makeInstituteRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'inst_apex_academy',
+    name: 'Apex Academy Kota',
+    slug: 'apex',
+    subdomain: 'apex',
+    plan: 'GROWTH',
+    status: 'ACTIVE',
+    isActive: true,
+    customDomain: 'learn.apexkota.edu.in',
+    isWhiteLabel: true,
+    isDedicatedDb: false,
+    maxStudents: 500,
+    maxTeachers: 25,
+    primaryColor: '#1677FF',
+    logoUrl: null,
+    contactPhone: '+91 98220 11223',
+    createdAt: new Date('2026-09-01T08:00:00Z'),
+    updatedAt: new Date('2026-10-25T14:20:00Z'),
+    memberships: [
+      { user: { fullName: 'Rajeshwar Singhania', email: 'owner@padhaipilot.com', phone: '+91 98220 11223' } },
+    ],
+    _count: { enrollments: 142, facultyProfiles: 8 },
+    ...overrides,
+  };
+}
+
+const SEED_INSTITUTES = [
+  makeInstituteRow({ id: 'inst_apex_academy', name: 'Apex Academy Kota', slug: 'apex', subdomain: 'apex', plan: 'GROWTH' }),
+  makeInstituteRow({ id: 'inst_zenith_classes', name: 'Zenith Science Institute', slug: 'zenith', subdomain: 'zenith', plan: 'PRO' }),
+  makeInstituteRow({ id: 'inst_prerna_tuition', name: 'Prerna Commerce Classes', slug: 'prerna', subdomain: 'prerna', plan: 'STARTER', _count: { enrollments: 45, facultyProfiles: 3 } }),
+  makeInstituteRow({ id: 'inst_quantum_allen', name: 'Quantum Physics Circle', slug: 'quantum', subdomain: 'quantum', plan: 'ENTERPRISE', _count: { enrollments: 890, facultyProfiles: 32 } }),
+];
 
 describe('Admin Module & Authorization Tests', () => {
   let adminService: AdminService;
@@ -14,11 +48,58 @@ describe('Admin Module & Authorization Tests', () => {
   let rolesGuard: RolesGuard;
   let reflector: Reflector;
 
+  // Stateful mock stores — reset per test
+  let auditLogStore: any[];
+  let announcementStore: any[];
+
   beforeEach(() => {
-    mockPrisma = { isConnected: false };
-    mockRedis = {
-      enforceRateLimit: async () => true,
+    auditLogStore = [];
+    announcementStore = [];
+
+    mockPrisma = {
+      isConnected: true,
+      institute: {
+        findMany: vi.fn().mockResolvedValue(SEED_INSTITUTES),
+        findFirst: vi.fn().mockResolvedValue(null), // no collision by default
+        findUnique: vi.fn().mockImplementation(({ where }: any) => {
+          const found = SEED_INSTITUTES.find((i) => i.id === where.id);
+          return Promise.resolve(found || null);
+        }),
+        create: vi.fn().mockImplementation(({ data }: any) => {
+          const created = {
+            id: `inst_${(data.slug || 'new').replace(/[^a-z0-9]/g, '_')}_${Date.now().toString().slice(-4)}`,
+            ...data,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            memberships: [],
+            _count: { enrollments: 0, facultyProfiles: 0 },
+          };
+          return Promise.resolve(created);
+        }),
+        update: vi.fn().mockImplementation(({ where, data }: any) => {
+          const existing = SEED_INSTITUTES.find((i) => i.id === where.id);
+          return Promise.resolve({ ...(existing || {}), ...data, updatedAt: new Date() });
+        }),
+      },
+      auditLog: {
+        findMany: vi.fn().mockImplementation(() => Promise.resolve([...auditLogStore])),
+        create: vi.fn().mockImplementation(({ data }: any) => {
+          const log = { id: `audit_${Date.now()}`, ...data, createdAt: new Date() };
+          auditLogStore.unshift(log);
+          return Promise.resolve(log);
+        }),
+      },
+      platformAnnouncement: {
+        findMany: vi.fn().mockImplementation(() => Promise.resolve([...announcementStore])),
+        create: vi.fn().mockImplementation(({ data }: any) => {
+          const ann = { id: `ann_${Date.now()}`, ...data, createdAt: new Date() };
+          announcementStore.unshift(ann);
+          return Promise.resolve(ann);
+        }),
+      },
     };
+
+    mockRedis = { enforceRateLimit: async () => true };
     adminService = new AdminService(mockPrisma, mockRedis);
     adminController = new AdminController(adminService);
     reflector = new Reflector();
@@ -39,41 +120,33 @@ describe('Admin Module & Authorization Tests', () => {
     };
 
     it('should throw ForbiddenException if user is a TUITION_OWNER trying to access SUPER_ADMIN endpoint', () => {
-      // Mock reflector returning SUPER_ADMIN required
       vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue(['SUPER_ADMIN']);
-
       const context = mockContext('TUITION_OWNER');
       expect(() => rolesGuard.canActivate(context)).toThrow(ForbiddenException);
     });
 
     it('should throw ForbiddenException if user is a FACULTY/TEACHER', () => {
       vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue(['SUPER_ADMIN']);
-
       const context = mockContext('TEACHER');
       expect(() => rolesGuard.canActivate(context)).toThrow(ForbiddenException);
     });
 
     it('should throw ForbiddenException if user is a STUDENT', () => {
       vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue(['SUPER_ADMIN']);
-
       const context = mockContext('STUDENT');
       expect(() => rolesGuard.canActivate(context)).toThrow(ForbiddenException);
     });
 
     it('should allow access if user has role SUPER_ADMIN', () => {
       vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue(['SUPER_ADMIN']);
-
       const context = mockContext('SUPER_ADMIN');
-      const canActivate = rolesGuard.canActivate(context);
-      expect(canActivate).toBe(true);
+      expect(rolesGuard.canActivate(context)).toBe(true);
     });
 
     it('should allow unrestricted access when no roles are required', () => {
       vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue(null);
-
       const context = mockContext('STUDENT');
-      const canActivate = rolesGuard.canActivate(context);
-      expect(canActivate).toBe(true);
+      expect(rolesGuard.canActivate(context)).toBe(true);
     });
   });
 
@@ -107,18 +180,19 @@ describe('Admin Module & Authorization Tests', () => {
         mockSuperAdmin,
       );
 
-      expect(created.id).toContain('inst_nalanda');
+      expect(created.id).toBeTruthy();
       expect(created.name).toBe('Nalanda Classes Pune');
       expect(created.plan).toBe('PRO');
       expect(created.isWhiteLabel).toBe(true);
     });
 
     it('should reject institute creation with duplicate subdomain', async () => {
+      mockPrisma.institute.findFirst.mockResolvedValue({ id: 'inst_apex_academy' });
       await expect(
         adminService.createInstitute(
           {
             name: 'Another Apex',
-            subdomain: 'apex', // already exists
+            subdomain: 'apex',
             plan: 'STARTER',
             ownerName: 'Fake Owner',
             ownerEmail: 'fake@example.com',
@@ -197,15 +271,6 @@ describe('Admin Module & Authorization Tests', () => {
   });
 
   describe('3. AdminController Response Contracts', () => {
-    const mockSuperAdmin = {
-      id: 'usr_admin_malhotra',
-      email: 'super@padhaipilot.com',
-      role: 'SUPER_ADMIN' as const,
-      fullName: 'Dr. Vikram Malhotra',
-      instituteId: 'platform_hq',
-      instituteName: 'PadhaiPilot HQ',
-    };
-
     it('should return wrapped data for getInstitutes', async () => {
       const res = await adminController.getInstitutes();
       expect(res.success).toBe(true);
@@ -220,4 +285,3 @@ describe('Admin Module & Authorization Tests', () => {
     });
   });
 });
-

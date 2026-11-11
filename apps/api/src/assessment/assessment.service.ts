@@ -78,7 +78,7 @@ export class AssessmentService {
     return enrollments.map((e) => ({
       id: e.studentId,
       fullName: e.student.fullName,
-      rollNumber: e.rollNumber || e.student.rollNumber || '',
+      rollNumber: e.rollNumber || '',
       email: e.student.email,
       phone: e.student.phone,
       enrollmentStatus: e.status,
@@ -329,7 +329,7 @@ export class AssessmentService {
             passingMarks: dto.passingMarks,
             instructions: dto.instructions,
             isMultiSubject: Boolean(dto.isMultiSubject),
-            subjects: dto.subjects || null,
+            subjects: dto.subjects ? (dto.subjects as any) : undefined,
           },
         });
       } else {
@@ -346,7 +346,7 @@ export class AssessmentService {
             passingMarks: dto.passingMarks,
             instructions: dto.instructions,
             isMultiSubject: Boolean(dto.isMultiSubject),
-            subjects: dto.subjects || null,
+            subjects: dto.subjects ? (dto.subjects as any) : undefined,
             status: 'DRAFT',
           },
         });
@@ -684,8 +684,8 @@ export class AssessmentService {
         orderBy: { createdAt: 'desc' },
       });
       const list = [...audits].filter((a: any) => !a.assessmentId || a.assessmentId === assessmentId);
-      const withReason = list.filter((a: any) => a.reason || a.metadata?.reason);
-      if (withReason.length > 0 && !(list[0].reason || list[0].metadata?.reason)) {
+      const withReason = list.filter((a: any) => a.reason || (a.metadata as any)?.reason);
+      if (withReason.length > 0 && !(list[0].reason || (list[0].metadata as any)?.reason)) {
         list.reverse();
       }
       return list.map((a: any) => ({
@@ -793,7 +793,7 @@ export class AssessmentService {
       message: n.message,
       type: n.type as any,
       link: n.link || undefined,
-      isRead: n.read,
+      isRead: n.isRead,
       createdAt: n.createdAt.toISOString(),
     }));
   }
@@ -801,7 +801,7 @@ export class AssessmentService {
   async markNotificationRead(notificationId: string, studentUser: AuthenticatedUser) {
     return this.db.notification.update({
       where: { id: notificationId, userId: studentUser.id },
-      data: { read: true },
+      data: { isRead: true },
     });
   }
 
