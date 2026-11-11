@@ -671,12 +671,6 @@ export const teacherApi = {
   async reviewStudentLeave(id: string, data: ReviewStudentLeaveRequest): Promise<StudentLeaveItem> {
     return request<StudentLeaveItem>(`/finance/leaves/${id}/review`, { method: 'PUT', body: JSON.stringify(data) });
   },
-  async createRazorpayFeeOrder(feeRecordId: string): Promise<{ order_id: string; amount: number; currency: string; key_id: string }> {
-    return request(`/finance/fees/${feeRecordId}/razorpay/create-order`, { method: 'POST' });
-  },
-  async verifyRazorpayFeePayment(feeRecordId: string, data: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }): Promise<FeePaymentItem> {
-    return request<FeePaymentItem>(`/finance/fees/${feeRecordId}/razorpay/verify`, { method: 'POST', body: JSON.stringify(data) });
-  },
   async getRevenueSummary(params?: { from?: string; to?: string; batchId?: string }): Promise<{ totalCollected: number; totalDue: number; totalOverdue: number; byMode: Record<string, number>; monthlyTrend: { month: string; amount: number }[] }> {
     const q = new URLSearchParams();
     if (params?.from) q.set('from', params.from);

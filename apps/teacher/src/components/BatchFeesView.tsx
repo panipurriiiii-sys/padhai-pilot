@@ -1,24 +1,11 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { IndianRupee, Plus, Receipt, Bell, Ban, Calendar, Check, CreditCard } from 'lucide-react';
+import { IndianRupee, Plus, Receipt, Bell, Ban, Calendar, Check } from 'lucide-react';
 import type { BatchSummary, BatchFeeStructureItem, BatchFeeSummary, FeeLedgerItem, PaymentMode, FeeRecordStatus } from '@padhai-pilot/shared';
 import { teacherApi } from '../lib/api';
 import { LoadError } from './LoadError';
 import { Modal, Field } from './InvitationsView';
-
-function loadRazorpayScript(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (typeof window === 'undefined') { reject(new Error('No window')); return; }
-    if ((window as any).Razorpay) { resolve(); return; }
-    const s = document.createElement('script');
-    s.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    s.async = true;
-    s.onload = () => resolve();
-    s.onerror = () => reject(new Error('Failed to load Razorpay checkout'));
-    document.head.appendChild(s);
-  });
-}
 
 const MODES: PaymentMode[] = ['CASH', 'UPI', 'BANK_TRANSFER', 'CHEQUE', 'CARD', 'OTHER'];
 const inr = (n: number) => `Rs ${n.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
@@ -63,7 +50,6 @@ export function BatchFeesView({ batches }: { batches: BatchSummary[] }) {
   const [pay, setPay] = useState({ amount: '', paidOn: today(), mode: 'CASH' as PaymentMode, reference: '', note: '' });
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [razorpayBusy, setRazorpayBusy] = useState<string | null>(null); // feeRecordId being processed
 
   const flash = (text: string, error = false) => {
     setNotice({ text, error });
@@ -204,45 +190,6 @@ export function BatchFeesView({ batches }: { batches: BatchSummary[] }) {
     }
   };
 
-  const openRazorpay = async (f: FeeLedgerItem) => {
-    setRazorpayBusy(f.id);
-    try {
-      await loadRazorpayScript();
-      const order = await teacherApi.createRazorpayFeeOrder(f.id);
-      const rzp = new (window as any).Razorpay({
-        key: order.key_id,
-        order_id: order.order_id,
-        amount: order.amount,
-        currency: order.currency,
-        name: 'Fee Payment',
-        description: f.feeTitle,
-        handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
-          try {
-            const p = await teacherApi.verifyRazorpayFeePayment(f.id, response);
-            await load();
-            flash(`Online payment verified. Receipt ${p.receiptNumber} issued.`);
-          } catch (err) {
-            flash(err instanceof Error ? err.message : 'Payment received but verification failed. Contact support.', true);
-          }
-        },
-        modal: {
-          ondismiss: () => setRazorpayBusy(null),
-        },
-        theme: { color: '#6366f1' },
-      });
-      rzp.on('payment.failed', (err: { error: { description: string } }) => {
-        flash(`Payment failed: ${err?.error?.description ?? 'Unknown error'}`, true);
-        setRazorpayBusy(null);
-      });
-      rzp.open();
-    } catch (err) {
-      flash(err instanceof Error ? err.message : 'Could not open Razorpay checkout.', true);
-      setRazorpayBusy(null);
-    } finally {
-      setRazorpayBusy((prev) => (prev === f.id ? null : prev));
-    }
-  };
-
   const remind = async (feeRecordIds?: string[]) => {
     try {
       const r = await teacherApi.sendFeeReminders({ batchId, feeRecordIds, channels: ['IN_APP'] });
@@ -339,10 +286,7 @@ export function BatchFeesView({ batches }: { batches: BatchSummary[] }) {
                   </dl>
                   {f.balanceDue > 0 && (
                     <div className="flex flex-wrap gap-2">
-                      <button type="button" className="btn-primary flex-1 text-xs px-3 flex items-center justify-center gap-1" onClick={() => openRazorpay(f)} disabled={razorpayBusy === f.id}>
-                        <CreditCard className="w-3 h-3" />{razorpayBusy === f.id ? 'Opening...' : 'Pay Online'}
-                      </button>
-                      <button type="button" className="btn-secondary flex-1 text-xs px-3" onClick={() => openPay(f)}>Record cash</button>
+                      <button type="button" className="btn-primary flex-1 text-xs px-3" onClick={() => openPay(f)}>Record payment</button>
                       {f.status !== 'PAID' && (
                         <button type="button" className="btn-secondary text-xs px-3" onClick={() => remind([f.id])}>Remind</button>
                       )}
@@ -387,12 +331,7 @@ export function BatchFeesView({ batches }: { batches: BatchSummary[] }) {
                         <td className="p-3">
                           <div className="flex gap-1.5 flex-wrap">
                             {f.balanceDue > 0 && (
-                              <button type="button" className="btn-primary text-[11px] px-2.5 py-1 flex items-center gap-1" onClick={() => openRazorpay(f)} disabled={razorpayBusy === f.id}>
-                                <CreditCard className="w-3 h-3" />{razorpayBusy === f.id ? 'Opening...' : 'Pay Online'}
-                              </button>
-                            )}
-                            {f.balanceDue > 0 && (
-                              <button type="button" className="text-[11px] px-2.5 py-1 rounded border border-[var(--border-paper)] hover:bg-[var(--bg-paper)]" onClick={() => openPay(f)}>Record cash</button>
+                              <button type="button" className="btn-primary text-[11px] px-2.5 py-1" onClick={() => openPay(f)}>Record payment</button>
                             )}
                             {f.balanceDue > 0 && f.status !== 'PAID' && (
                               <button type="button" className="text-[11px] px-2 py-1 rounded border border-[var(--border-paper)] hover:bg-[var(--bg-paper)]" onClick={() => remind([f.id])}>Remind</button>

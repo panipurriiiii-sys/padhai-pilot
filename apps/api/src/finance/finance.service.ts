@@ -1,6 +1,4 @@
-import { BadRequestException, ConflictException, Inject, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
-import Razorpay from 'razorpay';
-import crypto from 'node:crypto';
+﻿import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { AccessService } from '../common/access/access.service.js';
 import { clampLimit, optionalString, requireString } from '../common/db/db.js';
 import type { AuthenticatedUser } from '../common/types.js';
@@ -519,85 +517,6 @@ export class FinanceService {
 
   /** Re-exported so enrolment flows (join code, roster add, batch promotion) can reuse one implementation. */
   inheritForEnrollment = inheritBatchFees;
-
-  // ------------------------------------------------------------------ Razorpay online fee collection
-
-  private getRazorpay(): Razorpay {
-    const key_id = process.env.RAZORPAY_KEY_ID;
-    const key_secret = process.env.RAZORPAY_KEY_SECRET;
-    if (!key_id || !key_secret) throw new InternalServerErrorException('Razorpay is not configured.');
-    return new Razorpay({ key_id, key_secret });
-  }
-
-  /**
-   * Creates a Razorpay order for the outstanding balance of a fee record.
-   * Called by both staff (on behalf of a student) and the student themselves.
-   * Amount is always taken from the DB — never trusted from the client.
-   */
-  async createRazorpayFeeOrder(user: AuthenticatedUser, feeRecordId: string): Promise<{ order_id: string; amount: number; currency: string; key_id: string }> {
-    const db = this.access.db();
-    await this.access.assertActiveMembership(user);
-    const fee = await db.studentFeeRecord.findFirst({ where: { id: feeRecordId, instituteId: user.instituteId, voidedAt: null } });
-    if (!fee) throw new NotFoundException('Fee record not found.');
-    const balance = round2(fee.totalAmount - fee.paidAmount);
-    if (balance <= 0) throw new BadRequestException('Fee is already fully paid.');
-    const amountPaise = Math.round(balance * 100);
-    if (amountPaise < 100) throw new BadRequestException('Outstanding balance is below the minimum chargeable amount (₹1).');
-
-    try {
-      const rzp = this.getRazorpay();
-      const order = await rzp.orders.create({
-        amount: amountPaise,
-        currency: 'INR',
-        receipt: `fee-${feeRecordId.slice(-8)}-${Date.now().toString(36)}`,
-        notes: { feeRecordId, instituteId: user.instituteId, studentId: fee.studentId },
-      });
-      return { order_id: order.id, amount: Number(order.amount), currency: order.currency, key_id: process.env.RAZORPAY_KEY_ID! };
-    } catch (err: any) {
-      throw new InternalServerErrorException(err?.error?.description || err?.message || 'Could not create payment order.');
-    }
-  }
-
-  /**
-   * Verifies Razorpay signature (HMAC-SHA256) and, if valid, records the payment.
-   * The amount is re-read from the DB — the client cannot influence the amount.
-   */
-  async verifyAndRecordRazorpayFeePayment(
-    user: AuthenticatedUser,
-    feeRecordId: string,
-    body: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string },
-  ): Promise<FeePaymentItem> {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = body;
-    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-      throw new BadRequestException('Missing razorpay_order_id, razorpay_payment_id, or razorpay_signature.');
-    }
-
-    const key_secret = process.env.RAZORPAY_KEY_SECRET;
-    if (!key_secret) throw new InternalServerErrorException('Razorpay is not configured.');
-
-    const expected = crypto.createHmac('sha256', key_secret).update(`${razorpay_order_id}|${razorpay_payment_id}`).digest('hex');
-    const eBuf = Buffer.from(expected, 'utf8');
-    const rBuf = Buffer.from(razorpay_signature, 'utf8');
-    if (eBuf.length !== rBuf.length || !crypto.timingSafeEqual(eBuf, rBuf)) {
-      throw new BadRequestException('Payment verification failed: signature mismatch.');
-    }
-
-    // Signature verified — record payment at the DB balance (never trust client amount)
-    const db = this.access.db();
-    await this.access.assertActiveMembership(user);
-    const fee = await db.studentFeeRecord.findFirst({ where: { id: feeRecordId, instituteId: user.instituteId, voidedAt: null } });
-    if (!fee) throw new NotFoundException('Fee record not found.');
-    const balance = round2(fee.totalAmount - fee.paidAmount);
-    if (balance <= 0) throw new ConflictException('Fee has already been paid.');
-
-    return this.recordPayment(user, feeRecordId, {
-      amount: balance,
-      paidOn: new Date().toISOString().slice(0, 10),
-      mode: 'RAZORPAY',
-      reference: razorpay_payment_id,
-      note: `Order ${razorpay_order_id}`,
-    });
-  }
 
   /** Revenue summary for the authenticated institute (staff only). */
   async getRevenueSummary(
