@@ -72,6 +72,26 @@ const FEATURES_CREATIVE = [
     accentBorder: '#C7D2FE',
     pill: 'Always Accessible',
   },
+  {
+    icon: Layers,
+    tag: 'REPORTS & ANALYTICS',
+    title: 'Branded report cards and batch analytics, ready to share.',
+    desc: 'Generate PDF report cards carrying your institute name and logo. Track batch-level attendance rates, test averages and fee collection at a glance.',
+    accent: '#0E7490',
+    accentBg: '#ECFEFF',
+    accentBorder: '#A5F3FC',
+    pill: 'Instant PDF Reports',
+  },
+  {
+    icon: Users,
+    tag: 'TEACHER PAYROLL',
+    title: 'Staff salary slips and leave records, no spreadsheets.',
+    desc: 'Set monthly salaries for each teacher, mark leaves, and generate salary slips inside the portal. Keep payroll tidy alongside your academic work.',
+    accent: '#7C3AED',
+    accentBg: '#F5F3FF',
+    accentBorder: '#DDD6FE',
+    pill: 'Staff Management',
+  },
 ];
 
 const HOW_IT_WORKS = [
@@ -563,6 +583,40 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* APP DOWNLOAD SECTION */}
+        <section className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div className="p-6 sm:p-12 rounded-3xl bg-[#1C1917] text-white text-center space-y-6 relative overflow-hidden">
+            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_right,_#1677FF_0%,_transparent_60%)]" />
+            <div className="relative z-10 space-y-4 max-w-xl mx-auto">
+              <span className="text-[10px] font-['Inter'] font-extrabold uppercase tracking-widest text-[#4A9EFF]">
+                Mobile App
+              </span>
+              <h2 className="font-['Playfair_Display'] text-3xl sm:text-4xl font-bold leading-tight">
+                PadhaiPilot is coming to your pocket.
+              </h2>
+              <p className="text-xs sm:text-sm text-[#A8A29E]">
+                The Android and iOS apps are in development. Mark attendance, review fee balances and check results straight from your phone. Available soon on Play Store and App Store.
+              </p>
+            </div>
+            <div className="relative z-10 flex flex-wrap items-center justify-center gap-4 pt-2">
+              <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-white/10 border border-white/20 backdrop-blur-sm">
+                <Smartphone className="w-6 h-6 text-[#4A9EFF]" />
+                <div className="text-left">
+                  <p className="text-[9px] font-['Inter'] font-bold uppercase tracking-wider text-[#A8A29E]">Coming soon on</p>
+                  <p className="text-sm font-['Raleway'] font-bold">Google Play</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-white/10 border border-white/20 backdrop-blur-sm">
+                <Smartphone className="w-6 h-6 text-[#4A9EFF]" />
+                <div className="text-left">
+                  <p className="text-[9px] font-['Inter'] font-bold uppercase tracking-wider text-[#A8A29E]">Coming soon on</p>
+                  <p className="text-sm font-['Raleway'] font-bold">App Store</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* 10. LUXURY CTA INVITATION */}
         <section className="max-w-5xl mx-auto px-4 sm:px-6 pb-16">
           <div className="p-6 sm:p-14 rounded-3xl bg-[#FAF8F5] border border-[#E3DFD9] text-center space-y-6 shadow-sm relative overflow-hidden">
@@ -601,13 +655,9 @@ export default function HomePage() {
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-1 font-semibold [&_a]:min-h-[44px] [&_a]:inline-flex [&_a]:items-center">
-            <Link href="/privacy" className="hover:text-[#1C1917] transition">Privacy Policy</Link>
+            <Link href="/privacy-policy" className="hover:text-[#1C1917] transition">Privacy Policy</Link>
             <Link href="/terms" className="hover:text-[#1C1917] transition">Terms of Service</Link>
-            {SITE.contactEmail && (
-              <a href={`mailto:${SITE.contactEmail}`} className="hover:text-[#1C1917] transition font-['Inter']">
-                Contact Support
-              </a>
-            )}
+            <Link href="/contact" className="hover:text-[#1C1917] transition">Contact</Link>
           </div>
         </div>
       </footer>
