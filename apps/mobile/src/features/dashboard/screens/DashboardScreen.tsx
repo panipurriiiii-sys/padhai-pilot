@@ -44,15 +44,15 @@ export const DashboardScreen: React.FC = () => {
               <Card tone="amber" style={{ marginBottom: 12 }}>
                 <View style={{ gap: 6 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Text style={{ ...typography.caption, fontWeight: '700', color: colors.statusWarning }}>
+                    <Text style={{ fontFamily: typography.fonts.ui, fontSize: typography.sizes.xs, fontWeight: '700', color: colors.warning }}>
                       ACCOUNT FROZEN • PREMIUM REQUIRED
                     </Text>
                     <Badge label="INACTIVE" tone="amber" />
                   </View>
-                  <Text style={{ ...typography.h3, color: colors.inkPrimary }}>
+                  <Text style={{ fontFamily: typography.fonts.display, fontSize: typography.sizes.lg, lineHeight: typography.lineHeights.lg, color: colors.textPrimary }}>
                     Tuition Subscription Inactive
                   </Text>
-                  <Text style={{ ...typography.caption, color: colors.inkSecondary, lineHeight: 18 }}>
+                  <Text style={{ fontFamily: typography.fonts.ui, fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 18 }}>
                     {d.freezeMessage ||
                       'Your tuition is on the Free Starter plan. Student portal and app access is frozen until your tuition upgrades to a Premium plan.'}
                   </Text>

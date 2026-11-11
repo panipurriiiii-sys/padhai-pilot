@@ -12,6 +12,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { RedisService } from '../redis/redis.service.js';
+import { MailService } from '../common/mail/mail.service.js';
 import { AuthenticatedUser } from '../common/types.js';
 import { getJwtSecret, isDemoMode, JWT_EXPIRES_IN } from '../common/security/runtime.js';
 import {
@@ -69,6 +70,7 @@ export class AuthService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(RedisService) private readonly redis: RedisService,
+    private readonly mail: MailService,
   ) {
     this.demoReady = isDemoMode() ? this.seedDemoUsers() : Promise.resolve();
   }
@@ -473,7 +475,9 @@ export class AuthService {
       accountExists = true;
     }
 
-    // TODO(email-provider): deliver `token` by email once a provider is configured.
+    if (accountExists) {
+      await this.mail.sendPasswordReset(normalized, token);
+    }
     return { success: true, message, ...(isDemoMode() && accountExists ? { debugToken: token } : {}) };
   }
 

@@ -99,14 +99,14 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <View style={[styles.container, { backgroundColor: colors.paper, borderColor: colors.border }]}>
+        <View style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: colors.border }]}>
             <View style={styles.headerTitleRow}>
-              <Icon name="bell" size={20} color={colors.brand} />
-              <Text style={[styles.title, { color: colors.ink }]}>Notifications</Text>
+              <Icon name="bell" size={20} color={colors.primary} />
+              <Text style={[styles.title, { color: colors.textPrimary }]}>Notifications</Text>
               {unreadCount > 0 && (
-                <View style={[styles.badge, { backgroundColor: colors.brand }]}>
+                <View style={[styles.badge, { backgroundColor: colors.primary }]}>
                   <Text style={styles.badgeText}>{unreadCount}</Text>
                 </View>
               )}
@@ -114,11 +114,11 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
             <View style={styles.headerActionRow}>
               {unreadCount > 0 && (
                 <TouchableOpacity onPress={markAllRead} style={styles.markAllBtn}>
-                  <Text style={[styles.markAllText, { color: colors.brand }]}>Mark all read</Text>
+                  <Text style={[styles.markAllText, { color: colors.primary }]}>Mark all read</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-                <Icon name="x" size={20} color={colors.inkMuted} />
+                <Icon name="x" size={20} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
           </View>
@@ -134,14 +134,14 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
                   style={[
                     styles.categoryPill,
                     {
-                      backgroundColor: active ? colors.brand : colors.paperWarm,
+                      backgroundColor: active ? colors.primary : colors.surfaceSubtle,
                     },
                   ]}
                 >
                   <Text
                     style={[
                       styles.categoryText,
-                      { color: active ? '#ffffff' : colors.inkMuted },
+                      { color: active ? '#ffffff' : colors.textMuted },
                     ]}
                   >
                     {cat.label}
@@ -154,15 +154,15 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
           {/* Body List */}
           {loading ? (
             <View style={styles.centerContainer}>
-              <ActivityIndicator color={colors.brand} />
+              <ActivityIndicator color={colors.primary} />
             </View>
           ) : filteredItems.length === 0 ? (
             <View style={styles.centerContainer}>
-              <Icon name="check" size={32} color={colors.inkMuted} />
-              <Text style={[styles.emptyTitle, { color: colors.inkMuted }]}>
+              <Icon name="check" size={32} color={colors.textMuted} />
+              <Text style={[styles.emptyTitle, { color: colors.textMuted }]}>
                 No notifications in {selectedCategory.toLowerCase()}
               </Text>
-              <Text style={[styles.emptySubtitle, { color: colors.inkMuted }]}>
+              <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>
                 You are all caught up!
               </Text>
             </View>
@@ -178,30 +178,30 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
                     style={[
                       styles.card,
                       {
-                        backgroundColor: isUnread ? colors.paperWarm : colors.paper,
-                        borderColor: isUnread ? colors.brand : colors.border,
+                        backgroundColor: isUnread ? colors.surfaceSubtle : colors.surface,
+                        borderColor: isUnread ? colors.primary : colors.border,
                       },
                     ]}
                   >
                     <View style={styles.cardHeader}>
-                      <Text style={[styles.typeText, { color: colors.brand }]}>
+                      <Text style={[styles.typeText, { color: colors.primary }]}>
                         {item.type.replace(/_/g, ' ')}
                       </Text>
                       {isUnread && (
                         <TouchableOpacity onPress={() => markAsRead(item.id)}>
-                          <View style={[styles.unreadDot, { backgroundColor: colors.brand }]} />
+                          <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />
                         </TouchableOpacity>
                       )}
                     </View>
-                    <Text style={[styles.cardTitle, { color: colors.ink }]}>{item.title}</Text>
-                    <Text style={[styles.cardMessage, { color: colors.inkMuted }]}>
+                    <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>{item.title}</Text>
+                    <Text style={[styles.cardMessage, { color: colors.textMuted }]}>
                       {item.message}
                     </Text>
 
                     {item.link ? (
                       <TouchableOpacity
                         onPress={() => handleActionPress(item.link)}
-                        style={[styles.actionBtn, { backgroundColor: colors.brand }]}
+                        style={[styles.actionBtn, { backgroundColor: colors.primary }]}
                       >
                         <Text style={styles.actionBtnText}>Open in App</Text>
                         <Icon name="arrowRight" size={12} color="#ffffff" />
