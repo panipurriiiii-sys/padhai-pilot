@@ -91,6 +91,7 @@ async function main() {
         dedupeKey,
       },
       update: {},
+      select: { id: true },
     });
   }
 
@@ -116,6 +117,7 @@ async function main() {
         dedupeKey,
       },
       update: {},
+      select: { id: true },
     });
   }
   console.log(`Extra notifications: ${extraNotifs.length} upserted`);

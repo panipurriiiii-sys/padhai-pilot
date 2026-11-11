@@ -281,6 +281,7 @@ async function main() {
         createdAt: daysAgo(daysBack),
         dedupeKey: `ann-${created.id}`,
       },
+      select: { id: true },
     });
   }
   console.log(`Announcements + notifications: ${announcements.length}`);
@@ -304,6 +305,7 @@ async function main() {
         createdAt: daysAgo(n.daysBack),
         dedupeKey: `notif-${n.type}-${n.daysBack}`,
       },
+      select: { id: true },
     });
   }
   console.log(`Extra notifications: ${extraNotifs.length}`);
