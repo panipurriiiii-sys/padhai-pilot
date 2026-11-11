@@ -1,4 +1,4 @@
-﻿import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { AccessService } from '../common/access/access.service.js';
 import { clampLimit, optionalString, requireString } from '../common/db/db.js';
 import type { AuthenticatedUser } from '../common/types.js';
