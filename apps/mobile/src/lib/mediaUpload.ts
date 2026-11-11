@@ -2,7 +2,9 @@ import { apiClient } from '../services/api/client';
 
 declare const require: (moduleName: string) => any;
 
-export const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
+// Vercel serverless functions have a 4.5 MB body limit; base64 encoding adds ~33% overhead.
+// Keep the raw file under 3 MB so the base64 payload stays under 4 MB with request headers.
+export const MAX_UPLOAD_BYTES = 3 * 1024 * 1024;
 
 export interface UploadedMedia {
   url: string;
@@ -39,13 +41,13 @@ export async function pickAndUploadMedia(): Promise<UploadedMedia | null> {
     throw new Error(e instanceof Error ? e.message : 'Could not open the file picker.');
   }
   if (!file) return null;
-  if (typeof file.size === 'number' && file.size > MAX_UPLOAD_BYTES) throw new Error('File exceeds the 20 MB limit.');
+  if (typeof file.size === 'number' && file.size > MAX_UPLOAD_BYTES) throw new Error('File exceeds the 3 MB limit.');
   const fileName = file.name || 'document.pdf';
   const [copy] = await picker.keepLocalCopy({ files: [{ uri: file.uri, fileName }], destination: 'cachesDirectory' });
   if (copy?.status !== 'success') throw new Error('Could not read the selected file.');
   const path = decodeURIComponent(String(copy.localUri).replace(/^file:\/\//, ''));
   const stat = await fs.stat(path);
-  if (Number(stat.size) > MAX_UPLOAD_BYTES) throw new Error('File exceeds the 20 MB limit.');
+  if (Number(stat.size) > MAX_UPLOAD_BYTES) throw new Error('File exceeds the 3 MB limit.');
   const base64: string = await fs.readFile(path, 'base64');
   void fs.unlink(path).catch(() => undefined);
   const out = await apiClient.post<UploadedMedia>('/tuition/media-upload', { base64, fileName, mimeType: file.type || undefined });

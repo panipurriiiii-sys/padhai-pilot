@@ -3,6 +3,9 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
   transpilePackages: ["@padhai-pilot/ui", "@padhai-pilot/assets"],
+  async redirects() {
+    return [{ source: "/privacy", destination: "/privacy-policy", permanent: true }];
+  },
   async rewrites() {
     const target = process.env.API_PROXY_TARGET?.replace(/\/+$/, "");
     if (!target) return [];

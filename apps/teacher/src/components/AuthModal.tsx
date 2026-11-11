@@ -31,8 +31,8 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [instituteName, setInstituteName] = useState('');
   const [subject, setSubject] = useState('');
-  const [invitationCode, setInvitationCode] = useState('');
   const [resetToken, setResetToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
@@ -68,7 +68,8 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
         email,
         password,
         subject,
-        invitationCode: invitationCode || undefined,
+        instituteName: instituteName || undefined,
+        role: 'TUITION_OWNER',
       });
       onAuthSuccess(res.user);
       onClose();
@@ -130,7 +131,7 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
           </h2>
           <p className="text-[var(--ink-secondary)] text-[11px] mt-0.5 font-['Raleway']">
             {mode === 'login' && 'Sign in to access your academy, faculty records, or classroom'}
-            {mode === 'register' && 'Create your teacher profile or join your coaching academy'}
+            {mode === 'register' && 'Register your tuition centre or coaching academy on PadhaiPilot'}
             {mode === 'forgot' && 'Reset your account password securely'}
             {mode === 'reset' && 'Enter your authorization token and set a new password'}
           </p>
@@ -213,7 +214,7 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
                 onClick={() => setMode('register')}
                 className="text-[var(--ink-muted)] hover:text-[var(--ink-primary)] hover:underline"
               >
-                Register New Teacher
+                Register Your Academy
               </button>
             </div>
           </form>
@@ -250,31 +251,30 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-2.5">
-              <div>
-                <label className="block text-[var(--ink-secondary)] mb-1 font-['Raleway'] font-semibold">
-                  Teaching Subject
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Chemistry"
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  className="w-full input-paper"
-                />
-              </div>
-              <div>
-                <label className="block text-[var(--ink-secondary)] mb-1 font-['Raleway'] font-semibold">
-                  Teacher Invite Code
-                </label>
-                <input
-                  type="text"
-                  placeholder="Optional code"
-                  value={invitationCode}
-                  onChange={(e) => setInvitationCode(e.target.value)}
-                  className="w-full input-paper"
-                />
-              </div>
+            <div>
+              <label className="block text-[var(--ink-secondary)] mb-1 font-['Raleway'] font-semibold">
+                Academy / Institute Name
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Apex Coaching Centre"
+                value={instituteName}
+                onChange={(e) => setInstituteName(e.target.value)}
+                className="w-full input-paper"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[var(--ink-secondary)] mb-1 font-['Raleway'] font-semibold">
+                Primary Teaching Subject
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Chemistry"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                className="w-full input-paper"
+              />
             </div>
 
             <div>
@@ -308,7 +308,7 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
               className="w-full btn-primary justify-center text-xs py-2.5 mt-2"
             >
               <UserPlus className="w-4 h-4" />
-              <span>{isLoading ? 'Registering...' : 'Complete Teacher Registration'}</span>
+              <span>{isLoading ? 'Creating academy...' : 'Create My Academy & Account'}</span>
             </button>
 
             <div className="text-center pt-2">
@@ -317,7 +317,7 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
                 onClick={() => setMode('login')}
                 className="text-[var(--brand-electric)] hover:underline text-[11px] font-['Raleway']"
               >
-                Already registered? Sign in here
+                Already have an account? Sign in here
               </button>
             </div>
           </form>
@@ -345,7 +345,7 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
               disabled={isLoading}
               className="w-full btn-primary justify-center text-xs py-2.5"
             >
-              {isLoading ? 'Generating token...' : 'Request Password Reset'}
+              {isLoading ? 'Sending reset link...' : 'Send Password Reset Link'}
             </button>
 
             <div className="text-center pt-2">
