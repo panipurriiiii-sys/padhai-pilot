@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import {
   Award,
@@ -156,9 +157,31 @@ const TAB_RESOURCES: Record<string, string[]> = {
 };
 
 function StudentPortal() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [student, setStudent] = useState<UserSession | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<PortalTab>('OVERVIEW');
+  const [activeTab, setActiveTabState] = useState<PortalTab>(() => {
+    const t = searchParams.get('tab') as PortalTab | null;
+    return t || 'OVERVIEW';
+  });
+
+  // Sync state when user navigates back/forward
+  useEffect(() => {
+    const t = searchParams.get('tab') as PortalTab | null;
+    const next = t || 'OVERVIEW';
+    if (next !== activeTab) setActiveTabState(next);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  const setActiveTab = useCallback(
+    (tab: PortalTab) => {
+      setActiveTabState(tab);
+      router.replace(`?tab=${tab}`, { scroll: false });
+    },
+    [router],
+  );
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showNotifications, setShowNotifications] = useState<boolean>(false);
@@ -3186,7 +3209,9 @@ export default function StudentPortalRoot() {
   return (
     <MotionProvider>
       <ToastProvider>
-        <StudentPortal />
+        <Suspense>
+          <StudentPortal />
+        </Suspense>
       </ToastProvider>
     </MotionProvider>
   );

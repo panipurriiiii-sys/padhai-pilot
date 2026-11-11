@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { Sidebar, NavTab } from '../components/Sidebar';
 // Default tab — eagerly loaded
@@ -136,7 +137,29 @@ const TAB_RESOURCES: Partial<Record<NavTab, ResourceKey[]>> = {
 };
 
 function TeacherApp() {
-  const [currentTab, setCurrentTab] = useState<NavTab>('dashboard');
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const [currentTab, setCurrentTabState] = useState<NavTab>(() => {
+    const t = searchParams.get('tab') as NavTab | null;
+    return t || 'dashboard';
+  });
+
+  // Sync state when user navigates back/forward
+  useEffect(() => {
+    const t = searchParams.get('tab') as NavTab | null;
+    const next = t || 'dashboard';
+    if (next !== currentTab) setCurrentTabState(next);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  const setCurrentTab = useCallback(
+    (tab: NavTab) => {
+      setCurrentTabState(tab);
+      router.replace(`?tab=${tab}`, { scroll: false });
+    },
+    [router],
+  );
   const [user, setUser] = useState<UserSession | null>(null);
   const [metrics, setMetrics] = useState<TeacherDashboardMetrics | null>(null);
   const [batches, setBatches] = useState<BatchSummary[]>([]);
@@ -761,7 +784,9 @@ export default function TeacherPortalRoot() {
   return (
     <MotionProvider>
       <ToastProvider>
-        <TeacherApp />
+        <Suspense>
+          <TeacherApp />
+        </Suspense>
       </ToastProvider>
     </MotionProvider>
   );
