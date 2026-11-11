@@ -9,8 +9,17 @@
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 
+function resolveUrl() {
+  // Prefer pooled URL (port 5432 direct can be blocked by ISP/firewall)
+  const pooled = process.env.DATABASE_URL_POOLED;
+  if (pooled) return pooled.includes('pgbouncer') ? pooled : `${pooled}${pooled.includes('?') ? '&' : '?'}pgbouncer=true`;
+  const direct = process.env.DIRECT_URL || process.env.DATABASE_URL;
+  if (direct) return direct;
+  throw new Error('No DATABASE_URL set');
+}
+
 const prisma = new PrismaClient({
-  datasources: { db: { url: process.env.DIRECT_URL || process.env.DATABASE_URL } },
+  datasources: { db: { url: resolveUrl() } },
 });
 
 function daysAgo(n: number) {
@@ -243,7 +252,7 @@ async function main() {
 
   // ── 9. ANNOUNCEMENTS ──────────────────────────────────────────────────────
   const announcements = [
-    { title: 'Holiday on 15th November', content: 'No class on 15th November due to Diwali celebrations. Next class resumes on 18th November.', priority: 'HIGH' as const, daysBack: 3 },
+    { title: 'Holiday on 15th November', content: 'No class on 15th November due to Diwali celebrations. Next class resumes on 18th November.', priority: 'URGENT' as const, daysBack: 3 },
     { title: 'Unit Test 2 Syllabus', content: 'Unit Test 2 on Electrostatics will cover Chapters 1–3: Electric Charges, Gauss\'s Law and Electric Potential. Total marks: 100.', priority: 'NORMAL' as const, daysBack: 2 },
     { title: 'Practice Material Uploaded', content: 'JEE 2024 previous year papers for Physics have been uploaded to the Study Vault. Please solve them before the next class.', priority: 'NORMAL' as const, daysBack: 1 },
   ];
@@ -268,7 +277,7 @@ async function main() {
         title: ann.title,
         message: ann.content.substring(0, 100) + (ann.content.length > 100 ? '…' : ''),
         type: 'ANNOUNCEMENT',
-        priority: priority === 'HIGH' ? 'HIGH' : 'NORMAL',
+        priority: priority === 'URGENT' ? 'URGENT' : 'NORMAL',
         isRead: daysBack > 1,
         createdAt: daysAgo(daysBack),
         dedupeKey: `ann-${created.id}`,
