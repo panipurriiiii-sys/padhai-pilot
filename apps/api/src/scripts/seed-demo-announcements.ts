@@ -43,7 +43,7 @@ async function main() {
   console.log(`Institute: ${institute.name}`);
 
   // ── ANNOUNCEMENTS + THEIR NOTIFICATIONS ──────────────────────────────────────
-  const announcements = [
+  const announcements: Array<{ title: string; content: string; priority: 'URGENT' | 'NORMAL'; daysBack: number }> = [
     { title: 'Holiday on 15th November', content: 'No class on 15th November due to Diwali celebrations. Next class resumes on 18th November.', priority: 'URGENT', daysBack: 3 },
     { title: 'Unit Test 2 Syllabus', content: "Unit Test 2 on Electrostatics will cover Chapters 1–3: Electric Charges, Gauss's Law and Electric Potential. Total marks: 100.", priority: 'NORMAL', daysBack: 2 },
     { title: 'Practice Material Uploaded', content: 'JEE 2024 previous year papers for Physics have been uploaded to the Study Vault. Please solve them before the next class.', priority: 'NORMAL', daysBack: 1 },
