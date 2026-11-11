@@ -27,6 +27,8 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'PadhaiPilot — Platform Admin',
   description: 'Private platform administration for PadhaiPilot',
+  robots: { index: false, follow: false },
+  icons: { icon: '/favicon.ico', apple: '/apple-touch-icon.png' },
 };
 
 export default function RootLayout({

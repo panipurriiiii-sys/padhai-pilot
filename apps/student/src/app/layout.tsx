@@ -26,7 +26,9 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: 'PadhaiPilot — Student Portal',
-  description: 'View Verified Classroom Results, Academic Records & In-App Notifications',
+  description: 'PadhaiPilot Student Portal: view your results, assignments, attendance, fees and study materials.',
+  robots: { index: false, follow: false },
+  icons: { icon: '/favicon.ico', apple: '/apple-touch-icon.png' },
 };
 
 export default function RootLayout({

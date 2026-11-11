@@ -25,8 +25,26 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'PadhaiPilot — Tuition Operations Platform',
-  description: 'PadhaiPilot: attendance, marks, results and parent-ready reporting for tuition institutes',
+  title: 'PadhaiPilot — Run Your Entire Tuition from One App',
+  description: 'PadhaiPilot lets tuition centres manage batches, attendance, fees, assignments, results and payroll — all in one place. Trusted by coaching institutes across India.',
+  keywords: ['tuition management', 'coaching institute software', 'attendance app', 'fee collection', 'student results', 'India'],
+  authors: [{ name: 'PadhaiPilot' }],
+  metadataBase: new URL('https://padhaipilot.vercel.app'),
+  openGraph: {
+    title: 'PadhaiPilot — Run Your Entire Tuition from One App',
+    description: 'Manage batches, attendance, fees, assignments and results from one dashboard. Online fee collection via Razorpay. Coming to Play Store & App Store.',
+    url: 'https://padhaipilot.vercel.app',
+    siteName: 'PadhaiPilot',
+    type: 'website',
+    locale: 'en_IN',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'PadhaiPilot — Tuition Management Platform',
+    description: 'All-in-one platform for tuition centres: batches, attendance, fees, results & more.',
+  },
+  robots: { index: true, follow: true },
+  icons: { icon: '/favicon.ico', apple: '/apple-touch-icon.png' },
 };
 
 export default function RootLayout({

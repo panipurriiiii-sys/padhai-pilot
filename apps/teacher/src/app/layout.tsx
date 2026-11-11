@@ -26,7 +26,9 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: 'PadhaiPilot — Teacher Portal',
-  description: 'PadhaiPilot — Portal for Teachers and Coaching Institutes',
+  description: 'PadhaiPilot Teacher Portal: manage your batches, attendance, marks, assignments and fee collection.',
+  robots: { index: false, follow: false },
+  icons: { icon: '/favicon.ico', apple: '/apple-touch-icon.png' },
 };
 
 export default function RootLayout({
