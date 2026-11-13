@@ -43,14 +43,20 @@ export async function pickAndUploadMedia(): Promise<UploadedMedia | null> {
   if (!file) return null;
   if (typeof file.size === 'number' && file.size > MAX_UPLOAD_BYTES) throw new Error('File exceeds the 3 MB limit.');
   const fileName = file.name || 'document.pdf';
-  const [copy] = await picker.keepLocalCopy({ files: [{ uri: file.uri, fileName }], destination: 'cachesDirectory' });
-  if (copy?.status !== 'success') throw new Error('Could not read the selected file.');
-  const path = decodeURIComponent(String(copy.localUri).replace(/^file:\/\//, ''));
-  const stat = await fs.stat(path);
-  if (Number(stat.size) > MAX_UPLOAD_BYTES) throw new Error('File exceeds the 3 MB limit.');
-  const base64: string = await fs.readFile(path, 'base64');
-  void fs.unlink(path).catch(() => undefined);
-  const out = await apiClient.post<UploadedMedia>('/tuition/media-upload', { base64, fileName, mimeType: file.type || undefined });
-  if (!out?.url || !/^https:\/\//i.test(out.url)) throw new Error('Upload did not return a valid link.');
-  return out;
+  let path: string | null = null;
+  try {
+    const [copy] = await picker.keepLocalCopy({ files: [{ uri: file.uri, fileName }], destination: 'cachesDirectory' });
+    if (copy?.status !== 'success') throw new Error('Could not read the selected file.');
+    path = decodeURIComponent(String(copy.localUri).replace(/^file:\/\//, ''));
+    const stat = await fs.stat(path);
+    if (Number(stat.size) > MAX_UPLOAD_BYTES) throw new Error('File exceeds the 3 MB limit.');
+    const base64: string = await fs.readFile(path, 'base64');
+    const out = await apiClient.post<UploadedMedia>('/tuition/media-upload', { base64, fileName, mimeType: file.type || undefined });
+    if (!out?.url || !/^https:\/\//i.test(out.url)) throw new Error('Upload did not return a valid link.');
+    return out;
+  } finally {
+    if (path && fs) {
+      void fs.unlink(path).catch(() => undefined);
+    }
+  }
 }

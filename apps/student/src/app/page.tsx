@@ -312,11 +312,13 @@ function StudentPortal() {
   const [assignmentFileUrl, setAssignmentFileUrl] = useState('');
   const [isSubmittingAssignment, setIsSubmittingAssignment] = useState(false);
 
-  // Online Assessment Modal
-  const [activeTest, setActiveTest] = useState<any>(null);
-  const [testAnswers, setTestAnswers] = useState<Record<string, number>>({});
-  const [isSubmittingTest, setIsSubmittingTest] = useState(false);
-  const [testResultFeedback, setTestResultFeedback] = useState<string | null>(null);
+  // Online Assessment Modal - Formal State Machine
+  type TestSessionState =
+    | { stage: 'IDLE' }
+    | { stage: 'TAKING'; test: any; answers: Record<string, number> }
+    | { stage: 'SUBMITTING'; test: any; answers: Record<string, number> }
+    | { stage: 'SCORED'; test: any; feedback: string };
+  const [testSession, setTestSession] = useState<TestSessionState>({ stage: 'IDLE' });
 
   // Attendance Correction Modal
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
@@ -646,9 +648,7 @@ function StudentPortal() {
     setIsLoading(true);
     try {
       const details = await studentApi.getTestDetails(testId);
-      setActiveTest(details);
-      setTestAnswers({});
-      setTestResultFeedback(null);
+      setTestSession({ stage: 'TAKING', test: details, answers: {} });
     } catch (err: any) {
       alert(err.message || 'Failed to launch assessment.');
     } finally {
@@ -657,23 +657,25 @@ function StudentPortal() {
   };
 
   const handleSubmitTest = async () => {
-    if (!activeTest) return;
-    setIsSubmittingTest(true);
+    if (testSession.stage !== 'TAKING') return;
+    const { test, answers } = testSession;
+    setTestSession({ stage: 'SUBMITTING', test, answers });
     try {
-      const payload = Object.entries(testAnswers).map(([qid, optIdx]) => ({
+      const payload = Object.entries(answers).map(([qid, optIdx]) => ({
         questionId: qid,
         selectedOptionIndex: optIdx,
       }));
-      const res = await studentApi.submitTestAttempt(activeTest.id, payload);
-      setTestResultFeedback(
-        `Test Evaluated! Score: ${res.score}/${res.totalMarks} (${res.percentage}%). Feedback: ${res.feedback}`,
-      );
+      const res = await studentApi.submitTestAttempt(test.id, payload);
+      setTestSession({
+        stage: 'SCORED',
+        test,
+        feedback: `Test Evaluated! Score: ${res.score}/${res.totalMarks} (${res.percentage}%). Feedback: ${res.feedback}`,
+      });
       const updatedTests = await studentApi.getTests();
       setTests(updatedTests);
     } catch (err: any) {
       alert(err.message || 'Test submission failed.');
-    } finally {
-      setIsSubmittingTest(false);
+      setTestSession({ stage: 'TAKING', test, answers });
     }
   };
 
@@ -2729,35 +2731,35 @@ function StudentPortal() {
       )}
 
       {/* 3. ONLINE ASSESSMENT MODAL */}
-      {activeTest && (
+      {testSession.stage !== 'IDLE' && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
           <div className="w-full max-w-2xl bg-[var(--bg-paper)] border border-[var(--border-paper)] rounded-2xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-[var(--border-paper)] pb-3">
               <div>
                 <h3 className="font-['Raleway'] font-bold text-lg text-[var(--ink-primary)]">
-                  {activeTest.title}
+                  {testSession.test.title}
                 </h3>
                 <p className="text-xs text-[var(--ink-muted)]">
-                  Duration: {activeTest.durationMinutes}m • Total Marks: {activeTest.totalMarks}
+                  Duration: {testSession.test.durationMinutes}m • Total Marks: {testSession.test.totalMarks}
                 </p>
               </div>
               <button
-                onClick={() => setActiveTest(null)}
+                onClick={() => setTestSession({ stage: 'IDLE' })}
                 className="p-1 rounded-lg text-[var(--ink-muted)] hover:bg-[var(--bg-paper-warm)]"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {testResultFeedback ? (
+            {testSession.stage === 'SCORED' ? (
               <div className="p-5 rounded-xl bg-[var(--status-success-bg)] border border-[var(--status-success-border)] text-center space-y-3">
                 <CheckCircle2 className="w-10 h-10 text-[var(--status-success-text)] mx-auto" />
                 <div className="font-['Playfair_Display'] text-xl font-bold text-[var(--ink-primary)]">
                   Test Submitted Successfully!
                 </div>
-                <p className="text-xs text-[var(--ink-secondary)]">{testResultFeedback}</p>
+                <p className="text-xs text-[var(--ink-secondary)]">{testSession.feedback}</p>
                 <button
-                  onClick={() => setActiveTest(null)}
+                  onClick={() => setTestSession({ stage: 'IDLE' })}
                   className="px-5 py-2 rounded-xl bg-[var(--status-success)] text-white font-bold text-xs"
                 >
                   Return to Dashboard
@@ -2765,7 +2767,7 @@ function StudentPortal() {
               </div>
             ) : (
               <div className="space-y-4">
-                {activeTest.questions.map((q: any, idx: number) => (
+                {testSession.test.questions?.map((q: any, idx: number) => (
                   <div
                     key={q.id}
                     className="p-4 rounded-xl bg-[var(--bg-paper-warm)] border border-[var(--border-paper)] space-y-3"
@@ -2779,13 +2781,17 @@ function StudentPortal() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
                       {q.options?.map((opt: string, optIdx: number) => {
-                        const isSelected = testAnswers[q.id] === optIdx;
+                        const isSelected = testSession.answers[q.id] === optIdx;
                         return (
                           <button
                             key={optIdx}
                             type="button"
                             onClick={() =>
-                              setTestAnswers((prev) => ({ ...prev, [q.id]: optIdx }))
+                              setTestSession((prev) =>
+                                prev.stage === 'TAKING' || prev.stage === 'SUBMITTING'
+                                  ? { ...prev, answers: { ...prev.answers, [q.id]: optIdx } }
+                                  : prev,
+                              )
                             }
                             className={`p-3 rounded-xl border text-left text-xs transition flex items-center gap-2.5 ${
                               isSelected
@@ -2811,10 +2817,10 @@ function StudentPortal() {
                 <button
                   type="button"
                   onClick={handleSubmitTest}
-                  disabled={isSubmittingTest}
+                  disabled={testSession.stage === 'SUBMITTING'}
                   className="w-full py-3 rounded-xl bg-[var(--status-success)] hover:brightness-95 text-xs font-bold text-white transition flex items-center justify-center gap-2 shadow-lg disabled:opacity-50"
                 >
-                  {isSubmittingTest ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                  {testSession.stage === 'SUBMITTING' ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                   <span>Submit Assessment For Server Grading</span>
                 </button>
               </div>

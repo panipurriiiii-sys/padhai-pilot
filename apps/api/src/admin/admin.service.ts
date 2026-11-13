@@ -8,6 +8,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service.js';
 import { assertDb, clampLimit, isUniqueViolation } from '../common/db/db.js';
 import { RedisService } from '../redis/redis.service.js';
+import { validateStateTransition, INSTITUTE_TRANSITIONS, type InstituteStatus } from '../common/state/state-machine.js';
 import type {
   CreateInstituteTenantDto,
   UpdateInstituteStatusDto,
@@ -232,6 +233,7 @@ export class AdminService {
     actor: { id: string; email: string },
   ): Promise<InstituteTenantRecord> {
     const before = await this.getInstituteById(id);
+    validateStateTransition('Institute', before.status as InstituteStatus, dto.status as InstituteStatus, INSTITUTE_TRANSITIONS);
     const existing = await this.db.institute.findUnique({ where: { id }, select: { features: true } });
     const feat = ((existing?.features || {}) as Record<string, any>);
 

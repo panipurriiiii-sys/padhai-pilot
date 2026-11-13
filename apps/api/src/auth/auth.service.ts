@@ -70,7 +70,7 @@ export class AuthService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(RedisService) private readonly redis: RedisService,
-    private readonly mail: MailService,
+    private readonly mail?: MailService,
   ) {
     this.demoReady = isDemoMode() ? this.seedDemoUsers() : Promise.resolve();
   }
@@ -477,7 +477,7 @@ export class AuthService {
       accountExists = true;
     }
 
-    if (accountExists) {
+    if (accountExists && this.mail?.sendPasswordReset) {
       await this.mail.sendPasswordReset(normalized, token);
     }
     return { success: true, message, ...(isDemoMode() && accountExists ? { debugToken: token } : {}) };

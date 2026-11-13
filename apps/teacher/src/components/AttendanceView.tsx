@@ -71,6 +71,7 @@ export function AttendanceView({
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
+  const [saveErrorMsg, setSaveErrorMsg] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | AttendanceStatus>('ALL');
   const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
@@ -245,6 +246,7 @@ export function AttendanceView({
   const handleSaveDraft = async () => {
     try {
       setIsSaving(true);
+      setSaveErrorMsg('');
       await onSaveAttendance({
         batchId: currentBatchId,
         date: selectedDate,
@@ -258,6 +260,8 @@ export function AttendanceView({
       setTimeout(() => setSaveSuccessMsg(''), 4000);
     } catch (err) {
       console.error('Save error:', err);
+      setSaveErrorMsg(err instanceof Error ? err.message : 'Failed to save attendance draft.');
+      setTimeout(() => setSaveErrorMsg(''), 6000);
     } finally {
       setIsSaving(false);
     }
@@ -267,6 +271,7 @@ export function AttendanceView({
   const handleFinalize = async () => {
     try {
       setIsSaving(true);
+      setSaveErrorMsg('');
       await onSaveAttendance({
         batchId: currentBatchId,
         date: selectedDate,
@@ -282,6 +287,8 @@ export function AttendanceView({
       setTimeout(() => setSaveSuccessMsg(''), 5000);
     } catch (err) {
       console.error('Finalize error:', err);
+      setSaveErrorMsg(err instanceof Error ? err.message : 'Failed to seal attendance session.');
+      setTimeout(() => setSaveErrorMsg(''), 6000);
     } finally {
       setIsSaving(false);
     }
@@ -411,6 +418,16 @@ export function AttendanceView({
           <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
           <p className="font-['Raleway'] font-semibold text-xs md:text-sm">
             {saveSuccessMsg}
+          </p>
+        </div>
+      )}
+
+      {/* Save Error Alert Banner */}
+      {saveErrorMsg && (
+        <div className="p-4 rounded-xl bg-rose-50 border border-rose-300 text-rose-900 shadow-sm flex items-center gap-3 animate-fade-in">
+          <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+          <p className="font-['Raleway'] font-semibold text-xs md:text-sm">
+            {saveErrorMsg}
           </p>
         </div>
       )}
