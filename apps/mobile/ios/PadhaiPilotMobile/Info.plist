@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>PadhaiPilotMobile</string>
+	<string>PadhaiPilot</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -24,6 +24,19 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.padhaipilot.mobile</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>padhaipilot</string>
+			</array>
+		</dict>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSAppTransportSecurity</key>
@@ -34,8 +47,21 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string></string>
+	<key>NSCameraUsageDescription</key>
+	<string>PadhaiPilot needs camera access so you can photograph handwritten homework, question papers, and whiteboard notes.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>PadhaiPilot accesses your photo library to let you upload assignments, lecture handouts, and profile images.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>PadhaiPilot needs permission to save generated report cards and study sheets to your photo library.</string>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Inter.ttf</string>
+		<string>Inter_bold.ttf</string>
+		<string>PlayfairDisplay.ttf</string>
+		<string>PlayfairDisplay_bold.ttf</string>
+		<string>Raleway.ttf</string>
+		<string>Raleway_bold.ttf</string>
+	</array>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

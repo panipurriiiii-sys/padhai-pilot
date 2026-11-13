@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, StatusBar, StyleProp, ViewStyle } from 'react-native';
+import { View, StyleSheet, StatusBar, StyleProp, ViewStyle, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/ThemeContext';
 
@@ -29,6 +29,8 @@ export const ScreenContainer: React.FC<ScreenContainerProps> = ({
     <View style={[styles.root, containerStyle, style]}>
       <StatusBar
         barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={Platform.OS === 'android' ? colors.background : undefined}
+        translucent={false}
       />
       {children}
     </View>

@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 export interface ApiErrorResponse {
   message: string;
   statusCode?: number;
@@ -22,6 +24,8 @@ const REQUEST_TIMEOUT_MS = 20000;
 export const PROD_API_BASE_URL = 'https://padhai-pilot.vercel.app/api';
 /** Android emulator alias for the host machine's localhost (local stack: `npm run local:*`). */
 export const DEV_API_BASE_URL = 'http://10.0.2.2:3001/api';
+/** iOS simulator alias for host machine localhost. */
+export const DEV_API_IOS_URL = 'http://localhost:3001/api';
 export const DEFAULT_API_BASE_URL = PROD_API_BASE_URL;
 
 class ApiClient {

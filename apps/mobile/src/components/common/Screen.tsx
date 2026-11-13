@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { View, ScrollView, RefreshControl, StatusBar, Text } from 'react-native';
+import { View, ScrollView, RefreshControl, StatusBar, Text, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DeskBackground } from './Paper';
 import { Badge } from './Badge';
@@ -28,7 +28,11 @@ export const Screen: React.FC<ScreenProps> = memo(({ eyebrow, tag, title, subtit
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+      <StatusBar
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={Platform.OS === 'android' ? colors.background : undefined}
+        translucent={false}
+      />
       <DeskBackground />
       <ScrollView
         keyboardShouldPersistTaps="handled"

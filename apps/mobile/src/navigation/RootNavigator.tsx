@@ -99,8 +99,9 @@ export const RootNavigator: React.FC = () => {
       const home = isTeacher ? 'teacher_dashboard' : 'student_dashboard';
       const cur = useNavigationStore.getState().currentTab;
 
-      // On a non-home main tab: consume the event but stay on the current tab.
+      // On a non-home main tab: return to the home tab first (standard mobile navigation).
       if (cur !== home && cur !== 'dashboard') {
+        setTab(home);
         return true;
       }
 

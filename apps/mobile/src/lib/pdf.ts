@@ -1,4 +1,4 @@
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { apiClient } from '../services/api/client';
 
 declare const require: ((moduleName: string) => any) | undefined;
@@ -34,7 +34,11 @@ export async function openPdf(path: string, fileName: string): Promise<void> {
       await ReactNativeBlobUtil.fs.unlink(target).catch(() => undefined);
       throw new Error(status === 403 || status === 404 ? 'This document is not available to you.' : `Server returned HTTP ${status}`);
     }
-    await ReactNativeBlobUtil.android?.actionViewIntent(res.path(), 'application/pdf');
+    if (Platform.OS === 'android') {
+      await ReactNativeBlobUtil.android?.actionViewIntent(res.path(), 'application/pdf');
+    } else if (Platform.OS === 'ios') {
+      await ReactNativeBlobUtil.ios?.openDocument(res.path());
+    }
   } catch (e) {
     Alert.alert('Could not open document', e instanceof Error ? e.message : 'Unknown error');
   }
