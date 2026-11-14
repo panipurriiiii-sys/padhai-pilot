@@ -28,6 +28,14 @@ const TRANSITIONS: { to: InstituteStatus; label: string; icon: React.ElementType
   { to: 'ARCHIVED', label: 'Archive', icon: Archive, danger: true },
 ];
 
+/** Explicit state machine transitions aligned with backend INSTITUTE_TRANSITIONS */
+const ALLOWED_TRANSITIONS: Record<InstituteStatus, readonly InstituteStatus[]> = {
+  TRIAL: ['ACTIVE', 'SUSPENDED', 'ARCHIVED'],
+  ACTIVE: ['SUSPENDED', 'ARCHIVED', 'TRIAL'],
+  SUSPENDED: ['ACTIVE', 'ARCHIVED'],
+  ARCHIVED: [], // Terminal state
+};
+
 export function InstituteDetail({ id }: { id: string }) {
   const toast = useToast();
   const inst = useLoad(() => adminApi.getInstitute(id), [id]);
@@ -102,7 +110,13 @@ export function InstituteDetail({ id }: { id: string }) {
       <PageHeader
         title={i.name}
         subtitle={`${i.subdomain}${i.customDomain ? ` / ${i.customDomain}` : ''}`}
-        actions={<StatusBadge value={i.status} />}
+        actions={
+          i.status === 'TRIAL' && i.isTrialActive === false ? (
+            <StatusBadge value="WARNING" label="Trial Expired" />
+          ) : (
+            <StatusBadge value={i.status} />
+          )
+        }
       />
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
@@ -114,14 +128,30 @@ export function InstituteDetail({ id }: { id: string }) {
               ['Trial Status', i.isTrialActive ? `Active (${i.trialDaysLeft} days left)` : i.status === 'TRIAL' ? 'Trial Expired' : 'Not on Trial'],
               ['Owner', `${i.ownerName || '-'} (${i.ownerEmail || '-'})`],
               ['Phone', i.ownerPhone || '-'],
-              ['Students', `${i.studentCount}${i.maxStudentsLimit ? ` / ${i.maxStudentsLimit}` : ' (no cap)'}`],
-              ['Teachers', `${i.teacherCount}${i.maxTeachersLimit ? ` / ${i.maxTeachersLimit}` : ' (no cap)'}`],
+              [
+                'Students',
+                <span>
+                  {`${i.studentCount}${i.maxStudentsLimit ? ` / ${i.maxStudentsLimit}` : ' (no cap)'}`}
+                  {Boolean(i.maxStudentsLimit && i.studentCount > i.maxStudentsLimit) && (
+                    <span className="badge-status is-danger ml-2 text-[10px]">Over Quota</span>
+                  )}
+                </span>,
+              ],
+              [
+                'Teachers',
+                <span>
+                  {`${i.teacherCount}${i.maxTeachersLimit ? ` / ${i.maxTeachersLimit}` : ' (no cap)'}`}
+                  {Boolean(i.maxTeachersLimit && i.teacherCount > i.maxTeachersLimit) && (
+                    <span className="badge-status is-danger ml-2 text-[10px]">Over Quota</span>
+                  )}
+                </span>,
+              ],
               ['White label', i.isWhiteLabel ? 'Yes' : 'No'],
               ['Dedicated database', i.isDedicatedDb ? 'Yes' : 'No'],
               ['Created', fmtDate(i.createdAt)],
               ['Updated', fmtDate(i.updatedAt)],
             ].map(([k, v]) => (
-              <div key={k} className="min-w-0">
+              <div key={typeof k === 'string' ? k : String(k)} className="min-w-0">
                 <dt className="text-xs text-ink-muted font-primary">{k}</dt>
                 <dd className="font-data break-words">{v}</dd>
               </div>
@@ -139,11 +169,18 @@ export function InstituteDetail({ id }: { id: string }) {
             Suspended and archived institutes cannot sign in. Every change is recorded in the audit log with your reason.
           </p>
           <div className="flex flex-col gap-2">
-            {TRANSITIONS.filter((t) => t.to !== i.status).map((t) => (
-              <button key={t.to} type="button" className={t.danger ? 'btn-danger' : 'btn-secondary'} onClick={() => setTransition(t.to)}>
-                <t.icon className="w-3.5 h-3.5" /> {t.label}
-              </button>
-            ))}
+            {(ALLOWED_TRANSITIONS[i.status] ?? []).length === 0 ? (
+              <div className="p-3 rounded-lg border border-border-paper bg-paper-warm text-xs text-ink-muted">
+                <span className="font-bold block text-ink-primary mb-1">Terminal State</span>
+                This institute is permanently {i.status.toLowerCase()}. No further lifecycle status transitions can be performed.
+              </div>
+            ) : (
+              TRANSITIONS.filter((t) => (ALLOWED_TRANSITIONS[i.status] ?? []).includes(t.to)).map((t) => (
+                <button key={t.to} type="button" className={t.danger ? 'btn-danger' : 'btn-secondary'} onClick={() => setTransition(t.to)}>
+                  <t.icon className="w-3.5 h-3.5" /> {t.label}
+                </button>
+              ))
+            )}
           </div>
         </section>
       </div>

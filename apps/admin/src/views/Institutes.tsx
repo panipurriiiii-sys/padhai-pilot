@@ -110,9 +110,27 @@ export default function Institutes() {
           cols={[
             { header: 'Institute', primary: true, cell: (i) => <span className="font-bold font-primary">{i.name}</span> },
             { header: 'Subdomain', cell: (i) => i.subdomain },
-            { header: 'Status', cell: (i) => <StatusBadge value={i.status} /> },
+            {
+              header: 'Status',
+              cell: (i) =>
+                i.status === 'TRIAL' && i.isTrialActive === false ? (
+                  <StatusBadge value="WARNING" label="Trial Expired" />
+                ) : (
+                  <StatusBadge value={i.status} />
+                ),
+            },
             { header: 'Plan', cell: (i) => i.plan },
-            { header: 'Students', cell: (i) => i.studentCount },
+            {
+              header: 'Students',
+              cell: (i) => (
+                <span>
+                  {i.studentCount}
+                  {Boolean(i.maxStudentsLimit && i.studentCount > i.maxStudentsLimit) && (
+                    <span className="badge-status is-danger ml-1.5 text-[10px]">Over</span>
+                  )}
+                </span>
+              ),
+            },
             { header: 'Teachers', cell: (i) => i.teacherCount },
             { header: 'Owner', cell: (i) => i.ownerEmail || '-' },
             { header: 'Created', cell: (i) => fmtDay(i.createdAt) },

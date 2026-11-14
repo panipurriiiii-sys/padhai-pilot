@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Alert, View, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { presentAlert as Alert } from '../../store/useAlertStore';
 import { QueryBoundary } from '../../components/common/QueryBoundary';
 import { Card } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
@@ -62,7 +63,23 @@ export const StudentLeaveApply: React.FC = () => {
                   size="sm"
                   variant="outline"
                   style={{ marginTop: 8 }}
-                  onPress={() => cancel.mutate(l.id, { onError: (e) => Alert.alert('Could not cancel', errorMessage(e)) })}
+                  onPress={() =>
+                    Alert.alert(
+                      'Cancel leave request?',
+                      'Are you sure you want to withdraw this application?',
+                      [
+                        { text: 'Keep', style: 'cancel' },
+                        {
+                          text: 'Withdraw',
+                          style: 'destructive',
+                          onPress: () =>
+                            cancel.mutate(l.id, {
+                              onError: (e) => Alert.alert('Could not cancel', errorMessage(e)),
+                            }),
+                        },
+                      ],
+                    )
+                  }
                 />
               ) : null}
             </LeaveCard>

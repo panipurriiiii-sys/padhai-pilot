@@ -177,7 +177,7 @@ export function StudentLeavesView() {
             <p className="text-xs text-[var(--ink-secondary)]">
               Specify the reason for rejection. This reason will be recorded in the audit trail and visible to the student.
             </p>
-            <Field label="Rejection Reason" required>
+            <Field label="Rejection Reason">
               <textarea
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}

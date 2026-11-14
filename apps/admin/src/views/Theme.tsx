@@ -30,6 +30,11 @@ export default function Theme() {
   const primaryOk = HEX.test(cfg.brand.primary);
   const ratio = primaryOk ? contrastRatio(cfg.brand.primary, '#FFFFFF') : 0;
 
+  const isDirty = React.useMemo(() => {
+    if (!overview.data?.published?.config) return false;
+    return JSON.stringify(cfg) !== JSON.stringify(overview.data.published.config);
+  }, [cfg, overview.data]);
+
   const validate = async () => {
     setBusy('validate');
     try {
@@ -88,6 +93,11 @@ export default function Theme() {
         subtitle="Platform theme served to the web, teacher, student and mobile apps. Changes are validated, versioned and reversible."
         actions={
           <>
+            {isDirty && (
+              <span className="badge-status is-warning text-xs">
+                ● Draft (Unpublished Changes)
+              </span>
+            )}
             <button type="button" className="btn-secondary" disabled={!!busy || !primaryOk} onClick={validate}>{busy === 'validate' && <Spin />} Validate</button>
             <button type="button" className="btn-primary" disabled={!!busy || !primaryOk} onClick={publish}>{busy === 'publish' ? <Spin /> : <UploadCloud className="w-3.5 h-3.5" />} Publish</button>
           </>

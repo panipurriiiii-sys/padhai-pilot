@@ -56,11 +56,34 @@ export default function Announcements() {
           empty="No announcements yet."
           cols={[
             { header: 'Title', primary: true, cell: (a) => <span className="font-bold font-primary">{a.title}</span> },
+            {
+              header: 'Status',
+              cell: (a) => {
+                const isExpired = Boolean(a.expiresAt && new Date(a.expiresAt).getTime() < Date.now());
+                return isExpired ? (
+                  <StatusBadge value="ARCHIVED" label="Expired" />
+                ) : (
+                  <StatusBadge value="ACTIVE" label="Live" />
+                );
+              },
+            },
             { header: 'Severity', cell: (a) => <StatusBadge value={a.severity} /> },
             { header: 'Audience', cell: (a) => a.targetAudience },
             { header: 'Message', cell: (a) => a.message, className: 'max-w-md' },
             { header: 'Posted', cell: (a) => fmtDate(a.createdAt) },
-            { header: 'Expires', cell: (a) => (a.expiresAt ? fmtDate(a.expiresAt) : 'Never') },
+            {
+              header: 'Expires',
+              cell: (a) => {
+                const isExpired = Boolean(a.expiresAt && new Date(a.expiresAt).getTime() < Date.now());
+                return a.expiresAt ? (
+                  <span className={isExpired ? 'text-ink-muted line-through' : undefined}>
+                    {fmtDate(a.expiresAt)}
+                  </span>
+                ) : (
+                  'Never'
+                );
+              },
+            },
           ]}
         />
       )}

@@ -20,42 +20,49 @@ const BADGE: Record<string, string> = {
 };
 const badgeCls = (status: string) => `badge-status ${BADGE[status] ?? 'is-neutral'}`;
 
+type FeeLedgerState =
+  | { status: 'LOADING' }
+  | { status: 'ERROR'; error: string }
+  | { status: 'EMPTY' }
+  | { status: 'READY'; ledger: StudentFeeLedger };
+
 /** Fees, balance and receipts. Every fee starts PENDING and changes only when the teacher records a payment. */
 export function StudentFeesPanel() {
-  const [ledger, setLedger] = useState<StudentFeeLedger | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [docError, setDocError] = useState<string | null>(null);
+  const [state, setState] = useState<FeeLedgerState>({ status: 'LOADING' });
 
   const load = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
+    setState({ status: 'LOADING' });
     try {
-      setLedger(await studentApi.getFeeLedger());
+      const data = await studentApi.getFeeLedger();
+      if (!data || data.fees.length === 0) {
+        setState({ status: 'EMPTY' });
+      } else {
+        setState({ status: 'READY', ledger: data });
+      }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not load your fees.');
-    } finally {
-      setIsLoading(false);
+      setState({ status: 'ERROR', error: e instanceof Error ? e.message : 'Could not load your fees.' });
     }
   }, []);
+
   useEffect(() => {
     load();
   }, [load]);
 
   const openReceipt = async (id: string) => {
-    setDocError(null);
     try {
       await studentApi.openReceipt(id);
     } catch (e) {
-      setDocError(e instanceof Error ? e.message : 'Could not open the receipt.');
+      alert(e instanceof Error ? e.message : 'Could not open the receipt.');
     }
   };
 
-  if (isLoading) return <div role="status" className="paper-card p-12 text-center text-xs text-[var(--ink-muted)]">Loading your fees...</div>;
-  if (error) return <div className="py-10 flex justify-center" role="alert"><ErrorState title="Could not load your fees" description={error} onRetry={load} /></div>;
-  if (!ledger || ledger.fees.length === 0) {
+  if (state.status === 'LOADING') return <div role="status" className="paper-card p-12 text-center text-xs text-[var(--ink-muted)]">Loading your fees...</div>;
+  if (state.status === 'ERROR') return <div className="py-10 flex justify-center" role="alert"><ErrorState title="Could not load your fees" description={state.error} onRetry={load} /></div>;
+  if (state.status === 'EMPTY') {
     return <EmptyState art="empty-states/inbox" title="No fees yet" description="When your institute sets a fee for your batch it will appear here with its status." />;
   }
+
+  const { ledger } = state;
 
   return (
     <div className="space-y-6">
@@ -130,28 +137,34 @@ export function StudentFeesPanel() {
   );
 }
 
+type LeaveListState =
+  | { status: 'LOADING' }
+  | { status: 'ERROR'; error: string }
+  | { status: 'READY'; items: StudentLeaveItem[] };
+
+type LeaveSubmissionState =
+  | { status: 'IDLE' }
+  | { status: 'SUBMITTING' }
+  | { status: 'SUCCESS' }
+  | { status: 'ERROR'; error: string };
+
 /** Leave applications: apply, see the decision, cancel while pending. */
 export function StudentLeavesPanel() {
-  const [items, setItems] = useState<StudentLeaveItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [listState, setListState] = useState<LeaveListState>({ status: 'LOADING' });
+  const [submitState, setSubmitState] = useState<LeaveSubmissionState>({ status: 'IDLE' });
   const today = new Date().toISOString().slice(0, 10);
   const [form, setForm] = useState({ startDate: today, endDate: today, reason: '' });
-  const [busy, setBusy] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [sent, setSent] = useState(false);
 
   const load = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
+    setListState({ status: 'LOADING' });
     try {
-      setItems(await studentApi.getLeaves());
+      const items = await studentApi.getLeaves();
+      setListState({ status: 'READY', items });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not load your leave applications.');
-    } finally {
-      setIsLoading(false);
+      setListState({ status: 'ERROR', error: e instanceof Error ? e.message : 'Could not load your leave applications.' });
     }
   }, []);
+
   useEffect(() => {
     load();
   }, [load]);
@@ -159,21 +172,18 @@ export function StudentLeavesPanel() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (form.endDate < form.startDate) {
-      setFormError('The last day cannot be before the first day.');
+      setSubmitState({ status: 'ERROR', error: 'The last day cannot be before the first day.' });
       return;
     }
-    setBusy(true);
-    setFormError(null);
+    setSubmitState({ status: 'SUBMITTING' });
     try {
       await studentApi.applyLeave({ startDate: form.startDate, endDate: form.endDate, reason: form.reason.trim() });
       setForm({ startDate: today, endDate: today, reason: '' });
-      setSent(true);
-      setTimeout(() => setSent(false), 4000);
+      setSubmitState({ status: 'SUCCESS' });
+      setTimeout(() => setSubmitState({ status: 'IDLE' }), 4000);
       await load();
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Could not submit the application.');
-    } finally {
-      setBusy(false);
+      setSubmitState({ status: 'ERROR', error: err instanceof Error ? err.message : 'Could not submit the application.' });
     }
   };
 
@@ -182,7 +192,7 @@ export function StudentLeavesPanel() {
       await studentApi.cancelLeave(id);
       await load();
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Could not cancel the application.');
+      setSubmitState({ status: 'ERROR', error: err instanceof Error ? err.message : 'Could not cancel the application.' });
     }
   };
 
@@ -199,20 +209,22 @@ export function StudentLeavesPanel() {
           <label className="space-y-1 text-[11px] font-bold">To<input type="date" required min={form.startDate} className="input-paper w-full font-normal" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} /></label>
         </div>
         <label className="block space-y-1 text-[11px] font-bold">Reason<textarea required minLength={5} rows={3} className="input-paper w-full font-normal" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} /></label>
-        {formError && <p role="alert" className="text-xs text-[var(--status-danger-text)]">{formError}</p>}
-        {sent && <p role="status" className="text-xs text-[var(--status-success-text)]">Application sent to your teacher.</p>}
-        <button className="btn-primary px-4 py-2.5 min-h-[44px] w-full sm:w-auto text-xs font-bold" disabled={busy}>{busy ? 'Sending...' : 'Apply for leave'}</button>
+        {submitState.status === 'ERROR' && <p role="alert" className="text-xs text-[var(--status-danger-text)]">{submitState.error}</p>}
+        {submitState.status === 'SUCCESS' && <p role="status" className="text-xs text-[var(--status-success-text)]">Application sent to your teacher.</p>}
+        <button className="btn-primary px-4 py-2.5 min-h-[44px] w-full sm:w-auto text-xs font-bold" disabled={submitState.status === 'SUBMITTING'}>
+          {submitState.status === 'SUBMITTING' ? 'Sending...' : 'Apply for leave'}
+        </button>
       </form>
 
-      {isLoading ? (
+      {listState.status === 'LOADING' ? (
         <div role="status" className="text-xs text-[var(--ink-muted)]">Loading...</div>
-      ) : error ? (
-        <div className="py-6 flex justify-center" role="alert"><ErrorState title="Could not load leave applications" description={error} onRetry={load} /></div>
-      ) : items.length === 0 ? (
+      ) : listState.status === 'ERROR' ? (
+        <div className="py-6 flex justify-center" role="alert"><ErrorState title="Could not load leave applications" description={listState.error} onRetry={load} /></div>
+      ) : listState.items.length === 0 ? (
         <p className="text-xs text-[var(--ink-muted)]">You have not applied for leave yet.</p>
       ) : (
         <ul className="space-y-2">
-          {items.map((l) => (
+          {listState.items.map((l) => (
             <li key={l.id} className="paper-card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
               <div>
                 <div className="font-bold text-[var(--ink-primary)]">{new Date(l.startDate).toLocaleDateString()} to {new Date(l.endDate).toLocaleDateString()} ({l.totalDays} day{l.totalDays === 1 ? '' : 's'})</div>

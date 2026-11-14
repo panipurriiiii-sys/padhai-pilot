@@ -56,6 +56,8 @@ export function BatchFeesView({ batches }: { batches: BatchSummary[] }) {
   const [structForm, setStructForm] = useState<StructFormState | null>(null);
   const [payFor, setPayFor] = useState<FeeLedgerItem | null>(null);
   const [pay, setPay] = useState({ amount: '', paidOn: today(), mode: 'CASH' as PaymentMode, reference: '', note: '' });
+  const [voidTarget, setVoidTarget] = useState<string | null>(null);
+  const [voidReason, setVoidReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -194,15 +196,20 @@ export function BatchFeesView({ batches }: { batches: BatchSummary[] }) {
     }
   };
 
-  const voidPayment = async (paymentId: string) => {
-    const reason = window.prompt('Reason for voiding this payment (required):');
-    if (!reason?.trim()) return;
+  const confirmVoidPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!voidTarget || !voidReason.trim()) return;
+    setBusy(true);
     try {
-      await teacherApi.voidFeePayment(paymentId, reason.trim());
+      await teacherApi.voidFeePayment(voidTarget, voidReason.trim());
       await load();
       flash('Payment voided.');
+      setVoidTarget(null);
+      setVoidReason('');
     } catch (err) {
       flash(err instanceof Error ? err.message : 'Could not void the payment.', true);
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -324,7 +331,7 @@ export function BatchFeesView({ batches }: { batches: BatchSummary[] }) {
                           <span className="flex gap-1 shrink-0">
                             <button type="button" aria-label="Open receipt" className="underline text-[var(--brand-electric)] px-2" onClick={() => openReceipt(p.id)}>PDF</button>
                             {p.status === 'ISSUED' && (
-                              <button type="button" aria-label="Void payment" className="text-rose-700 px-2" onClick={() => voidPayment(p.id)}>Void</button>
+                              <button type="button" aria-label="Void payment" className="text-rose-700 px-2" onClick={() => { setVoidTarget(p.id); setVoidReason(''); }}>Void</button>
                             )}
                           </span>
                         </div>
@@ -372,7 +379,7 @@ export function BatchFeesView({ batches }: { batches: BatchSummary[] }) {
                                 {p.receiptNumber} ({inr(p.amount)}, {p.mode})
                                 <button type="button" aria-label="Open receipt" className="underline text-[var(--brand-electric)] hover:text-blue-900" onClick={() => openReceipt(p.id)}>PDF</button>
                                 {p.status === 'ISSUED' && (
-                                  <button type="button" aria-label="Void payment" className="text-rose-700 hover:underline" onClick={() => voidPayment(p.id)}>(void)</button>
+                                  <button type="button" aria-label="Void payment" className="text-rose-700 hover:underline" onClick={() => { setVoidTarget(p.id); setVoidReason(''); }}>(void)</button>
                                 )}
                               </span>
                             ))}
@@ -578,6 +585,41 @@ export function BatchFeesView({ batches }: { batches: BatchSummary[] }) {
             <Field label="Note"><input className="input-paper w-full" value={pay.note} onChange={(e) => setPay({ ...pay, note: e.target.value })} /></Field>
             {formError && <p role="alert" className="text-xs text-rose-700">{formError}</p>}
             <button className="btn-primary w-full py-2.5 text-xs font-bold" disabled={busy}>{busy ? 'Saving...' : 'Save and issue receipt'}</button>
+          </form>
+        </Modal>
+      )}
+      {/* Void Receipt Modal */}
+      {voidTarget && (
+        <Modal title="Void Payment Receipt" onClose={() => { setVoidTarget(null); setVoidReason(''); }}>
+          <form onSubmit={confirmVoidPayment} className="space-y-4">
+            <p className="text-xs text-[var(--ink-secondary)]">
+              Specify the reason for voiding this payment receipt. This will cancel the receipt and update the student's balance due.
+            </p>
+            <Field label="Reason for voiding (required)">
+              <textarea
+                value={voidReason}
+                onChange={(e) => setVoidReason(e.target.value)}
+                placeholder="e.g. Cheque bounced / incorrect entry recorded by mistake"
+                className="input-paper w-full text-xs min-h-[70px]"
+                required
+              />
+            </Field>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                className="btn-ghost text-xs px-4 py-2"
+                onClick={() => { setVoidTarget(null); setVoidReason(''); }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={!voidReason.trim() || busy}
+                className="text-xs font-bold px-4 py-2 rounded-lg bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-50"
+              >
+                {busy ? 'Voiding...' : 'Confirm Void'}
+              </button>
+            </div>
           </form>
         </Modal>
       )}

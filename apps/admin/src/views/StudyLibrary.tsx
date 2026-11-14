@@ -85,8 +85,8 @@ export default function StudyLibrary() {
               header: 'Status',
               cell: (m) => (
                 <StatusBadge
-                  value={m.isApproved ? 'ACTIVE' : 'PENDING'}
-                  label={m.isApproved ? 'Approved' : 'Pending'}
+                  value={m.isApproved ? 'ACTIVE' : 'WARNING'}
+                  label={m.isApproved ? 'Approved' : 'Pending Review'}
                 />
               ),
             },

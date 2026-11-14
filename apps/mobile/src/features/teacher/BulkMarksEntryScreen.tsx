@@ -211,7 +211,14 @@ export const BulkMarksEntryScreen: React.FC = () => {
           Set total marks once, enter each score, save draft, then publish
         </Text>
       </View>
-      <BatchPicker value={batchId} onChange={setBatchId} />
+      <BatchPicker
+        value={batchId}
+        onChange={(id) => {
+          setBatchId(id);
+          const b = batches.data?.find((x) => x.id === id);
+          if (b?.subject) setSubject(b.subject);
+        }}
+      />
       <Input label="Assessment title" value={title} onChangeText={setTitle} returnKeyType="next" />
       <Input label="Subject" value={subject} onChangeText={setSubject} returnKeyType="next" />
       <Input label="Total marks" value={maxMarks} onChangeText={setMaxMarks} keyboardType="number-pad" returnKeyType="done" />

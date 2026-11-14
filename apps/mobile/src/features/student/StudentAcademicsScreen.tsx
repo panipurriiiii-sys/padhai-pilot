@@ -62,42 +62,51 @@ const SubmitForm: React.FC<{ item: StudentAssignmentItem; onDone: () => void }> 
   );
 };
 
+type TestRunnerState =
+  | { status: 'LOADING' }
+  | { status: 'ERROR'; message: string }
+  | { status: 'READY'; details: StudentTestDetails; answers: Record<string, number> }
+  | { status: 'SUBMITTING'; details: StudentTestDetails; answers: Record<string, number> };
+
 const TestRunner: React.FC<{ testId: string; onClose: () => void }> = ({ testId, onClose }) => {
-  const { spacing, colors, typography } = useTheme();
-  const [details, setDetails] = useState<StudentTestDetails | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [answers, setAnswers] = useState<Record<string, number>>({});
+  const { spacing, colors } = useTheme();
+  const [state, setState] = useState<TestRunnerState>({ status: 'LOADING' });
   const submit = useSubmitTest();
 
   React.useEffect(() => {
     let active = true;
-    setIsLoading(true);
-    setError(null);
+    setState({ status: 'LOADING' });
     studentService
       .getTestDetails(testId)
       .then((data) => {
-        if (active) {
-          setDetails(data);
-          setIsLoading(false);
-        }
+        if (active) setState({ status: 'READY', details: data, answers: {} });
       })
       .catch((e) => {
-        if (active) {
-          setError(errorMessage(e));
-          setIsLoading(false);
-        }
+        if (active) setState({ status: 'ERROR', message: errorMessage(e) });
       });
     return () => {
       active = false;
     };
   }, [testId]);
 
-  if (error) return <ErrorState message={error} onRetry={onClose} />;
-  if (isLoading || !details) return <Skeleton height={140} />;
+  if (state.status === 'ERROR') return <ErrorState message={state.message} onRetry={onClose} />;
+  if (state.status === 'LOADING') return <Skeleton height={140} />;
 
+  const { details, answers } = state;
+  const isSubmitting = state.status === 'SUBMITTING' || submit.isPending;
   const totalQuestions = details.questions?.length ?? 0;
   const answeredCount = Object.keys(answers).length;
+
+  const handleSelectOption = (questionId: string, optionIndex: number) => {
+    if (isSubmitting) return; // Guard: immutable while in-flight
+    setState((prev) => {
+      if (prev.status !== 'READY' && prev.status !== 'SUBMITTING') return prev;
+      return {
+        ...prev,
+        answers: { ...prev.answers, [questionId]: optionIndex },
+      };
+    });
+  };
 
   const finish = () => {
     if (answeredCount === 0) {
@@ -111,7 +120,8 @@ const TestRunner: React.FC<{ testId: string; onClose: () => void }> = ({ testId,
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Submit',
-          onPress: () =>
+          onPress: () => {
+            setState({ status: 'SUBMITTING', details, answers });
             submit.mutate(
               {
                 id: testId,
@@ -122,9 +132,13 @@ const TestRunner: React.FC<{ testId: string; onClose: () => void }> = ({ testId,
                   Alert.alert('Test submitted', r.feedback || `Score ${r.score}/${r.totalMarks}`);
                   onClose();
                 },
-                onError: (e) => Alert.alert('Could not submit', errorMessage(e)),
+                onError: (e) => {
+                  setState({ status: 'READY', details, answers });
+                  Alert.alert('Could not submit', errorMessage(e));
+                },
               },
-            ),
+            );
+          },
         },
       ],
     );
@@ -145,7 +159,7 @@ const TestRunner: React.FC<{ testId: string; onClose: () => void }> = ({ testId,
                 key={`${q.id}-${idx}`}
                 accessibilityRole="radio"
                 accessibilityState={{ selected }}
-                onPress={() => setAnswers((a) => ({ ...a, [q.id]: idx }))}
+                onPress={() => handleSelectOption(q.id, idx)}
                 style={{
                   marginTop: spacing.xs,
                   padding: spacing.md,
@@ -163,7 +177,7 @@ const TestRunner: React.FC<{ testId: string; onClose: () => void }> = ({ testId,
       ))}
       <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg }}>
         <Button title="Cancel" variant="secondary" style={{ flex: 1 }} onPress={onClose} />
-        <Button title="Submit test" style={{ flex: 1 }} loading={submit.isPending} onPress={finish} />
+        <Button title="Submit test" style={{ flex: 1 }} loading={isSubmitting} disabled={isSubmitting} onPress={finish} />
       </View>
     </Card>
   );

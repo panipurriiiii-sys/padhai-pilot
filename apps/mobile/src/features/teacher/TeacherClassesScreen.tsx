@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Share, View, StyleSheet } from 'react-native';
 import { Screen, SectionTitle } from '../../components/common/Screen';
 import { QueryBoundary } from '../../components/common/QueryBoundary';
@@ -38,6 +38,14 @@ const CodeCard: React.FC<{ c: EnrollmentCode }> = ({ c }) => {
   const [editing, setEditing] = useState(false);
   const [maxUses, setMaxUses] = useState(String(c.maxUses));
   const [expiry, setExpiry] = useState(c.expiresAt ? c.expiresAt.slice(0, 10) : '');
+
+  // Synchronize inputs if server invalidates code details while not editing
+  useEffect(() => {
+    if (!editing) {
+      setMaxUses(String(c.maxUses));
+      setExpiry(c.expiresAt ? c.expiresAt.slice(0, 10) : '');
+    }
+  }, [c.maxUses, c.expiresAt, editing]);
   const fail = (e: unknown) => Alert.alert('Could not update code', errorMessage(e));
   const validExpiry = expiry === '' || ISO_DAY.test(expiry);
   const validUses = Number.isInteger(Number(maxUses)) && Number(maxUses) >= c.usedCount && Number(maxUses) >= 1;
