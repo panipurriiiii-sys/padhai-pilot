@@ -17,6 +17,7 @@ import type { BatchSummary, StudentRosterItem } from '@padhai-pilot/shared';
 import { Pagination, usePagination } from '@padhai-pilot/ui';
 import { BatchActions } from './BatchActions';
 import { teacherApi } from '../lib/api';
+import { webAlert } from '../store/useAlertStore';
 
 interface BatchesViewProps {
   batches: BatchSummary[];
@@ -212,7 +213,7 @@ export function BatchesView({
                     <button
                       type="button"
                       className="btn-secondary text-[11px] px-3 py-1.5 inline-flex items-center gap-1 whitespace-nowrap"
-                      onClick={() => teacherApi.openReportCard(std.id, activeBatch.id).catch((e) => alert(e instanceof Error ? e.message : 'Could not generate the report card.'))}
+                      onClick={() => teacherApi.openReportCard(std.id, activeBatch.id).catch((e) => webAlert('Report Card', e instanceof Error ? e.message : 'Could not generate the report card.'))}
                     >
                       <FileText className="w-3 h-3" /> Report card PDF
                     </button>
@@ -276,7 +277,7 @@ export function BatchesView({
                         <button
                           type="button"
                           className="btn-secondary text-[11px] px-2.5 py-1.5 min-h-11 sm:min-h-0 inline-flex items-center gap-1 whitespace-nowrap"
-                          onClick={() => teacherApi.openReportCard(std.id, activeBatch.id).catch((e) => alert(e instanceof Error ? e.message : 'Could not generate the report card.'))}
+                          onClick={() => teacherApi.openReportCard(std.id, activeBatch.id).catch((e) => webAlert('Report Card', e instanceof Error ? e.message : 'Could not generate the report card.'))}
                         >
                           <FileText className="w-3 h-3" /> PDF
                         </button>

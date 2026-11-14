@@ -32,6 +32,10 @@ const PaymentForm: React.FC<{ batchId: string; fee: FeeLedgerItem; onDone: () =>
   const [paidOn, setPaidOn] = useState(todayIso());
   const [mode, setMode] = useState<PaymentMode>('CASH');
   const [reference, setReference] = useState('');
+
+  React.useEffect(() => {
+    setAmount(String(fee.balanceDue));
+  }, [fee.id, fee.balanceDue]);
   const amt = Number(amount);
   const valid = amt > 0 && amt <= fee.balanceDue && ISO_DAY.test(paidOn);
   return (
@@ -110,7 +114,7 @@ const FeeRow: React.FC<{ batchId: string; fee: FeeLedgerItem }> = ({ batchId, fe
       {fee.balanceDue > 0 ? (
         <Button title={open ? 'Close' : 'Record payment'} size="sm" variant="outline" style={{ marginTop: 8 }} onPress={() => setOpen((v) => !v)} />
       ) : null}
-      {open ? <PaymentForm batchId={batchId} fee={fee} onDone={() => setOpen(false)} /> : null}
+      {open ? <PaymentForm key={`${fee.id}_${fee.balanceDue}`} batchId={batchId} fee={fee} onDone={() => setOpen(false)} /> : null}
     </Card>
   );
 };

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Platform, ToastAndroid, View, StyleSheet, BackHandler } from 'react-native';
+import { ActivityIndicator, Platform, ToastAndroid, View, StyleSheet, BackHandler } from 'react-native';
 import { useAuthStore } from '../store/useAuthStore';
 import { useNavigationStore } from '../store/useNavigationStore';
 import { LoginScreen } from '../features/auth/screens/LoginScreen';
@@ -31,7 +31,7 @@ import { notificationService } from '../services/notification/NotificationServic
 
 export const RootNavigator: React.FC = () => {
   const { colors } = useTheme();
-  const { isAuthenticated, session } = useAuthStore();
+  const { isAuthenticated, isInitialized, session } = useAuthStore();
   const { currentTab, setTab } = useNavigationStore();
   const lastBackPressRef = useRef<number>(0);
 
@@ -136,15 +136,35 @@ export const RootNavigator: React.FC = () => {
     };
   }, [isAuthenticated, isTeacher, setTab]);
 
+  // 1. Initializing auth state from secure storage
+  if (!isInitialized) {
+    return (
+      <View style={[styles.centerLoading, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="small" color={colors.primary} />
+      </View>
+    );
+  }
+
+  // 2. Unauthenticated: check pending faculty invite deep link
   if (!isAuthenticated && pendingInvite) {
     return <FacultyJoinScreen token={pendingInvite} />;
   }
 
+  // 3. Unauthenticated: login screen
   if (!isAuthenticated) {
     return <LoginScreen />;
   }
 
-  // Once logged in, show dedicated role-specific permission screens if onboarding hasn't been completed yet
+  // 4. Authenticated: wait for permission onboarding check to prevent screen flash
+  if (!hasCheckedPermissions) {
+    return (
+      <View style={[styles.centerLoading, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="small" color={colors.primary} />
+      </View>
+    );
+  }
+
+  // 5. Authenticated: show dedicated role-specific permission screens if onboarding hasn't been completed yet
   if (needsPermissionOnboarding && userId) {
     return (
       <PermissionOnboardingScreen
@@ -222,5 +242,10 @@ const styles = StyleSheet.create({
   },
   screenContainer: {
     flex: 1,
+  },
+  centerLoading: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

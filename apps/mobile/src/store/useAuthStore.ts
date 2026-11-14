@@ -6,8 +6,12 @@ import {
   StudentRegisterPayload,
   TeacherRegisterPayload,
 } from '../services/api/authService';
+import { useNavigationStore } from './useNavigationStore';
+
+export type AuthStatus = 'initializing' | 'unauthenticated' | 'authenticated';
 
 interface AuthState {
+  status: AuthStatus;
   session: MobileUserSession | null;
   isAuthenticated: boolean;
   isInitialized: boolean;
@@ -28,6 +32,7 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
+  status: 'initializing',
   session: null,
   isAuthenticated: false,
   isInitialized: false,
@@ -42,7 +47,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           ? { email: payloadOrEmail, password: maybePassword }
           : payloadOrEmail;
       const session = await authService.login(payload);
-      set({ session, isAuthenticated: true, isLoading: false, error: null });
+      set({ status: 'authenticated', session, isAuthenticated: true, isLoading: false, error: null });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Login failed. Please check credentials.';
       set({ error: msg, isLoading: false });
@@ -54,7 +59,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true, error: null });
     try {
       const session = await authService.registerStudent(payload);
-      set({ session, isAuthenticated: true, isLoading: false, error: null });
+      set({ status: 'authenticated', session, isAuthenticated: true, isLoading: false, error: null });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Student registration failed.';
       set({ error: msg, isLoading: false });
@@ -66,7 +71,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true, error: null });
     try {
       const session = await authService.registerTeacher(payload);
-      set({ session, isAuthenticated: true, isLoading: false, error: null });
+      set({ status: 'authenticated', session, isAuthenticated: true, isLoading: false, error: null });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Teacher registration failed.';
       set({ error: msg, isLoading: false });
@@ -117,7 +122,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true, error: null });
     try {
       const session = await authService.loginDemoStudent();
-      set({ session, isAuthenticated: true, isLoading: false, error: null });
+      set({ status: 'authenticated', session, isAuthenticated: true, isLoading: false, error: null });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Demo student login failed.';
       set({ error: msg, isLoading: false });
@@ -129,7 +134,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true, error: null });
     try {
       const session = await authService.loginDemoTeacher();
-      set({ session, isAuthenticated: true, isLoading: false, error: null });
+      set({ status: 'authenticated', session, isAuthenticated: true, isLoading: false, error: null });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Demo teacher login failed.';
       set({ error: msg, isLoading: false });
@@ -139,19 +144,20 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   logout: () => {
     authService.logout();
-    set({ session: null, isAuthenticated: false, error: null });
+    useNavigationStore.getState().reset();
+    set({ status: 'unauthenticated', session: null, isAuthenticated: false, error: null });
   },
 
   initializeAuth: async () => {
     try {
       const session = await authService.restoreStoredSession();
       if (session) {
-        set({ session, isAuthenticated: true, isInitialized: true, error: null });
+        set({ status: 'authenticated', session, isAuthenticated: true, isInitialized: true, error: null });
       } else {
-        set({ session: null, isAuthenticated: false, isInitialized: true });
+        set({ status: 'unauthenticated', session: null, isAuthenticated: false, isInitialized: true });
       }
     } catch {
-      set({ session: null, isAuthenticated: false, isInitialized: true });
+      set({ status: 'unauthenticated', session: null, isAuthenticated: false, isInitialized: true });
     }
   },
 

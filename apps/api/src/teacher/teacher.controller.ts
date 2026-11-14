@@ -318,13 +318,28 @@ export class TeacherController {
 
   // 8. Timetable (all slots visible to the caller)
   @Get('timetable')
-  getTimetable(@CurrentUser() user: AuthenticatedUser, @Query('batchId') batchId?: string) {
+  getTimetable(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('batchId') batchId?: string,
+    @Res({ passthrough: true }) res?: any,
+  ) {
+    if (res?.setHeader) {
+      res.setHeader('Cache-Control', 'private, max-age=300, stale-while-revalidate=600');
+    }
     return this.timetable.list(user, { batchId });
   }
 
   // 9. Academic broadcast (announcements)
   @Get('announcements')
-  getAnnouncements(@CurrentUser() user: AuthenticatedUser, @Query('batchId') batchId?: string, @Query('limit') limit?: string) {
+  getAnnouncements(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('batchId') batchId?: string,
+    @Query('limit') limit?: string,
+    @Res({ passthrough: true }) res?: any,
+  ) {
+    if (res?.setHeader) {
+      res.setHeader('Cache-Control', 'private, max-age=120, stale-while-revalidate=300');
+    }
     return this.broadcast.list(user, { batchId, limit });
   }
 

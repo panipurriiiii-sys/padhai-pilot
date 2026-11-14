@@ -158,16 +158,15 @@ export class RedisService implements OnModuleInit {
     value: T,
     ttlSeconds: number = RedisTTLs.DEFAULT_CACHE_SECONDS,
   ): Promise<void> {
+    this.localMemoryCache.set(key, {
+      value,
+      expiresAt: Date.now() + ttlSeconds * 1000,
+    });
     await this.executeWithTimeout<void>(
       async () => {
         await this.client!.set(key, value, { ex: ttlSeconds });
       },
-      () => {
-        this.localMemoryCache.set(key, {
-          value,
-          expiresAt: Date.now() + ttlSeconds * 1000,
-        });
-      },
+      () => {},
     );
   }
 

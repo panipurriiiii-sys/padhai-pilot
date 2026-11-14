@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Playfair_Display, Raleway, Inter } from 'next/font/google';
 import './globals.css';
+import { GlobalAlertModal } from '../components/ui/GlobalAlertModal';
 
 // The three approved PadhaiPilot families (identical in every app; see docs/global-design-system.md).
 const playfair = Playfair_Display({
@@ -43,6 +44,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-desk text-ink-primary">
         {children}
+        <GlobalAlertModal />
       </body>
     </html>
   );

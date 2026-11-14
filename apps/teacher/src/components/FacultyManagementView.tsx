@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { teacherApi } from '../lib/api';
 import { LoadError } from './LoadError';
+import { webAlert } from '../store/useAlertStore';
 import type {
   FacultyMember,
   CreateFacultyDto,
@@ -94,7 +95,7 @@ export function FacultyManagementView({
   async function handleCreateFaculty(e: React.FormEvent) {
     e.preventDefault();
     if (!newFaculty.fullName.trim() || !newFaculty.email.trim()) {
-      alert('Please fill in Full Name and Email Address.');
+      webAlert('Missing Details', 'Please fill in Full Name and Email Address.');
       return;
     }
 

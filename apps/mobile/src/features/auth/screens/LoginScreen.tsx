@@ -22,6 +22,7 @@ import { ForgotPasswordForm } from '../components/ForgotPasswordForm';
 import { AuthFooterToggle } from '../components/AuthFooterToggle';
 import { GetStartedScreen } from './GetStartedScreen';
 import { AuthRole } from '../components/RoleSelector';
+import { isStaffRole } from '../../../lib/format';
 
 type AuthViewMode = 'ONBOARDING' | 'SIGN_IN' | 'REGISTER' | 'FORGOT_PASSWORD';
 
@@ -103,7 +104,8 @@ export const LoginScreen: React.FC = () => {
 
     try {
       await login({ email: cleanEmail, password });
-      setTab('student_dashboard'); // RootNavigator auto-adjusts based on teacher vs student role
+      const role = useAuthStore.getState().session?.user?.role;
+      useNavigationStore.getState().initializeForRole(isStaffRole(role));
     } catch (err: any) {
       setBannerError(err?.message || 'Invalid email or password. Please try again.');
     }
@@ -147,6 +149,7 @@ export const LoginScreen: React.FC = () => {
           phone: phone.trim() || undefined,
           invitationCode: invitationCode.trim() || undefined,
         });
+        useNavigationStore.getState().initializeForRole(false);
       } else {
         await registerTeacher({
           fullName: cleanName,
@@ -155,8 +158,8 @@ export const LoginScreen: React.FC = () => {
           phone: phone.trim() || undefined,
           subject: subject.trim() || 'General',
         });
+        useNavigationStore.getState().initializeForRole(true);
       }
-      setTab('student_dashboard');
     } catch (err: any) {
       setBannerError(err?.message || 'Registration failed. Please check your details.');
     }

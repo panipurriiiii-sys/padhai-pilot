@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, FlatList, KeyboardAvoidingView, Platform, View, StyleSheet } from 'react-native';
+import { FlatList, KeyboardAvoidingView, Platform, View, StyleSheet } from 'react-native';
+import { presentAlert as Alert } from '../../store/useAlertStore';
 import { openPdf } from '../../lib/pdf';
 import { documentPaths } from '../../services/api/financeService';
 import { SectionTitle } from '../../components/common/Screen';
@@ -85,6 +86,8 @@ export const BulkMarksEntryScreen: React.FC = () => {
   const [maxMarks, setMaxMarks] = useState('100');
   const [entries, setEntries] = useState<Record<string, Entry>>({});
   const [assessmentId, setAssessmentId] = useState<string>();
+  const prevBatchIdRef = useRef<string | undefined>(undefined);
+  const isDirtyRef = useRef(false);
   const roster = useRoster(batchId);
   const assessments = useAssessments();
   const saveDraft = useSaveMarksDraft();
@@ -98,12 +101,20 @@ export const BulkMarksEntryScreen: React.FC = () => {
     }
   }, [batchId, batches.data]);
 
+  // Only re-initialize entries when the batch actually changes, never wipe on query background refetches!
   useEffect(() => {
     if (roster.data) {
-      setEntries(Object.fromEntries(roster.data.students.map((s) => [s.id, { marks: '', absent: false }])));
-      setAssessmentId(undefined);
+      const batchChanged = prevBatchIdRef.current !== batchId;
+      if (batchChanged || !isDirtyRef.current) {
+        setEntries(Object.fromEntries(roster.data.students.map((s) => [s.id, { marks: '', absent: false }])));
+        if (batchChanged) {
+          setAssessmentId(undefined);
+          prevBatchIdRef.current = batchId;
+          isDirtyRef.current = false;
+        }
+      }
     }
-  }, [roster.data]);
+  }, [roster.data, batchId]);
 
   const max = Number(maxMarks);
   const hasErrors = useMemo(
@@ -117,18 +128,21 @@ export const BulkMarksEntryScreen: React.FC = () => {
   const ready = !!batchId && title.trim() && subject.trim() && max > 0 && !hasErrors;
 
   const handleMarksChange = useCallback((id: string, marks: string) => {
+    isDirtyRef.current = true;
     setEntries((m) => ({ ...m, [id]: { ...m[id], marks } }));
   }, []);
 
   const handleToggleAbsent = useCallback((id: string) => {
+    isDirtyRef.current = true;
     setEntries((m) => ({ ...m, [id]: { ...m[id], absent: !m[id].absent } }));
   }, []);
 
-  const onSave = () =>
+  const onSave = () => {
+    if (!batchId || !ready) return;
     saveDraft.mutate(
       {
         assessmentId,
-        batchId: batchId as string,
+        batchId,
         title: title.trim(),
         subject: subject.trim(),
         assessmentDate: todayIso(),
@@ -142,27 +156,32 @@ export const BulkMarksEntryScreen: React.FC = () => {
       {
         onSuccess: (r) => {
           setAssessmentId(r.assessmentId);
+          isDirtyRef.current = false;
           Alert.alert('Draft saved', 'Review the entries, then publish when ready.');
         },
         onError: (e) => Alert.alert('Could not save draft', errorMessage(e)),
       },
     );
+  };
 
-  const onPublish = () =>
+  const onPublish = () => {
+    if (!assessmentId) return;
     Alert.alert('Publish results?', 'Each student will see only their own result. Corrections after this are audited.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Publish',
         onPress: () =>
-          publish.mutate(assessmentId as string, {
+          publish.mutate(assessmentId, {
             onSuccess: () => {
               setAssessmentId(undefined);
+              isDirtyRef.current = false;
               Alert.alert('Published', 'Results are now visible to students.');
             },
             onError: (e) => Alert.alert('Could not publish', errorMessage(e)),
           }),
       },
     ]);
+  };
 
   const students: StudentRow[] = roster.data?.students ?? [];
 

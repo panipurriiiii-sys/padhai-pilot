@@ -55,10 +55,10 @@ export class StudentController {
     return this.studentService.validateInvitation(dto.code);
   }
 
-  @Post('join-batch')
+  @Post(['join-batch', 'join-institute'])
   @HttpCode(HttpStatus.OK)
-  async joinBatch(@CurrentUser() user: AuthenticatedUser, @Body() dto: JoinInstituteDto) {
-    return this.studentService.joinInstitute(user, dto.code);
+  async joinBatch(@CurrentUser() user: AuthenticatedUser, @Body() dto: JoinInstituteDto & { invitationCode?: string }) {
+    return this.studentService.joinInstitute(user, dto.code || dto.invitationCode || '');
   }
 
   // 3. Profile & Settings

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Alert, View, StyleSheet, Pressable } from 'react-native';
+import { View, StyleSheet, Pressable } from 'react-native';
+import { presentAlert as Alert } from '../../store/useAlertStore';
 import { Screen } from '../../components/common/Screen';
 import { QueryBoundary } from '../../components/common/QueryBoundary';
 import { Segmented } from '../../components/common/Segmented';
@@ -62,41 +63,77 @@ const SubmitForm: React.FC<{ item: StudentAssignmentItem; onDone: () => void }> 
 };
 
 const TestRunner: React.FC<{ testId: string; onClose: () => void }> = ({ testId, onClose }) => {
-  const { spacing, colors } = useTheme();
+  const { spacing, colors, typography } = useTheme();
   const [details, setDetails] = useState<StudentTestDetails | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const submit = useSubmitTest();
 
   React.useEffect(() => {
+    let active = true;
+    setIsLoading(true);
+    setError(null);
     studentService
       .getTestDetails(testId)
-      .then(setDetails)
-      .catch((e) => setError(errorMessage(e)));
+      .then((data) => {
+        if (active) {
+          setDetails(data);
+          setIsLoading(false);
+        }
+      })
+      .catch((e) => {
+        if (active) {
+          setError(errorMessage(e));
+          setIsLoading(false);
+        }
+      });
+    return () => {
+      active = false;
+    };
   }, [testId]);
 
   if (error) return <ErrorState message={error} onRetry={onClose} />;
-  if (!details) return <Skeleton height={120} />;
+  if (isLoading || !details) return <Skeleton height={140} />;
 
-  const finish = () =>
-    submit.mutate(
-      {
-        id: testId,
-        answers: Object.entries(answers).map(([questionId, selectedOptionIndex]) => ({ questionId, selectedOptionIndex })),
-      },
-      {
-        onSuccess: (r) => {
-          Alert.alert('Test submitted', r.feedback || `Score ${r.score}/${r.totalMarks}`);
-          onClose();
+  const totalQuestions = details.questions?.length ?? 0;
+  const answeredCount = Object.keys(answers).length;
+
+  const finish = () => {
+    if (answeredCount === 0) {
+      Alert.alert('No answers selected', 'Please answer at least one question before submitting.');
+      return;
+    }
+    Alert.alert(
+      'Submit test?',
+      `You answered ${answeredCount} of ${totalQuestions} questions. Are you sure you want to finish?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Submit',
+          onPress: () =>
+            submit.mutate(
+              {
+                id: testId,
+                answers: Object.entries(answers).map(([questionId, selectedOptionIndex]) => ({ questionId, selectedOptionIndex })),
+              },
+              {
+                onSuccess: (r) => {
+                  Alert.alert('Test submitted', r.feedback || `Score ${r.score}/${r.totalMarks}`);
+                  onClose();
+                },
+                onError: (e) => Alert.alert('Could not submit', errorMessage(e)),
+              },
+            ),
         },
-        onError: (e) => Alert.alert('Could not submit', errorMessage(e)),
-      },
+      ],
     );
+  };
 
   return (
     <Card>
       <Subtitle>{details.title}</Subtitle>
-      <Caption>{`${details.durationMinutes} min · ${details.totalMarks} marks`}</Caption>
+      <Caption>{`${details.durationMinutes} min · ${details.totalMarks} marks · Answered ${answeredCount}/${totalQuestions}`}</Caption>
       {details.instructions ? <Body style={{ marginTop: spacing.xs }}>{details.instructions}</Body> : null}
       {details.questions.map((q, i) => (
         <View key={q.id} style={{ marginTop: spacing.lg }}>

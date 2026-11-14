@@ -111,6 +111,16 @@ const BatchManage: React.FC<{ batch: TeacherBatch }> = ({ batch }) => {
   const [schedule, setSchedule] = useState(batch.schedule ?? '');
   const [targetId, setTargetId] = useState<string>();
   const [newName, setNewName] = useState('');
+
+  // Sync state if batch refetches from server
+  React.useEffect(() => {
+    setName(batch.name);
+    setSubject(batch.subject);
+    setGradeLevel(batch.gradeLevel ?? '');
+    setRoom(batch.room ?? '');
+    setSchedule(batch.schedule ?? '');
+  }, [batch]);
+
   const others = (batches.data ?? []).filter((b) => b.id !== batch.id && !b.archivedAt);
   const fail = (title: string) => (e: unknown) => Alert.alert(title, errorMessage(e));
 

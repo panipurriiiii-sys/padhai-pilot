@@ -23,6 +23,7 @@ import {
 import { teacherApi } from '../lib/api';
 import { uploadMediaFile } from '../lib/mediaUpload';
 import { LoadError } from './LoadError';
+import { webAlert } from '../store/useAlertStore';
 import { Pagination, usePagination } from '@padhai-pilot/ui';
 import type {
   StudyMaterialItem,
@@ -160,7 +161,7 @@ export function StudyMaterialView({
   async function handleCreateMaterial(e: React.FormEvent) {
     e.preventDefault();
     if (!formData.title.trim()) {
-      alert('Please provide a document title.');
+      webAlert('Document Title', 'Please provide a document title.');
       return;
     }
 

@@ -5,6 +5,7 @@ import { Pencil, ArrowUpRight, FileText } from 'lucide-react';
 import type { BatchSummary, PromoteBatchResult } from '@padhai-pilot/shared';
 import { teacherApi } from '../lib/api';
 import { Modal, Field } from './InvitationsView';
+import { webAlert } from '../store/useAlertStore';
 
 /** Edit and promote controls for the selected batch. Calls onChanged() so the page reloads batches and roster. */
 export function BatchActions({ batch, batches, onChanged }: { batch: BatchSummary; batches: BatchSummary[]; onChanged: () => void }) {
@@ -70,7 +71,7 @@ export function BatchActions({ batch, batches, onChanged }: { batch: BatchSummar
         <button type="button" className="btn-secondary text-xs px-3 py-2 min-h-11 flex items-center gap-1.5" onClick={() => open('edit')}>
           <Pencil className="w-3.5 h-3.5" /> Edit batch
         </button>
-        <button type="button" className="btn-secondary text-xs px-3 py-2 min-h-11 flex items-center gap-1.5" onClick={() => teacherApi.openAttendanceReport({ batchId: batch.id }).catch((e) => alert(e instanceof Error ? e.message : 'Could not generate the report.'))}>
+        <button type="button" className="btn-secondary text-xs px-3 py-2 min-h-11 flex items-center gap-1.5" onClick={() => teacherApi.openAttendanceReport({ batchId: batch.id }).catch((e) => webAlert('Attendance Report', e instanceof Error ? e.message : 'Could not generate the report.'))}>
           <FileText className="w-3.5 h-3.5" /> Attendance report PDF
         </button>
         <button type="button" className="btn-secondary text-xs px-3 py-2 min-h-11 flex items-center gap-1.5" onClick={() => open('promote')}>

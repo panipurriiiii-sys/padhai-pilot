@@ -289,12 +289,32 @@ export class PaymentsService {
     if (opts?.instituteId) {
       where.studentFeeRecord = { batch: { instituteId: opts.instituteId } };
     }
-    const payments = await this.prisma.feePayment.findMany({ where, select: { amount: true, mode: true, paidOn: true } });
-    const totalCollected = payments.reduce((s, p) => s + p.amount, 0);
+    // Offload summing and group counts to database engine (prevents serverless OOM)
+    const [totalResult, byModeGroup] = await Promise.all([
+      this.prisma.feePayment.aggregate({
+        where,
+        _sum: { amount: true },
+      }),
+      this.prisma.feePayment.groupBy({
+        by: ['mode'],
+        where,
+        _sum: { amount: true },
+      }),
+    ]);
+
+    const totalCollected = totalResult._sum.amount ?? 0;
     const byMode: Record<string, number> = {};
-    for (const p of payments) {
-      byMode[p.mode] = (byMode[p.mode] ?? 0) + p.amount;
+    for (const g of byModeGroup) {
+      byMode[g.mode] = g._sum.amount ?? 0;
     }
+
+    // Trend: capped query or time-bounded slice for monthly chart data
+    const payments = await this.prisma.feePayment.findMany({
+      where,
+      select: { amount: true, paidOn: true },
+      take: 2000,
+      orderBy: { paidOn: 'desc' },
+    });
     const trendMap: Record<string, number> = {};
     for (const p of payments) {
       const month = p.paidOn.toISOString().slice(0, 7);

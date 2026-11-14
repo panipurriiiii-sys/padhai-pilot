@@ -4,6 +4,7 @@ import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider } from './src/theme/ThemeContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
+import { GlobalAlertModal } from './src/components/common/GlobalAlertModal';
 import { ApiError, apiClient } from './src/services/api/client';
 import { useAuthStore } from './src/store/useAuthStore';
 import { notificationService } from './src/services/notification';
@@ -65,6 +66,7 @@ function App() {
       >
         <ThemeProvider>
           <RootNavigator />
+          <GlobalAlertModal />
         </ThemeProvider>
       </PersistQueryClientProvider>
     </SafeAreaProvider>

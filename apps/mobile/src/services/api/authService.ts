@@ -98,7 +98,7 @@ export const authService = {
   },
 
   async joinInstitute(invitationCode: string): Promise<{ success: boolean; message: string; batchName?: string }> {
-    return apiClient.post('/student/join-institute', { invitationCode });
+    return apiClient.post('/student/join-batch', { code: invitationCode });
   },
 
   // Development-only convenience. The server answers 404 in production, and there is deliberately no

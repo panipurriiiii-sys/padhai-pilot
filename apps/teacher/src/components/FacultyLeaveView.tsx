@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { teacherApi } from '../lib/api';
 import { LoadError } from './LoadError';
+import { webAlert } from '../store/useAlertStore';
 import type {
   FacultyLeaveItem,
   ApplyFacultyLeaveDto,
@@ -83,7 +84,7 @@ export function FacultyLeaveView({
   async function handleApplyLeave(e: React.FormEvent) {
     e.preventDefault();
     if (!applyForm.reason.trim()) {
-      alert('Please provide a reason for the leave application.');
+      webAlert('Reason Required', 'Please provide a reason for the leave application.');
       return;
     }
 
@@ -112,7 +113,7 @@ export function FacultyLeaveView({
     if (!reviewTarget) return;
 
     if (reviewTarget.facultyId === currentUserId) {
-      alert('Security Policy: You cannot review or approve your own leave application.');
+      webAlert('Security Policy', 'You cannot review or approve your own leave application.');
       return;
     }
 

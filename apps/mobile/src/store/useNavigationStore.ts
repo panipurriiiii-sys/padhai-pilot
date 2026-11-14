@@ -39,6 +39,8 @@ interface NavigationState {
   setTeacherSubView: (view: 'batches' | 'invitations' | 'attendance' | 'marks' | 'assignments' | 'diary' | 'materials' | 'leave' | 'salary' | 'timetable') => void;
   studentSubView?: 'diary' | 'materials' | 'assignments' | 'cbt' | 'results' | 'attendance' | 'fees' | 'timetable' | 'planner' | 'documents' | 'doubts';
   setStudentSubView: (view: 'diary' | 'materials' | 'assignments' | 'cbt' | 'results' | 'attendance' | 'fees' | 'timetable' | 'planner' | 'documents' | 'doubts') => void;
+  initializeForRole: (isTeacher: boolean) => void;
+  reset: () => void;
 }
 
 export const useNavigationStore = create<NavigationState>((set) => ({
@@ -50,4 +52,18 @@ export const useNavigationStore = create<NavigationState>((set) => ({
   setTeacherSubView: (view) => set({ teacherSubView: view }),
   studentSubView: undefined,
   setStudentSubView: (view) => set({ studentSubView: view }),
+  initializeForRole: (isTeacher: boolean) =>
+    set({
+      currentTab: isTeacher ? 'teacher_dashboard' : 'student_dashboard',
+      selectedBatchId: undefined,
+      teacherSubView: undefined,
+      studentSubView: undefined,
+    }),
+  reset: () =>
+    set({
+      currentTab: 'student_dashboard',
+      selectedBatchId: undefined,
+      teacherSubView: undefined,
+      studentSubView: undefined,
+    }),
 }));

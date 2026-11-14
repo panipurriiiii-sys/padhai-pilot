@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { Alert, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Text, View } from 'react-native';
+import { presentAlert as Alert } from '../../store/useAlertStore';
 import { openPdf } from '../../lib/pdf';
 import { documentPaths } from '../../services/api/financeService';
 import { Screen } from '../../components/common/Screen';
@@ -27,27 +28,51 @@ export const TeacherAttendanceScreen: React.FC = () => {
   const [batchId, setBatchId] = useState<string>();
   const [date, setDate] = useState(todayIso());
   const [marks, setMarks] = useState<Record<string, AttendanceStatus>>({});
+  const isDirtyRef = useRef(false);
+  const prevKeyRef = useRef<string>('');
+
   const validDate = DATE_RE.test(date);
   const roster = useRoster(batchId);
   const session = useAttendanceSession(batchId, validDate ? date : undefined);
   const save = useSaveAttendance();
 
-  // Seed the editable state from what the server already holds for this batch + date.
+  // Seed editable state safely. Never wipe in-progress edits on background query refetches!
   useEffect(() => {
     if (!roster.data) return;
-    const saved = new Map((session.data?.records ?? []).map((r) => [r.studentId, r.status]));
-    setMarks(Object.fromEntries(roster.data.students.map((s) => [s.id, saved.get(s.id) ?? 'PRESENT'])));
-  }, [roster.data, session.data]);
+    const currentKey = `${batchId || ''}_${date}`;
+    const targetChanged = prevKeyRef.current !== currentKey;
 
-  const setAll = (status: AttendanceStatus) => setMarks((m) => Object.fromEntries(Object.keys(m).map((id) => [id, status])));
+    if (targetChanged || !isDirtyRef.current) {
+      const saved = new Map((session.data?.records ?? []).map((r) => [r.studentId, r.status]));
+      setMarks(Object.fromEntries(roster.data.students.map((s) => [s.id, saved.get(s.id) ?? 'PRESENT'])));
+      if (targetChanged) {
+        prevKeyRef.current = currentKey;
+        isDirtyRef.current = false;
+      }
+    }
+  }, [roster.data, session.data, batchId, date]);
+
+  const setAll = (status: AttendanceStatus) => {
+    isDirtyRef.current = true;
+    setMarks((m) => Object.fromEntries(Object.keys(m).map((id) => [id, status])));
+  };
+
   const count = (s: AttendanceStatus) => Object.values(marks).filter((v) => v === s).length;
   const summary = `${count('PRESENT')} present · ${count('ABSENT')} absent · ${count('LATE')} late · ${count('EXCUSED')} excused`;
 
-  const onSave = () =>
+  const onSave = () => {
+    if (!batchId || !validDate) return;
     save.mutate(
-      { batchId: batchId as string, date, records: Object.entries(marks).map(([studentId, status]) => ({ studentId, status })) },
-      { onSuccess: () => Alert.alert('Attendance saved', summary), onError: (e) => Alert.alert('Could not save', errorMessage(e)) },
+      { batchId, date, records: Object.entries(marks).map(([studentId, status]) => ({ studentId, status })) },
+      {
+        onSuccess: () => {
+          isDirtyRef.current = false;
+          Alert.alert('Attendance saved', summary);
+        },
+        onError: (e) => Alert.alert('Could not save', errorMessage(e)),
+      },
     );
+  };
 
   return (
     <Screen eyebrow="Classroom & Academic" title="Mark Attendance" subtitle="Stamp each student: P present, A absent, L late, E excused">
@@ -90,7 +115,15 @@ export const TeacherAttendanceScreen: React.FC = () => {
                       </View>
                       <View style={{ flexDirection: 'row', gap: 6 }}>
                         {KINDS.map(([kind, value]) => (
-                          <Stamp key={kind} kind={kind} active={status === value} onPress={() => setMarks((m) => ({ ...m, [s.id]: value }))} />
+                          <Stamp
+                            key={kind}
+                            kind={kind}
+                            active={status === value}
+                            onPress={() => {
+                              isDirtyRef.current = true;
+                              setMarks((m) => ({ ...m, [s.id]: value }));
+                            }}
+                          />
                         ))}
                       </View>
                     </View>

@@ -8,21 +8,27 @@ import type { Express, Request, Response } from 'express';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import { CORS_HEADERS, CORS_METHODS, corsOptions, getJwtSecret, isOriginAllowed } from '../src/common/security/runtime.js';
 
-let cachedServer: Express;
+let cachedServerPromise: Promise<Express> | null = null;
 
 async function bootstrapServer(): Promise<Express> {
-  if (!cachedServer) {
-    getJwtSecret(); // refuse to boot in production without a strong JWT_SECRET
-    const server = express();
-    const app = await NestFactory.create(AppModule, new ExpressAdapter(server));
-    app.use(cookieParser());
-    app.enableCors(corsOptions);
-    app.useGlobalPipes(new ValidationPipe({ transform: true }));
-    app.setGlobalPrefix('api');
-    await app.init();
-    cachedServer = server;
+  if (!cachedServerPromise) {
+    cachedServerPromise = (async () => {
+      getJwtSecret(); // refuse to boot in production without a strong JWT_SECRET
+      const server = express();
+      const app = await NestFactory.create(AppModule, new ExpressAdapter(server));
+      app.use(cookieParser());
+      app.enableCors(corsOptions);
+      app.useGlobalPipes(new ValidationPipe({ transform: true }));
+      app.setGlobalPrefix('api');
+      await app.init();
+      return server;
+    })().catch((err) => {
+      // Clear promise so subsequent requests can retry rather than staying permanently rejected
+      cachedServerPromise = null;
+      throw err;
+    });
   }
-  return cachedServer;
+  return cachedServerPromise;
 }
 
 export default async function handler(req: Request, res: Response) {

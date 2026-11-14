@@ -72,6 +72,7 @@ const FrozenAccountView = dynamic(
   { ssr: false },
 );
 import { cached, invalidate } from '../lib/cache';
+import { webAlert } from '../store/useAlertStore';
 import {
   studentApi,
   clearAuthToken,
@@ -620,7 +621,7 @@ function StudentPortal() {
   const handleSubmitAssignment = async (isDraft: boolean) => {
     if (!selectedAssignment) return;
     if (!assignmentAnswer.trim() && !assignmentFileUrl.trim()) {
-      alert('Please write an answer response or provide an attachment link.');
+      webAlert('Missing Answer', 'Please write an answer response or provide an attachment link.');
       return;
     }
     setIsSubmittingAssignment(true);
@@ -630,14 +631,14 @@ function StudentPortal() {
         attachmentUrl: assignmentFileUrl.trim() || undefined,
         isDraft,
       });
-      alert(isDraft ? 'Assignment draft saved.' : 'Assignment submitted for grading!');
+      webAlert('Assignment Submitted', isDraft ? 'Assignment draft saved.' : 'Assignment submitted for grading!');
       setSelectedAssignment(null);
       setAssignmentAnswer('');
       setAssignmentFileUrl('');
       const updated = await studentApi.getAssignments();
       setAssignments(updated);
     } catch (err: any) {
-      alert(err.message || 'Failed to submit assignment.');
+      webAlert('Submission Error', err.message || 'Failed to submit assignment.');
     } finally {
       setIsSubmittingAssignment(false);
     }
@@ -650,7 +651,7 @@ function StudentPortal() {
       const details = await studentApi.getTestDetails(testId);
       setTestSession({ stage: 'TAKING', test: details, answers: {} });
     } catch (err: any) {
-      alert(err.message || 'Failed to launch assessment.');
+      webAlert('Assessment Error', err.message || 'Failed to launch assessment.');
     } finally {
       setIsLoading(false);
     }
@@ -674,7 +675,7 @@ function StudentPortal() {
       const updatedTests = await studentApi.getTests();
       setTests(updatedTests);
     } catch (err: any) {
-      alert(err.message || 'Test submission failed.');
+      webAlert('Test Error', err.message || 'Test submission failed.');
       setTestSession({ stage: 'TAKING', test, answers });
     }
   };
@@ -686,12 +687,12 @@ function StudentPortal() {
     setIsSubmittingCorrection(true);
     try {
       await studentApi.submitAttendanceCorrection(correctionDate, correctionReason.trim());
-      alert('Correction request submitted to academic faculty.');
+      webAlert('Correction Request', 'Correction request submitted to academic faculty.');
       setShowAttendanceModal(false);
       setCorrectionDate('');
       setCorrectionReason('');
     } catch (err: any) {
-      alert(err.message || 'Failed to submit request.');
+      webAlert('Request Error', err.message || 'Failed to submit request.');
     } finally {
       setIsSubmittingCorrection(false);
     }
@@ -708,14 +709,14 @@ function StudentPortal() {
         topic: queryTopic.trim() || undefined,
         questionText: queryText.trim(),
       });
-      alert('Your question has been sent to faculty.');
+      webAlert('Query Submitted', 'Your question has been sent to faculty.');
       setShowQueryModal(false);
       setQueryTopic('');
       setQueryText('');
       const qList = await studentApi.getAcademicQueries();
       setQueries(qList);
     } catch (err: any) {
-      alert(err.message || 'Failed to post query.');
+      webAlert('Query Error', err.message || 'Failed to post query.');
     } finally {
       setIsSubmittingQuery(false);
     }
@@ -735,7 +736,7 @@ function StudentPortal() {
       const tasks = await studentApi.getStudyTasks();
       setStudyTasks(tasks);
     } catch (err: any) {
-      alert(err.message || 'Failed to create task.');
+      webAlert('Task Error', err.message || 'Failed to create task.');
     }
   };
 
@@ -770,12 +771,12 @@ function StudentPortal() {
         subject: supportSubject.trim(),
         description: supportDescription.trim(),
       });
-      alert(`Support Ticket #${res.ticketId} created! The academic desk will review it.`);
+      webAlert('Support Desk', `Support Ticket #${res.ticketId} created! The academic desk will review it.`);
       setShowSupportModal(false);
       setSupportSubject('');
       setSupportDescription('');
     } catch (err: any) {
-      alert(err.message || 'Failed to submit support ticket.');
+      webAlert('Ticket Error', err.message || 'Failed to submit support ticket.');
     } finally {
       setIsSubmittingSupport(false);
     }

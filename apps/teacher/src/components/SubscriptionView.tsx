@@ -19,6 +19,7 @@ import {
 import { teacherApi } from '../lib/api';
 import type { SubscriptionPlan, FeatureEvaluationResult } from '@padhai-pilot/shared';
 import { RazorpayCheckoutButton } from './RazorpayCheckoutButton';
+import { webAlert } from '../store/useAlertStore';
 
 interface SubscriptionViewProps {
   instituteName?: string;
@@ -486,7 +487,7 @@ export function SubscriptionView({
                       type="button"
                       onClick={async () => {
                         if (!isOwner) {
-                          alert('Only Tuition Owners and Institute Admins can alter subscription tiers.');
+                          webAlert('Access Restricted', 'Only Tuition Owners and Institute Admins can alter subscription tiers.');
                           return;
                         }
                         try {

@@ -42,6 +42,7 @@ import {
   calculateGradeAndPercentage,
 } from '@padhai-pilot/shared';
 import { teacherApi } from '../lib/api';
+import { webAlert } from '../store/useAlertStore';
 
 interface BulkMarksEntryViewProps {
   batches: BatchSummary[];
@@ -623,13 +624,13 @@ export function BulkMarksEntryView({
   // The PDF is rendered by the API on the institute's own letterhead (name, logo, signatory), never the platform's.
   const handleDownloadPdf = async () => {
     if (!currentAssessmentId) {
-      alert('Save the marks as a draft first, then download the result sheet.');
+      webAlert('Result Sheet', 'Save the marks as a draft first, then download the result sheet.');
       return;
     }
     try {
       await teacherApi.openResultSheet(currentAssessmentId);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Could not generate the result sheet.');
+      webAlert('Result Sheet Error', err instanceof Error ? err.message : 'Could not generate the result sheet.');
     }
   };
 
@@ -640,7 +641,7 @@ export function BulkMarksEntryView({
       const savedId = await handleSaveDraft();
       const idToPublish = savedId ?? currentAssessmentId;
       if (!idToPublish) {
-        alert('Could not save draft. Please try again.');
+        webAlert('Draft Error', 'Could not save draft. Please try again.');
         return;
       }
 
@@ -656,7 +657,7 @@ export function BulkMarksEntryView({
       // Update local roster
       setRoster((prev) => prev.map((r) => ({ ...r, isPublished: true })));
     } catch (err: any) {
-      alert(`Publishing failed: ${err.message}`);
+      webAlert('Publishing Failed', err.message);
     } finally {
       setIsPublishing(false);
     }
@@ -675,11 +676,11 @@ export function BulkMarksEntryView({
     if (!correctionTarget || !currentAssessmentId) return;
     const num = parseFloat(correctionNewMarks);
     if (isNaN(num) || num < 0 || num > maxMarks) {
-      alert(`Marks must be between 0 and ${maxMarks}`);
+      webAlert('Validation Error', `Marks must be between 0 and ${maxMarks}`);
       return;
     }
     if (!correctionReason.trim()) {
-      alert('A reason must be documented for result correction.');
+      webAlert('Reason Required', 'A reason must be documented for result correction.');
       return;
     }
 
@@ -707,9 +708,9 @@ export function BulkMarksEntryView({
       );
 
       setCorrectionTarget(null);
-      alert('Marks corrected successfully! Student has been notified of the revision.');
+      webAlert('Correction Saved', 'Marks corrected successfully! Student has been notified of the revision.');
     } catch (err: any) {
-      alert(`Correction failed: ${err.message}`);
+      webAlert('Correction Failed', err.message);
     } finally {
       setIsCorrecting(false);
     }
@@ -720,7 +721,7 @@ export function BulkMarksEntryView({
   // -------------------------------------------------------------
   const handleExportCsv = async () => {
     if (!currentAssessmentId) {
-      alert('Please save the assessment draft before exporting.');
+      webAlert('Export Result Sheet', 'Please save the assessment draft before exporting.');
       return;
     }
     const csvContent = await teacherApi.exportResultSheetCsv(currentAssessmentId);

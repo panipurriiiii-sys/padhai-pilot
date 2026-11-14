@@ -56,9 +56,8 @@ export const useNotificationsData = () =>
   useQuery({
     queryKey: studentKeys.notifications,
     queryFn: studentService.getNotifications,
-    staleTime: MIN, // 1 min stale
-    refetchInterval: 90 * 1000, // poll every 90 s when app is active
-    refetchIntervalInBackground: false, // stop polling when app is backgrounded
+    staleTime: 3 * MIN,
+    refetchOnWindowFocus: false,
   });
 
 export const useSubmitAssignment = () => {

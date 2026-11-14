@@ -4,6 +4,7 @@ import type { UseQueryResult } from '@tanstack/react-query';
 import { Skeleton, CardSkeleton } from './Skeleton';
 import { ErrorState } from './ErrorState';
 import { EmptyPaper } from './Paper';
+import { OfflineNotice } from './OfflineNotice';
 import { errorMessage } from '../../lib/format';
 
 interface QueryBoundaryProps<T> {
@@ -37,11 +38,16 @@ export function QueryBoundary<T>({
       </View>
     );
   }
-  if (query.isError) {
+  if (query.isError && (query.data === undefined || query.data === null)) {
     return <ErrorState message={errorMessage(query.error)} onRetry={() => query.refetch()} />;
   }
   if (query.data === undefined || query.data === null || (isEmpty && isEmpty(query.data))) {
     return <EmptyPaper title={emptyTitle} message={emptyDescription} />;
   }
-  return <>{children(query.data)}</>;
+  return (
+    <>
+      {query.isError ? <OfflineNotice /> : null}
+      {children(query.data)}
+    </>
+  );
 }

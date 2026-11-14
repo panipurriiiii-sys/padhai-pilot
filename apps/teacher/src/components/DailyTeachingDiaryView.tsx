@@ -20,6 +20,7 @@ import {
   FileCheck2,
 } from 'lucide-react';
 import { teacherApi } from '../lib/api';
+import { webAlert } from '../store/useAlertStore';
 import { LoadError } from './LoadError';
 import { Pagination, usePagination } from '@padhai-pilot/ui';
 import type {
@@ -101,7 +102,7 @@ export function DailyTeachingDiaryView({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!formData.chapterTitle.trim() || !formData.conceptsTaught.trim()) {
-      alert('Please fill in the Chapter Title and Concepts Taught.');
+      webAlert('Required Fields', 'Please fill in the Chapter Title and Concepts Taught.');
       return;
     }
 

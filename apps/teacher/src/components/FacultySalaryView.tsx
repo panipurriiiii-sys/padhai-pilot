@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { teacherApi } from '../lib/api';
 import { LoadError } from './LoadError';
+import { webAlert } from '../store/useAlertStore';
 import type {
   SalaryStatementItem,
   FacultyMember,
@@ -539,7 +540,7 @@ export function FacultySalaryView({
               </button>
               <button
                 type="button"
-                onClick={async () => { try { await teacherApi.openSalarySlip(salarySlipTarget.id); } catch (e) { alert(e instanceof Error ? e.message : 'Could not generate the salary slip.'); } }}
+                onClick={async () => { try { await teacherApi.openSalarySlip(salarySlipTarget.id); } catch (e) { webAlert('Salary Slip', e instanceof Error ? e.message : 'Could not generate the salary slip.'); } }}
                 className="btn-primary text-xs font-['Raleway'] font-bold px-4 py-2 flex items-center gap-1.5"
               >
                 <Printer className="w-4 h-4" />
