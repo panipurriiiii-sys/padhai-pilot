@@ -24,7 +24,7 @@ type FeeLedgerState =
   | { status: 'LOADING' }
   | { status: 'ERROR'; error: string }
   | { status: 'EMPTY' }
-  | { status: 'READY'; ledger: StudentFeeLedger };
+  | { status: 'READY'; ledger: StudentFeeLedger; docError?: string };
 
 /** Fees, balance and receipts. Every fee starts PENDING and changes only when the teacher records a payment. */
 export function StudentFeesPanel() {
@@ -87,7 +87,9 @@ export function StudentFeesPanel() {
 
       <StudentFeeBreakdownCard fee={{ totalFees: ledger.totalFees, paidAmount: ledger.paidAmount, balanceDue: ledger.balanceDue }} />
 
-      {docError && <p role="alert" className="text-xs text-[var(--status-danger-text)]">{docError}</p>}
+      {state.status === 'READY' && state.docError && (
+        <p role="alert" className="text-xs text-[var(--status-danger-text)]">{state.docError}</p>
+      )}
 
       <div className="paper-card overflow-x-auto max-w-full">
         <table className="w-full min-w-[640px] text-xs">

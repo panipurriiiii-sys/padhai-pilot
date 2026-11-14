@@ -63,34 +63,34 @@ export const DashboardScreen: React.FC = () => {
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
               <KpiCard
                 label="Attendance"
-                value={`${Math.round(d.stats.attendanceRate)}%`}
-                caption={`${d.stats.classesAttended}/${d.stats.totalClasses} attended`}
+                value={`${Math.round(d?.stats?.attendanceRate ?? 0)}%`}
+                caption={`${d?.stats?.classesAttended ?? 0}/${d?.stats?.totalClasses ?? 0} attended`}
                 icon="calendar-check"
-                tone={d.stats.attendanceRate < 75 ? 'amber' : 'emerald'}
+                tone={(d?.stats?.attendanceRate ?? 0) < 75 ? 'amber' : 'emerald'}
                 onPress={() => setTab('student_results')}
               />
               <KpiCard
                 label="Avg Score"
-                value={d.stats.totalTests ? `${d.stats.avgPercentage}%` : '—'}
-                caption={`${d.stats.totalTests} results published`}
+                value={d?.stats?.totalTests ? `${d?.stats?.avgPercentage ?? 0}%` : '—'}
+                caption={`${d?.stats?.totalTests ?? 0} results published`}
                 icon="award"
                 tone="blue"
                 onPress={() => setTab('student_results')}
               />
               <KpiCard
                 label="Homework Due"
-                value={String(d.stats.pendingAssignments)}
-                caption={`${d.stats.upcomingTests} upcoming tests`}
+                value={String(d?.stats?.pendingAssignments ?? 0)}
+                caption={`${d?.stats?.upcomingTests ?? 0} upcoming tests`}
                 icon="file-check-2"
                 tone="rose"
                 onPress={() => setTab('student_academics')}
               />
               <KpiCard
                 label="Fee Balance"
-                value={formatInr(d.stats.feeBalance)}
-                caption={d.stats.feeBalance > 0 ? 'Pending payment' : 'All clear'}
+                value={formatInr(d?.stats?.feeBalance ?? 0)}
+                caption={(d?.stats?.feeBalance ?? 0) > 0 ? 'Pending payment' : 'All clear'}
                 icon="receipt"
-                tone={d.stats.feeBalance > 0 ? 'amber' : 'emerald'}
+                tone={(d?.stats?.feeBalance ?? 0) > 0 ? 'amber' : 'emerald'}
                 onPress={() => setTab('student_fees')}
               />
             </View>

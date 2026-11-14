@@ -310,10 +310,36 @@ function StudentPortal() {
   // Modals & Interactive States
   const [selectedResult, setSelectedResult] = useState<StudentAssessmentResult | null>(null);
   const [selectedDiary, setSelectedDiary] = useState<TeachingDiaryEntry | null>(null);
-  const [selectedAssignment, setSelectedAssignment] = useState<AssignmentItem | null>(null);
-  const [assignmentAnswer, setAssignmentAnswer] = useState('');
-  const [assignmentFileUrl, setAssignmentFileUrl] = useState('');
-  const [isSubmittingAssignment, setIsSubmittingAssignment] = useState(false);
+  // 1. Homework Submission - Formal State Machine
+  const [assignmentSession, setAssignmentSession] = useState<{
+    assignment: AssignmentItem | null;
+    answer: string;
+    fileUrl: string;
+    isSubmitting: boolean;
+  }>({
+    assignment: null,
+    answer: '',
+    fileUrl: '',
+    isSubmitting: false,
+  });
+  const selectedAssignment = assignmentSession.assignment;
+  const setSelectedAssignment = (assignment: AssignmentItem | null) =>
+    setAssignmentSession((prev) => ({
+      ...prev,
+      assignment,
+      answer: assignment ? prev.answer : '',
+      fileUrl: assignment ? prev.fileUrl : '',
+      isSubmitting: false,
+    }));
+  const assignmentAnswer = assignmentSession.answer;
+  const setAssignmentAnswer = (answer: string) =>
+    setAssignmentSession((prev) => ({ ...prev, answer }));
+  const assignmentFileUrl = assignmentSession.fileUrl;
+  const setAssignmentFileUrl = (fileUrl: string) =>
+    setAssignmentSession((prev) => ({ ...prev, fileUrl }));
+  const isSubmittingAssignment = assignmentSession.isSubmitting;
+  const setIsSubmittingAssignment = (isSubmitting: boolean) =>
+    setAssignmentSession((prev) => ({ ...prev, isSubmitting }));
 
   // Online Assessment Modal - Formal State Machine
   type TestSessionState =
@@ -323,36 +349,126 @@ function StudentPortal() {
     | { stage: 'SCORED'; test: any; feedback: string };
   const [testSession, setTestSession] = useState<TestSessionState>({ stage: 'IDLE' });
 
-  // Attendance Correction Modal
-  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
-  const [correctionDate, setCorrectionDate] = useState('');
-  const [correctionReason, setCorrectionReason] = useState('');
-  const [isSubmittingCorrection, setIsSubmittingCorrection] = useState(false);
+  // 2. Attendance Correction Modal - Formal State Machine
+  const [attendanceCorrection, setAttendanceCorrection] = useState<{
+    isOpen: boolean;
+    date: string;
+    reason: string;
+    isSubmitting: boolean;
+  }>({
+    isOpen: false,
+    date: '',
+    reason: '',
+    isSubmitting: false,
+  });
+  const showAttendanceModal = attendanceCorrection.isOpen;
+  const setShowAttendanceModal = (isOpen: boolean) =>
+    setAttendanceCorrection((prev) => ({ ...prev, isOpen, isSubmitting: false }));
+  const correctionDate = attendanceCorrection.date;
+  const setCorrectionDate = (date: string) =>
+    setAttendanceCorrection((prev) => ({ ...prev, date }));
+  const correctionReason = attendanceCorrection.reason;
+  const setCorrectionReason = (reason: string) =>
+    setAttendanceCorrection((prev) => ({ ...prev, reason }));
+  const isSubmittingCorrection = attendanceCorrection.isSubmitting;
+  const setIsSubmittingCorrection = (isSubmitting: boolean) =>
+    setAttendanceCorrection((prev) => ({ ...prev, isSubmitting }));
 
-  // Ask Academic Doubt Modal
-  const [showQueryModal, setShowQueryModal] = useState(false);
-  const [querySubject, setQuerySubject] = useState('');
-  const [queryTopic, setQueryTopic] = useState('');
-  const [queryText, setQueryText] = useState('');
-  const [isSubmittingQuery, setIsSubmittingQuery] = useState(false);
+  // 3. Ask Academic Doubt Modal - Formal State Machine
+  const [querySession, setQuerySession] = useState<{
+    isOpen: boolean;
+    subject: string;
+    topic: string;
+    text: string;
+    isSubmitting: boolean;
+  }>({
+    isOpen: false,
+    subject: '',
+    topic: '',
+    text: '',
+    isSubmitting: false,
+  });
+  const showQueryModal = querySession.isOpen;
+  const setShowQueryModal = (isOpen: boolean) =>
+    setQuerySession((prev) => ({ ...prev, isOpen, isSubmitting: false }));
+  const querySubject = querySession.subject;
+  const setQuerySubject = (subject: string) =>
+    setQuerySession((prev) => ({ ...prev, subject }));
+  const queryTopic = querySession.topic;
+  const setQueryTopic = (topic: string) =>
+    setQuerySession((prev) => ({ ...prev, topic }));
+  const queryText = querySession.text;
+  const setQueryText = (text: string) =>
+    setQuerySession((prev) => ({ ...prev, text }));
+  const isSubmittingQuery = querySession.isSubmitting;
+  const setIsSubmittingQuery = (isSubmitting: boolean) =>
+    setQuerySession((prev) => ({ ...prev, isSubmitting }));
 
   // New Study Task Input
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskSubject, setNewTaskSubject] = useState('General');
   const [newTaskPriority, setNewTaskPriority] = useState<'NORMAL' | 'HIGH' | 'LOW'>('NORMAL');
 
-  // Join Institute / Invitation State
-  const [inviteCodeInput, setInviteCodeInput] = useState('');
-  const [inviteValidationResult, setInviteValidationResult] = useState<any>(null);
-  const [isValidatingInvite, setIsValidatingInvite] = useState(false);
-  const [inviteStatusMsg, setInviteStatusMsg] = useState<string | null>(null);
+  // 4. Join Institute / Invitation State Machine
+  const [inviteSession, setInviteSession] = useState<{
+    code: string;
+    status: 'IDLE' | 'VALIDATING' | 'VALIDATED' | 'JOINING' | 'DONE' | 'ERROR';
+    result: any;
+    msg: string | null;
+  }>({
+    code: '',
+    status: 'IDLE',
+    result: null,
+    msg: null,
+  });
+  const inviteCodeInput = inviteSession.code;
+  const setInviteCodeInput = (code: string) =>
+    setInviteSession((prev) => ({ ...prev, code, result: null, msg: null, status: 'IDLE' }));
+  const inviteValidationResult = inviteSession.result;
+  const isValidatingInvite =
+    inviteSession.status === 'VALIDATING' || inviteSession.status === 'JOINING';
+  const inviteStatusMsg = inviteSession.msg;
 
-  // Support Ticket Modal
-  const [showSupportModal, setShowSupportModal] = useState(false);
-  const [supportCategory, setSupportCategory] = useState<'PROFILE_CORRECTION' | 'ATTENDANCE_MISMATCH' | 'PAYMENT_ISSUE' | 'ACADEMIC_HELP' | 'TECHNICAL_SUPPORT'>('ACADEMIC_HELP');
-  const [supportSubject, setSupportSubject] = useState('');
-  const [supportDescription, setSupportDescription] = useState('');
-  const [isSubmittingSupport, setIsSubmittingSupport] = useState(false);
+  // 5. Support Ticket Modal - Formal State Machine
+  const [supportSession, setSupportSession] = useState<{
+    isOpen: boolean;
+    category:
+      | 'PROFILE_CORRECTION'
+      | 'ATTENDANCE_MISMATCH'
+      | 'PAYMENT_ISSUE'
+      | 'ACADEMIC_HELP'
+      | 'TECHNICAL_SUPPORT';
+    subject: string;
+    description: string;
+    isSubmitting: boolean;
+  }>({
+    isOpen: false,
+    category: 'ACADEMIC_HELP',
+    subject: '',
+    description: '',
+    isSubmitting: false,
+  });
+  const showSupportModal = supportSession.isOpen;
+  const setShowSupportModal = (isOpen: boolean) =>
+    setSupportSession((prev) => ({ ...prev, isOpen, isSubmitting: false }));
+  const supportCategory = supportSession.category;
+  const setSupportCategory = (
+    category:
+      | 'PROFILE_CORRECTION'
+      | 'ATTENDANCE_MISMATCH'
+      | 'PAYMENT_ISSUE'
+      | 'ACADEMIC_HELP'
+      | 'TECHNICAL_SUPPORT',
+  ) => setSupportSession((prev) => ({ ...prev, category }));
+  const supportSubject = supportSession.subject;
+  const setSupportSubject = (subject: string) =>
+    setSupportSession((prev) => ({ ...prev, subject }));
+  const supportDescription = supportSession.description;
+  const setSupportDescription = (description: string) =>
+    setSupportSession((prev) => ({ ...prev, description }));
+  const isSubmittingSupport = supportSession.isSubmitting;
+  const setIsSubmittingSupport = (isSubmitting: boolean) =>
+    setSupportSession((prev) => ({ ...prev, isSubmitting }));
 
   // Auth States
   const [authMode, setAuthMode] = useState<'SIGN_IN' | 'REGISTER'>('SIGN_IN');
@@ -603,34 +719,36 @@ function StudentPortal() {
   };
 
   const handleVerifyInvite = async () => {
-    if (!inviteCodeInput.trim()) return;
-    setIsValidatingInvite(true);
-    setInviteStatusMsg(null);
+    if (!inviteSession.code.trim()) return;
+    setInviteSession((prev) => ({ ...prev, status: 'VALIDATING', msg: null }));
     try {
-      const res = await studentApi.validateInvitation(inviteCodeInput.trim());
-      setInviteValidationResult(res);
+      const res = await studentApi.validateInvitation(inviteSession.code.trim());
+      setInviteSession((prev) => ({ ...prev, status: 'VALIDATED', result: res, msg: null }));
     } catch (err: any) {
-      setInviteStatusMsg(err.message || 'Invalid invitation code.');
-      setInviteValidationResult(null);
-    } finally {
-      setIsValidatingInvite(false);
+      setInviteSession((prev) => ({
+        ...prev,
+        status: 'ERROR',
+        result: null,
+        msg: err.message || 'Invalid invitation code.',
+      }));
     }
   };
 
   const handleConfirmJoinBatch = async () => {
-    if (!inviteCodeInput.trim()) return;
-    setIsValidatingInvite(true);
+    if (!inviteSession.code.trim()) return;
+    setInviteSession((prev) => ({ ...prev, status: 'JOINING' }));
     try {
-      const res = await studentApi.joinBatch(inviteCodeInput.trim());
-      setInviteStatusMsg(res.alreadyEnrolled ? 'You are already enrolled in this batch.' : 'You have joined the batch.');
+      const res = await studentApi.joinBatch(inviteSession.code.trim());
+      const msg = res.alreadyEnrolled ? 'You are already enrolled in this batch.' : 'You have joined the batch.';
       setStudent(res.user);
-      setInviteValidationResult(null);
-      setInviteCodeInput('');
+      setInviteSession({ code: '', status: 'DONE', result: null, msg });
       await loadAllStudentData();
     } catch (err: any) {
-      setInviteStatusMsg(err.message || 'Failed to join batch.');
-    } finally {
-      setIsValidatingInvite(false);
+      setInviteSession((prev) => ({
+        ...prev,
+        status: 'ERROR',
+        msg: err.message || 'Failed to join batch.',
+      }));
     }
   };
 
