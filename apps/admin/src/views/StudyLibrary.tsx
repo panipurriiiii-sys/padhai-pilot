@@ -59,7 +59,7 @@ export default function StudyLibrary() {
       {error ? (
         <ErrorState error={error} onRetry={reload} />
       ) : loading && items.length === 0 ? (
-        <LoadingBlock />
+        <LoadingBlock message="Loading study library repository..." />
       ) : (
         <DataList<LibraryMaterialAdminItem>
           rows={items}

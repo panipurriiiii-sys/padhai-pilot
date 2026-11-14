@@ -95,6 +95,14 @@ export const RedisKeys = {
     return `${REDIS_KEY_VERSION}:tenant:${instituteId}:student:${studentId}:dashboard`;
   },
 
+  teacherAnalytics(instituteId: string, teacherId: string): string {
+    return `${REDIS_KEY_VERSION}:tenant:${instituteId}:teacher:${teacherId}:analytics`;
+  },
+
+  studentAnalytics(instituteId: string, studentId: string): string {
+    return `${REDIS_KEY_VERSION}:tenant:${instituteId}:student:${studentId}:analytics`;
+  },
+
   rateLimit(action: string, identifier: string): string {
     const hashed = hashIdentifier(identifier);
     return `${REDIS_KEY_VERSION}:rate:${action}:${hashed}`;
@@ -112,6 +120,7 @@ export const RedisTTLs = {
   BRANDING_SECONDS: 900, // 15 minutes
   FEATURES_SECONDS: 900, // 15 minutes
   DASHBOARD_SECONDS: 300, // 5 minutes
+  ANALYTICS_SECONDS: 300, // 5 minutes — charts tolerate staleness; the queries are the expensive ones
   DEFAULT_CACHE_SECONDS: 300, // 5 minutes
 };
 

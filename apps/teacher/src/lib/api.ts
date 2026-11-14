@@ -100,6 +100,13 @@ interface CacheEntry<T> {
 const teacherApiCache = new Map<string, CacheEntry<any>>();
 const CLIENT_CACHE_TTL_MS = 120_000; // 2 minutes
 
+/**
+ * GETs currently on the wire, so concurrent callers share one response.
+ * The TTL cache alone cannot do this: it is only written once a response arrives, so N callers
+ * firing before that point produced N identical requests.
+ */
+const teacherApiInflight = new Map<string, Promise<any>>();
+
 export function invalidateTeacherApiCache(endpointPrefix?: string) {
   if (!endpointPrefix) {
     teacherApiCache.clear();
@@ -160,8 +167,28 @@ async function request<T>(
     if (cached && Date.now() - cached.timestamp < CLIENT_CACHE_TTL_MS) {
       return cached.data as T;
     }
+    const pending = teacherApiInflight.get(cleanEndpoint) as Promise<T> | undefined;
+    if (pending) return pending;
+    const started = send<T>(url, options, headers, token, endpoint, cleanEndpoint, true).finally(() => {
+      teacherApiInflight.delete(cleanEndpoint);
+    });
+    teacherApiInflight.set(cleanEndpoint, started);
+    return started;
   }
 
+  return send<T>(url, options, headers, token, endpoint, cleanEndpoint, isGet);
+}
+
+/** Performs the HTTP call and the shared error / cache bookkeeping. */
+async function send<T>(
+  url: string,
+  options: RequestInit,
+  headers: Headers,
+  token: string | null,
+  endpoint: string,
+  cleanEndpoint: string,
+  isGet: boolean,
+): Promise<T> {
   let res: Response;
   try {
     res = await fetch(url, {

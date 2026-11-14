@@ -23,6 +23,23 @@ import type {
   FeatureQuotaStatus,
 } from '@padhai-pilot/shared';
 
+/**
+ * Everything the precedence engine needs about one feature, already loaded.
+ * `decideFeature` is pure, so the single-feature path and the whole-matrix path cannot drift apart:
+ * the matrix path loads these rows once in bulk instead of per feature.
+ */
+interface FeatureInputs {
+  platformFlag: {
+    isEmergencyDisabled: boolean;
+    isGloballyEnabled: boolean;
+    disabledReason: string | null;
+  } | null;
+  institute: { id: string; isActive: boolean; plan: string | null } | null;
+  planEntitlement: { isIncluded: boolean; quotaLimit: number | null } | null;
+  instituteConfig: { isEnabled: boolean; customQuota: number | null } | null;
+  usageValue: number | null;
+}
+
 // Role hierarchy weights for RBAC comparison
 const ROLE_WEIGHTS: Record<UserRole, number> = {
   SUPER_ADMIN: 100,
@@ -64,10 +81,6 @@ export class FeaturesService {
     metricKey?: string;
   }): Promise<FeatureEvaluationResult> {
     const { featureKey, instituteId, userRole, requiredRole, metricKey } = params;
-    const evaluatedAt = new Date().toISOString();
-
-    // Verify feature is canonically registered
-    const def = getRegisteredFeature(featureKey);
 
     // Fast memory cache check
     const cacheKey = `feat_eval:${featureKey}:${instituteId || 'global'}:${userRole || 'anon'}`;
@@ -76,13 +89,82 @@ export class FeaturesService {
       return cached.value;
     }
 
+    const def = getRegisteredFeature(featureKey); // throws for an unregistered key, as before
+    const currentPeriod = new Date().toISOString().slice(0, 7);
+
+    // The rows the precedence engine reads, fetched in one round instead of up to four in series.
+    const [platformFlag, institute] = await Promise.all([
+      this.prisma.platformFeatureFlag.findUnique({ where: { key: featureKey } }),
+      instituteId
+        ? this.prisma.institute.findUnique({
+            where: { id: instituteId },
+            select: { id: true, name: true, plan: true, isActive: true },
+          })
+        : Promise.resolve(null),
+    ]);
+
+    // Plan/institute/quota rows only matter once we know the plan, so they form a second round.
+    let planEntitlement: FeatureInputs['planEntitlement'] = null;
+    let instituteConfig: FeatureInputs['instituteConfig'] = null;
+    let usageValue: number | null = null;
+    if (instituteId && institute) {
+      const plan = (institute.plan as SubscriptionPlan) || 'STARTER';
+      const [pe, ic, usage] = await Promise.all([
+        this.prisma.planEntitlement.findUnique({
+          where: { plan_featureKey: { plan, featureKey } },
+        }),
+        this.prisma.instituteFeatureConfig.findUnique({
+          where: { instituteId_featureKey: { instituteId, featureKey } },
+        }),
+        this.prisma.instituteUsageCounter.findUnique({
+          where: {
+            instituteId_metricKey_period: {
+              instituteId,
+              metricKey: metricKey || `${featureKey}_usage`,
+              period: currentPeriod,
+            },
+          },
+        }),
+      ]);
+      planEntitlement = pe;
+      instituteConfig = ic;
+      usageValue = usage?.currentValue ?? null;
+    }
+
+    const result = this.decideFeature(
+      { featureKey, instituteId, userRole, requiredRole },
+      def,
+      { platformFlag, institute, planEntitlement, instituteConfig, usageValue },
+    );
+    // `!institute` is the one outcome the original did not cache (the id may be a typo that is
+    // about to be corrected), so that behaviour is preserved.
+    if (!(instituteId && !institute) && result.status !== 'PERMISSION_DENIED') {
+      this.setCache(cacheKey, result);
+    }
+    return result;
+  }
+
+  /**
+   * The precedence engine itself: pure, so it cannot issue a query. Both the single-feature path
+   * and the whole-matrix path run exactly this logic.
+   */
+  private decideFeature(
+    params: {
+      featureKey: FeatureKey;
+      instituteId?: string;
+      userRole?: UserRole;
+      requiredRole?: UserRole;
+    },
+    def: ReturnType<typeof getRegisteredFeature>,
+    inputs: FeatureInputs,
+  ): FeatureEvaluationResult {
+    const { featureKey, instituteId, userRole, requiredRole } = params;
+    const { platformFlag, institute, planEntitlement, instituteConfig, usageValue } = inputs;
+    const evaluatedAt = new Date().toISOString();
+
     // ----------------------------------------------------------------------
     // STEP 1: Platform Feature Flags (Source of Truth: PlatformFeatureFlag)
     // ----------------------------------------------------------------------
-    const platformFlag = await this.prisma.platformFeatureFlag.findUnique({
-      where: { key: featureKey },
-    });
-
     // Check Emergency Kill Switch first
     if (platformFlag?.isEmergencyDisabled) {
       const res: FeatureEvaluationResult = {
@@ -94,7 +176,6 @@ export class FeaturesService {
           'Feature has been temporarily emergency-disabled across the platform.',
         evaluatedAt,
       };
-      this.setCache(cacheKey, res);
       return res;
     }
 
@@ -109,7 +190,6 @@ export class FeaturesService {
           'Feature is globally disabled by Platform Super Admin.',
         evaluatedAt,
       };
-      this.setCache(cacheKey, res);
       return res;
     }
 
@@ -121,15 +201,8 @@ export class FeaturesService {
         status: 'ACTIVE',
         evaluatedAt,
       };
-      this.setCache(cacheKey, res);
       return res;
     }
-
-    // Fetch Institute & Plan
-    const institute = await this.prisma.institute.findUnique({
-      where: { id: instituteId },
-      select: { id: true, name: true, plan: true, isActive: true },
-    });
 
     if (!institute) {
       const res: FeatureEvaluationResult = {
@@ -150,7 +223,6 @@ export class FeaturesService {
         reason: 'Institute is currently suspended or inactive.',
         evaluatedAt,
       };
-      this.setCache(cacheKey, res);
       return res;
     }
 
@@ -159,15 +231,6 @@ export class FeaturesService {
     // ----------------------------------------------------------------------
     // STEP 2: Subscription Plan Entitlements (PlanEntitlement)
     // ----------------------------------------------------------------------
-    let planEntitlement = await this.prisma.planEntitlement.findUnique({
-      where: {
-        plan_featureKey: {
-          plan: currentPlan,
-          featureKey,
-        },
-      },
-    });
-
     // If no custom plan entitlement row exists in DB, fall back to Canonical Registry default
     let isIncludedInPlan = true;
     let planQuotaLimit: number | null = null;
@@ -193,22 +256,12 @@ export class FeaturesService {
         requiredPlan: this.getRecommendedPlanForFeature(featureKey),
         evaluatedAt,
       };
-      this.setCache(cacheKey, res);
       return res;
     }
 
     // ----------------------------------------------------------------------
     // STEP 3: Institute Configuration Overrides (InstituteFeatureConfig)
     // ----------------------------------------------------------------------
-    const instituteConfig = await this.prisma.instituteFeatureConfig.findUnique({
-      where: {
-        instituteId_featureKey: {
-          instituteId,
-          featureKey,
-        },
-      },
-    });
-
     if (instituteConfig && !instituteConfig.isEnabled) {
       const res: FeatureEvaluationResult = {
         featureKey,
@@ -217,7 +270,6 @@ export class FeaturesService {
         reason: 'Feature has been disabled in this institute\'s settings.',
         evaluatedAt,
       };
-      this.setCache(cacheKey, res);
       return res;
     }
 
@@ -252,19 +304,7 @@ export class FeaturesService {
 
     if (effectiveQuotaLimit !== null) {
       const currentPeriod = new Date().toISOString().slice(0, 7); // e.g. "2026-10"
-      const mKey = metricKey || `${featureKey}_usage`;
-
-      const usageRecord = await this.prisma.instituteUsageCounter.findUnique({
-        where: {
-          instituteId_metricKey_period: {
-            instituteId,
-            metricKey: mKey,
-            period: currentPeriod,
-          },
-        },
-      });
-
-      const usedCount = usageRecord?.currentValue || 0;
+      const usedCount = usageValue || 0;
       const remaining = Math.max(0, effectiveQuotaLimit - usedCount);
 
       quotaStatus = {
@@ -283,8 +323,7 @@ export class FeaturesService {
           quota: quotaStatus,
           evaluatedAt,
         };
-        this.setCache(cacheKey, res);
-        return res;
+          return res;
       }
     }
 
@@ -297,7 +336,6 @@ export class FeaturesService {
       evaluatedAt,
     };
 
-    this.setCache(cacheKey, finalResult);
     return finalResult;
   }
 
@@ -341,25 +379,55 @@ export class FeaturesService {
       const allDefs = getAllRegisteredFeatures();
       const evaluatedFeatures: Record<string, FeatureEvaluationResult> = {};
 
-      await Promise.all(
-        allDefs.map(async (def) => {
-          try {
-            const res = await this.evaluateFeature({
-              featureKey: def.key,
-              instituteId: safeInstituteId,
-              userRole,
-            });
-            evaluatedFeatures[def.key] = res;
-          } catch {
-            evaluatedFeatures[def.key] = {
-              featureKey: def.key,
-              isAvailable: true,
-              status: 'ACTIVE',
-              evaluatedAt: new Date().toISOString(),
-            };
-          }
-        }),
-      );
+      // One bulk read per table, then the same precedence engine in memory. Previously this
+      // called evaluateFeature once per registered feature, each doing up to four of its own
+      // queries — about 4 x (number of features) round trips on a pool of one connection.
+      const plan = (institute.plan as SubscriptionPlan) || 'STARTER';
+      const currentPeriod = new Date().toISOString().slice(0, 7);
+      const featureKeys = allDefs.map((d) => d.key);
+      const metricKeys = featureKeys.map((k) => `${k}_usage`);
+
+      const [flags, entitlements, configs, usage] = await Promise.all([
+        this.prisma.platformFeatureFlag.findMany({ where: { key: { in: featureKeys } } }).catch(() => []),
+        this.prisma.planEntitlement.findMany({ where: { plan, featureKey: { in: featureKeys } } }).catch(() => []),
+        this.prisma.instituteFeatureConfig
+          .findMany({ where: { instituteId: safeInstituteId, featureKey: { in: featureKeys } } })
+          .catch(() => []),
+        this.prisma.instituteUsageCounter
+          .findMany({
+            where: { instituteId: safeInstituteId, period: currentPeriod, metricKey: { in: metricKeys } },
+            select: { metricKey: true, currentValue: true },
+          })
+          .catch(() => []),
+      ]);
+
+      const flagByKey = new Map(flags.map((f) => [f.key, f]));
+      const entByKey = new Map(entitlements.map((e) => [e.featureKey, e]));
+      const cfgByKey = new Map(configs.map((c) => [c.featureKey, c]));
+      const usageByMetric = new Map(usage.map((u) => [u.metricKey, u.currentValue]));
+
+      for (const def of allDefs) {
+        try {
+          evaluatedFeatures[def.key] = this.decideFeature(
+            { featureKey: def.key, instituteId: safeInstituteId, userRole },
+            def,
+            {
+              platformFlag: flagByKey.get(def.key) ?? null,
+              institute: { id: institute.id, isActive: institute.isActive, plan: institute.plan },
+              planEntitlement: entByKey.get(def.key) ?? null,
+              instituteConfig: cfgByKey.get(def.key) ?? null,
+              usageValue: usageByMetric.get(`${def.key}_usage`) ?? null,
+            },
+          );
+        } catch {
+          evaluatedFeatures[def.key] = {
+            featureKey: def.key,
+            isAvailable: true,
+            status: 'ACTIVE',
+            evaluatedAt: new Date().toISOString(),
+          };
+        }
+      }
 
       return {
         instituteId: institute.id,

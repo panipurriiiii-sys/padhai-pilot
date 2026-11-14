@@ -3,7 +3,10 @@ import {
   Inject,
   Optional,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { RedisService } from '../redis/redis.service.js';
+import { RedisKeys, RedisTTLs } from '../redis/redis.config.js';
 import { AccessService } from '../common/access/access.service.js';
 import { assertDb } from '../common/db/db.js';
 import type { AuthenticatedUser } from '../common/types.js';
@@ -22,15 +25,34 @@ import type {
   SyllabusCoverageItem,
 } from '@padhai-pilot/shared';
 
+/**
+ * Hard bounds so one large institute can never turn a chart endpoint into an unbounded scan.
+ * Every chart in the portals renders aggregates, so these caps are invisible in the UI.
+ */
+const MAX_BATCHES = 300;
+const ATTENDANCE_SESSIONS_PER_BATCH = 30;
+const MAX_ASSESSMENTS = 500;
+const MAX_STUDENT_ATTENDANCE_RECORDS = 200;
+const MAX_STUDENT_MARKS = 200;
+
+/** Redis is optional (it falls back to an in-process cache), so analytics must work without it. */
+const NO_REDIS = {
+  get: async () => null,
+  set: async () => undefined,
+} as unknown as RedisService;
+
 @Injectable()
 export class AnalyticsService {
   private readonly access: AccessService;
+  private readonly redis: RedisService;
 
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Optional() @Inject(AccessService) access?: AccessService,
+    @Optional() @Inject(RedisService) redis?: RedisService,
   ) {
     this.access = access ?? new AccessService(prisma);
+    this.redis = redis ?? NO_REDIS;
   }
 
   private get db(): PrismaService {
@@ -44,6 +66,13 @@ export class AnalyticsService {
   async getStudentAnalytics(user: AuthenticatedUser): Promise<StudentAnalyticsSummary> {
     const studentId = user.id;
     const instituteId = user.instituteId;
+
+    if (instituteId) {
+      const cached = await this.redis.get<StudentAnalyticsSummary>(
+        RedisKeys.studentAnalytics(instituteId, studentId),
+      );
+      if (cached) return cached;
+    }
 
     if (!instituteId) {
       return {
@@ -62,23 +91,54 @@ export class AnalyticsService {
       };
     }
 
-    // Attendance
-    const records = await this.db.attendanceRecord.findMany({
-      where: {
-        studentId,
-        session: { instituteId },
-      },
-      include: {
-        session: {
-          select: {
-            date: true,
-            batch: { select: { subject: true } },
+    // The four blocks below are independent, so they go out together instead of in series.
+    const [records, marks, enrolledBatchIds] = await Promise.all([
+      // Attendance
+      this.db.attendanceRecord.findMany({
+        where: {
+          studentId,
+          session: { instituteId },
+        },
+        select: {
+          status: true,
+          session: {
+            select: {
+              date: true,
+              batch: { select: { subject: true } },
+            },
           },
         },
-      },
-      orderBy: { session: { date: 'asc' } },
-      take: 100,
-    });
+        orderBy: { session: { date: 'asc' } },
+        take: MAX_STUDENT_ATTENDANCE_RECORDS,
+      }),
+
+      // Assessments & subject performance. Only the assessment columns this method reads are
+      // selected, and the row count is bounded.
+      this.db.assessmentMark.findMany({
+        where: {
+          studentId,
+          isPublished: true,
+          assessment: {
+            instituteId,
+            status: 'PUBLISHED',
+          },
+        },
+        select: {
+          assessmentId: true,
+          obtainedMarks: true,
+          percentage: true,
+          assessment: {
+            select: { title: true, subject: true, maxMarks: true, assessmentDate: true },
+          },
+        },
+        orderBy: {
+          assessment: { assessmentDate: 'asc' },
+        },
+        take: MAX_STUDENT_MARKS,
+      }),
+
+      this.access.studentBatchIds(user),
+    ]);
 
     const presentCount = records.filter(
       (r) => r.status === 'PRESENT' || r.status === 'LATE',
@@ -92,24 +152,6 @@ export class AnalyticsService {
       status: r.status as any,
       subject: r.session.batch.subject,
     }));
-
-    // Assessments & Subject Performance
-    const marks = await this.db.assessmentMark.findMany({
-      where: {
-        studentId,
-        isPublished: true,
-        assessment: {
-          instituteId,
-          status: 'PUBLISHED',
-        },
-      },
-      include: {
-        assessment: true,
-      },
-      orderBy: {
-        assessment: { assessmentDate: 'asc' },
-      },
-    });
 
     const subjectStatsMap = new Map<string, { totalObtained: number; totalMax: number; count: number }>();
     for (const m of marks) {
@@ -168,27 +210,29 @@ export class AnalyticsService {
       classAveragePercentage: classAvgByAssessment.get(m.assessmentId) ?? null,
     }));
 
-    // Homework Summary
-    const enrolledBatchIds = await this.access.studentBatchIds(user);
-    const [totalAssigned, submissions] = await Promise.all([
+    // Homework Summary — the per-status breakdown is counted in PostgreSQL.
+    const [totalAssigned, submissionGroups] = await Promise.all([
       this.db.assignment.count({
         where: {
           instituteId,
           batchId: { in: enrolledBatchIds },
         },
       }),
-      this.db.assignmentSubmission.findMany({
+      this.db.assignmentSubmission.groupBy({
+        by: ['status'],
         where: {
           studentId,
           assignment: { instituteId },
         },
-        select: { status: true },
+        _count: { _all: true },
       }),
     ]);
 
-    const submitted = submissions.length;
-    const graded = submissions.filter((s) => s.status === 'GRADED').length;
-    const pending = submissions.filter((s) => s.status === 'SUBMITTED').length;
+    const countOf = (status: string) =>
+      submissionGroups.find((s) => s.status === status)?._count._all ?? 0;
+    const submitted = submissionGroups.reduce((sum, s) => sum + s._count._all, 0);
+    const graded = countOf('GRADED');
+    const pending = countOf('SUBMITTED');
     const completionRatePercentage = totalAssigned > 0
       ? Math.round((submitted / totalAssigned) * 100)
       : null;
@@ -201,7 +245,7 @@ export class AnalyticsService {
       completionRatePercentage,
     };
 
-    return {
+    const summary: StudentAnalyticsSummary = {
       studentId,
       attendanceRate,
       attendanceTrend,
@@ -209,12 +253,68 @@ export class AnalyticsService {
       examScoreTrend,
       homeworkSummary,
     };
+
+    await this.redis.set(
+      RedisKeys.studentAnalytics(instituteId, studentId),
+      summary,
+      RedisTTLs.ANALYTICS_SECONDS,
+    );
+    return summary;
+  }
+
+  /**
+   * Present/total attendance per batch over each batch's newest
+   * ATTENDANCE_SESSIONS_PER_BATCH sessions, computed entirely in PostgreSQL.
+   *
+   * Prisma's `groupBy` cannot group a child table by a parent column, so doing this through the
+   * client meant fetching the sessions, then one row per (session x status) — thousands of rows
+   * for a mid-sized institute — and folding them in Node. This returns one row per batch.
+   * Values are parameterised; `batchIds` is already tenant-scoped by the caller and the
+   * instituteId filter is repeated here so the query is safe on its own.
+   */
+  private async batchAttendanceTotals(
+    instituteId: string,
+    batchIds: string[],
+  ): Promise<{ batchId: string; present: number; total: number; sessions: number }[]> {
+    if (batchIds.length === 0) return [];
+    const rows = await this.db.$queryRaw<
+      { batchId: string; present: bigint; total: bigint; sessions: bigint }[]
+    >`
+      SELECT s."batchId"                                               AS "batchId",
+             COUNT(r.id)                                               AS "total",
+             COUNT(r.id) FILTER (WHERE r.status IN ('PRESENT','LATE')) AS "present",
+             COUNT(DISTINCT s.id)                                      AS "sessions"
+      FROM (
+        SELECT id, "batchId"
+        FROM (
+          SELECT id, "batchId",
+                 ROW_NUMBER() OVER (PARTITION BY "batchId" ORDER BY date DESC) AS rn
+          FROM "AttendanceSession"
+          WHERE "instituteId" = ${instituteId}
+            AND "batchId" IN (${Prisma.join(batchIds)})
+        ) ranked
+        WHERE rn <= ${ATTENDANCE_SESSIONS_PER_BATCH}
+      ) s
+      LEFT JOIN "AttendanceRecord" r ON r."sessionId" = s.id
+      GROUP BY s."batchId"
+    `;
+    return rows.map((r) => ({
+      batchId: r.batchId,
+      present: Number(r.present),
+      total: Number(r.total),
+      sessions: Number(r.sessions),
+    }));
   }
 
   // --------------------------------------------------------------------------
   // 2. TEACHER / FACULTY ANALYTICS
   // --------------------------------------------------------------------------
   async getTeacherAnalytics(user: AuthenticatedUser): Promise<TeacherAnalyticsSummary> {
+    const cached = await this.redis.get<TeacherAnalyticsSummary>(
+      RedisKeys.teacherAnalytics(user.instituteId, user.id),
+    );
+    if (cached) return cached;
+
     const instituteId = user.instituteId;
     const staffBatchIds = await this.access.staffBatchIds(user);
 
@@ -229,60 +329,105 @@ export class AnalyticsService {
     const batches = await this.db.batch.findMany({
       where: batchWhere,
       select: { id: true, name: true, subject: true },
+      take: MAX_BATCHES,
     });
     const batchIds = batches.map((b) => b.id);
+    const batchById = new Map(batches.map((b) => [b.id, b]));
 
-    // 1. Batch Attendance Trends
-    const batchAttendanceTrends: BatchAttendanceTrend[] = await Promise.all(
-      batches.map(async (b) => {
-        const sessions = await this.db.attendanceSession.findMany({
-          where: { batchId: b.id },
-          include: { records: { select: { status: true } } },
-          take: 30,
-        });
+    // Everything below is independent of everything else, so it goes out in one round of queries
+    // instead of five sequential ones. Each block is an aggregate: no per-batch loop, and no
+    // "load every row to count it".
+    const [
+      attendanceRows,
+      gradeGroups,
+      assessmentRows,
+      enrollmentCounts,
+      recentAssignments,
+      lessonGroups,
+    ] = await Promise.all([
+      // (1) Attendance per batch over its newest N sessions, aggregated by PostgreSQL.
+      // Was one query per batch, each loading every attendance record of those sessions.
+      this.batchAttendanceTotals(instituteId, batchIds),
 
-        let totalRecords = 0;
-        let presentRecords = 0;
-        sessions.forEach((s) => {
-          s.records.forEach((r) => {
-            totalRecords++;
-            if (r.status === 'PRESENT' || r.status === 'LATE') presentRecords++;
-          });
-        });
+      // (2) Grade distribution: counted in PostgreSQL (was every mark row shipped to Node).
+      batchIds.length && typeof this.db.assessmentMark?.groupBy === 'function'
+        ? this.db.assessmentMark.groupBy({
+            by: ['grade'],
+            where: {
+              assessment: { instituteId, batchId: { in: batchIds } },
+              resultStatus: 'SCORED',
+            },
+            _count: { _all: true },
+          })
+        : Promise.resolve([]),
 
-        const averageAttendancePercentage = totalRecords > 0
-          ? Math.round((presentRecords / totalRecords) * 100)
-          : null;
+      // (3) Subject comparison: assessment ids + subject only; marks are summed below.
+      batchIds.length
+        ? this.db.classroomAssessment.findMany({
+            where: { instituteId, batchId: { in: batchIds } },
+            select: { id: true, subject: true, batchId: true },
+            orderBy: { assessmentDate: 'desc' },
+            take: MAX_ASSESSMENTS,
+          })
+        : Promise.resolve([]),
 
-        return {
-          batchId: b.id,
-          batchName: b.name,
-          averageAttendancePercentage,
-          sessionsCount: sessions.length,
-        };
-      }),
-    );
+      // Active head count per batch, once, instead of a nested _count on every assessment row.
+      batchIds.length && typeof this.db.enrollment?.groupBy === 'function'
+        ? this.db.enrollment.groupBy({
+            by: ['batchId'],
+            where: { instituteId, batchId: { in: batchIds }, status: 'ACTIVE' },
+            _count: { _all: true },
+          })
+        : Promise.resolve([]),
 
-    // 2. Grade Distribution
-    const marks = await this.db.assessmentMark.findMany({
-      where: {
-        assessment: {
-          instituteId,
-          batchId: { in: batchIds },
-        },
-        resultStatus: 'SCORED',
-      },
-      select: { grade: true },
+      // (4) Assignment submissions — already bounded, kept as-is apart from the head count.
+      batchIds.length
+        ? this.db.assignment.findMany({
+            where: { instituteId, batchId: { in: batchIds } },
+            select: {
+              id: true,
+              title: true,
+              dueDate: true,
+              batchId: true,
+              _count: { select: { submissions: true } },
+            },
+            orderBy: { dueDate: 'desc' },
+            take: 10,
+          })
+        : Promise.resolve([]),
+
+      // (5) Syllabus coverage: counted in PostgreSQL (was every lesson plan row, body included).
+      batchIds.length && typeof this.db.lessonPlan?.groupBy === 'function'
+        ? this.db.lessonPlan.groupBy({
+            by: ['batchId', 'subject', 'isCompleted'],
+            where: { instituteId, batchId: { in: batchIds } },
+            _count: { _all: true },
+          })
+        : Promise.resolve([]),
+    ]);
+
+    const headCount = new Map(enrollmentCounts.map((e) => [e.batchId, e._count._all]));
+
+    // (1) Attendance trends
+    const attByBatch = new Map(attendanceRows.map((r) => [r.batchId, r]));
+    const batchAttendanceTrends: BatchAttendanceTrend[] = batches.map((b) => {
+      const acc = attByBatch.get(b.id);
+      return {
+        batchId: b.id,
+        batchName: b.name,
+        averageAttendancePercentage:
+          acc && acc.total > 0 ? Math.round((acc.present / acc.total) * 100) : null,
+        sessionsCount: acc?.sessions ?? 0,
+      };
     });
 
+    // (2) Grade distribution
     const gradeCounts: Record<string, number> = { 'A+': 0, A: 0, 'B+': 0, B: 0, C: 0, D: 0, F: 0 };
-    marks.forEach((m) => {
-      if (m.grade && gradeCounts[m.grade] !== undefined) {
-        gradeCounts[m.grade]++;
-      }
-    });
-
-    const totalGraded = marks.length;
+    let totalGraded = 0;
+    for (const g of gradeGroups) {
+      totalGraded += g._count._all;
+      if (g.grade && gradeCounts[g.grade] !== undefined) gradeCounts[g.grade] += g._count._all;
+    }
     const gradeDistribution: GradeDistributionBucket[] = Object.entries(gradeCounts).map(
       ([grade, count]) => ({
         grade,
@@ -291,38 +436,41 @@ export class AnalyticsService {
       }),
     );
 
-    // 3. Subject Comparison
-    const assessments = await this.db.classroomAssessment.findMany({
-      where: {
-        instituteId,
-        batchId: { in: batchIds },
-      },
-      include: {
-        marks: {
-          where: { resultStatus: 'SCORED' },
-          select: { percentage: true },
-        },
-        batch: {
-          include: {
-            _count: { select: { enrollments: { where: { status: 'ACTIVE' } } } },
+    // (3) Subject comparison — sum and count the marks in PostgreSQL, average per subject here.
+    // Same arithmetic as before (mean over every scored mark of the subject), one query instead
+    // of loading every mark of every assessment.
+    const markStats = assessmentRows.length
+      ? await this.db.assessmentMark.groupBy({
+          by: ['assessmentId'],
+          where: {
+            assessmentId: { in: assessmentRows.map((a) => a.id) },
+            resultStatus: 'SCORED',
+            percentage: { not: null },
           },
-        },
-      },
-    });
+          _sum: { percentage: true },
+          _count: { percentage: true },
+        })
+      : [];
+    const markByAssessment = new Map(
+      markStats.map((m) => [m.assessmentId, { sum: m._sum.percentage ?? 0, count: m._count.percentage }]),
+    );
 
-    const subjectMap = new Map<string, { totalPct: number; count: number; totalStudents: number; asmCount: number }>();
-    assessments.forEach((asm) => {
-      const current = subjectMap.get(asm.subject) || { totalPct: 0, count: 0, totalStudents: 0, asmCount: 0 };
-      current.asmCount++;
-      current.totalStudents = Math.max(current.totalStudents, asm.batch?._count?.enrollments || 0);
-      asm.marks.forEach((m) => {
-        if (m.percentage !== null) {
-          current.totalPct += m.percentage;
-          current.count++;
-        }
-      });
+    const subjectMap = new Map<
+      string,
+      { totalPct: number; count: number; totalStudents: number; asmCount: number }
+    >();
+    for (const asm of assessmentRows) {
+      const current =
+        subjectMap.get(asm.subject) || { totalPct: 0, count: 0, totalStudents: 0, asmCount: 0 };
+      current.asmCount += 1;
+      current.totalStudents = Math.max(current.totalStudents, headCount.get(asm.batchId) ?? 0);
+      const stat = markByAssessment.get(asm.id);
+      if (stat) {
+        current.totalPct += stat.sum;
+        current.count += stat.count;
+      }
       subjectMap.set(asm.subject, current);
-    });
+    }
 
     const subjectComparison: SubjectComparisonItem[] = Array.from(subjectMap.entries()).map(
       ([subject, stat]) => ({
@@ -333,26 +481,9 @@ export class AnalyticsService {
       }),
     );
 
-    // 4. Assignment Submissions
-    const recentAssignments = await this.db.assignment.findMany({
-      where: {
-        instituteId,
-        batchId: { in: batchIds },
-      },
-      include: {
-        batch: {
-          include: {
-            _count: { select: { enrollments: { where: { status: 'ACTIVE' } } } },
-          },
-        },
-        _count: { select: { submissions: true } },
-      },
-      orderBy: { dueDate: 'desc' },
-      take: 10,
-    });
-
+    // (4) Assignment submissions
     const assignmentSubmissions: AssignmentSubmissionStat[] = recentAssignments.map((a) => {
-      const totalStudents = a.batch?._count?.enrollments ?? 0;
+      const totalStudents = headCount.get(a.batchId) ?? 0;
       const submittedCount = a._count.submissions;
       return {
         assignmentId: a.id,
@@ -360,52 +491,41 @@ export class AnalyticsService {
         dueDate: a.dueDate.toISOString().split('T')[0],
         totalStudents,
         submittedCount,
-        submissionRatePercentage: totalStudents > 0
-          ? Math.round((submittedCount / totalStudents) * 100)
-          : 0,
+        submissionRatePercentage:
+          totalStudents > 0 ? Math.round((submittedCount / totalStudents) * 100) : 0,
       };
     });
 
-    // 5. Syllabus Coverage
-    const lessonPlans = await this.db.lessonPlan.findMany({
-      where: {
-        instituteId,
-        batchId: { in: batchIds },
-      },
-      include: {
-        batch: { select: { name: true } },
-      },
-    });
-
-    const coverageMap = new Map<string, { batchName: string; subject: string; total: number; completed: number }>();
-    lessonPlans.forEach((lp) => {
-      const key = `${lp.batchId}:${lp.subject}`;
-      const current = coverageMap.get(key) || {
-        batchName: lp.batch.name,
-        subject: lp.subject,
-        total: 0,
-        completed: 0,
-      };
-      current.total++;
-      if (lp.isCompleted) current.completed++;
-      coverageMap.set(key, current);
-    });
-
-    const syllabusCoverage: SyllabusCoverageItem[] = Array.from(coverageMap.entries()).map(
-      ([key, stat]) => {
-        const batchId = key.split(':')[0];
-        return {
-          batchId,
-          batchName: stat.batchName,
-          subject: stat.subject,
-          totalTopics: stat.total,
-          completedTopics: stat.completed,
-          coveragePercentage: stat.total > 0 ? Math.round((stat.completed / stat.total) * 100) : 0,
+    // (5) Syllabus coverage
+    const coverageMap = new Map<
+      string,
+      { batchId: string; batchName: string; subject: string; total: number; completed: number }
+    >();
+    for (const g of lessonGroups) {
+      const key = `${g.batchId}:${g.subject}`;
+      const current =
+        coverageMap.get(key) || {
+          batchId: g.batchId,
+          batchName: batchById.get(g.batchId)?.name ?? '',
+          subject: g.subject,
+          total: 0,
+          completed: 0,
         };
-      },
-    );
+      current.total += g._count._all;
+      if (g.isCompleted) current.completed += g._count._all;
+      coverageMap.set(key, current);
+    }
 
-    return {
+    const syllabusCoverage: SyllabusCoverageItem[] = Array.from(coverageMap.values()).map((stat) => ({
+      batchId: stat.batchId,
+      batchName: stat.batchName,
+      subject: stat.subject,
+      totalTopics: stat.total,
+      completedTopics: stat.completed,
+      coveragePercentage: stat.total > 0 ? Math.round((stat.completed / stat.total) * 100) : 0,
+    }));
+
+    const summary: TeacherAnalyticsSummary = {
       instituteId,
       teacherId: user.id,
       batchAttendanceTrends,
@@ -414,6 +534,13 @@ export class AnalyticsService {
       assignmentSubmissions,
       syllabusCoverage,
     };
+
+    await this.redis.set(
+      RedisKeys.teacherAnalytics(instituteId, user.id),
+      summary,
+      RedisTTLs.ANALYTICS_SECONDS,
+    );
+    return summary;
   }
 
   // --------------------------------------------------------------------------
@@ -423,7 +550,7 @@ export class AnalyticsService {
     const [
       totalInstitutes,
       activeInstitutes,
-      institutes,
+      planGroups,
       totalStudents,
       totalTeachers,
       assessmentsCreated,
@@ -432,7 +559,8 @@ export class AnalyticsService {
     ] = await Promise.all([
       this.db.institute.count(),
       this.db.institute.count({ where: { isActive: true } }),
-      this.db.institute.findMany({ select: { plan: true } }),
+      // Counted in PostgreSQL rather than shipping one row per institute to Node.
+      this.db.institute.groupBy({ by: ['plan'], _count: { _all: true } }),
       this.db.user.count({ where: { role: 'STUDENT' } }),
       this.db.user.count({ where: { role: { in: ['TEACHER', 'FACULTY'] } } }),
       this.db.classroomAssessment.count(),
@@ -445,9 +573,9 @@ export class AnalyticsService {
     ]);
 
     const institutesByPlan: Record<string, number> = {};
-    institutes.forEach((i) => {
-      const plan = i.plan || 'STARTER';
-      institutesByPlan[plan] = (institutesByPlan[plan] || 0) + 1;
+    planGroups.forEach((g) => {
+      const plan = g.plan || 'STARTER';
+      institutesByPlan[plan] = (institutesByPlan[plan] || 0) + g._count._all;
     });
 
     return {

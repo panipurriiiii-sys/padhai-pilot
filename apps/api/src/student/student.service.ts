@@ -987,25 +987,56 @@ export class StudentService {
   // ==========================================================================
   async getAnnouncements(user: AuthenticatedUser): Promise<StudentAnnouncementItem[]> {
     const db = this.access.db();
-    if (!user.instituteId) return [];
-    const batchIds = await this.access.studentBatchIds(user);
-    const rows = await db.announcement.findMany({
-      where: {
-        instituteId: user.instituteId,
-        OR: [{ batchId: null }, ...(batchIds.length ? [{ batchId: { in: batchIds } }] : [])],
-      },
-      select: { id: true, title: true, content: true, priority: true, createdAt: true, author: { select: { fullName: true } } },
-      orderBy: { createdAt: 'desc' },
-      take: 50,
-    });
-    return rows.map((a) => ({
-      id: a.id,
-      title: a.title,
-      content: a.content,
-      date: isoDay(a.createdAt),
-      priority: a.priority,
-      authorName: a.author.fullName,
-    }));
+    let instituteItems: StudentAnnouncementItem[] = [];
+
+    if (user.instituteId) {
+      const batchIds = await this.access.studentBatchIds(user);
+      const rows = await db.announcement.findMany({
+        where: {
+          instituteId: user.instituteId,
+          OR: [{ batchId: null }, ...(batchIds.length ? [{ batchId: { in: batchIds } }] : [])],
+        },
+        select: { id: true, title: true, content: true, priority: true, createdAt: true, author: { select: { fullName: true } } },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      });
+      instituteItems = rows.map((a) => ({
+        id: a.id,
+        title: a.title,
+        content: a.content,
+        date: isoDay(a.createdAt),
+        priority: a.priority,
+        authorName: a.author.fullName,
+      }));
+    }
+
+    // Include active platform broadcast announcements from Super Admin
+    try {
+      const now = new Date();
+      const platformRows = await db.platformAnnouncement.findMany({
+        where: {
+          targetAudience: { in: ['ALL', 'STUDENTS'] },
+          OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+      });
+
+      const platformItems: StudentAnnouncementItem[] = platformRows.map((p: any) => ({
+        id: `platform-${p.id}`,
+        title: p.title,
+        content: p.message,
+        date: isoDay(p.createdAt),
+        priority: p.severity === 'critical' ? 'URGENT' : 'NORMAL',
+        authorName: 'Platform Administration',
+      }));
+
+      return [...platformItems, ...instituteItems].sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+      );
+    } catch {
+      return instituteItems;
+    }
   }
 
   // ==========================================================================

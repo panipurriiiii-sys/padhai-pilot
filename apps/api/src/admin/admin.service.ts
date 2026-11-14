@@ -431,8 +431,16 @@ export class AdminService {
   }
 
   async getAnnouncements(): Promise<PlatformAnnouncement[]> {
-    const anns = await this.db.platformAnnouncement.findMany({ orderBy: { createdAt: 'desc' }, take: 100 });
-    return anns.map((a) => this.shapeAnnouncement(a));
+    try {
+      const anns = await this.db.platformAnnouncement.findMany({ orderBy: { createdAt: 'desc' }, take: 100 });
+      return anns.map((a) => this.shapeAnnouncement(a));
+    } catch (e: any) {
+      if (e?.code === 'P2021' || e?.message?.includes('does not exist')) {
+        // Table not migrated yet on this database instance - return empty list gracefully
+        return [];
+      }
+      throw e;
+    }
   }
 
   async createAnnouncement(
@@ -464,6 +472,27 @@ export class AdminService {
       status: 'SUCCESS',
     });
     return this.shapeAnnouncement(created);
+  }
+
+  async deleteAnnouncement(
+    id: string,
+    actor: { id: string; email: string },
+  ): Promise<{ success: boolean; message: string }> {
+    if (!id) throw new BadRequestException('Announcement ID is required.');
+    const existing = await this.db.platformAnnouncement.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException('Platform announcement not found.');
+
+    await this.db.platformAnnouncement.delete({ where: { id } });
+    await this.recordAuditLog({
+      actorId: actor.id,
+      actorEmail: actor.email,
+      action: 'PLATFORM_ANNOUNCEMENT_DELETED',
+      targetId: id,
+      targetType: 'ANNOUNCEMENT',
+      details: `Deleted global announcement "${existing.title}".`,
+      status: 'SUCCESS',
+    });
+    return { success: true, message: `Announcement "${existing.title}" deleted.` };
   }
 
   async seedLibraryMaterials(uploadedBy: string): Promise<{ migrated: boolean; inserted: number; skipped: number }> {

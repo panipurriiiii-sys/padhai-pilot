@@ -53,7 +53,45 @@ export class BroadcastService {
       orderBy: { createdAt: 'desc' },
       take: clampLimit(opts.limit, 50, 200),
     });
-    return rows.map((r) => this.shape(r));
+
+    const instituteItems = rows.map((r) => this.shape(r));
+
+    // Also surface active platform-wide broadcast notices from Super Admin
+    if (!opts.batchId) {
+      try {
+        const now = new Date();
+        const platformRows = await db.platformAnnouncement.findMany({
+          where: {
+            targetAudience: { in: ['ALL', 'TEACHERS'] },
+            OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 20,
+        });
+
+        const platformItems: BroadcastItem[] = platformRows.map((p: any) => ({
+          id: `platform-${p.id}`,
+          instituteId: user.instituteId,
+          batchId: null,
+          batchName: 'Platform Notice (Super Admin)',
+          authorId: p.createdById || 'super_admin',
+          authorName: 'Platform Administration',
+          authorRole: 'SUPER_ADMIN',
+          title: p.title,
+          content: p.message,
+          priority: (p.severity === 'critical' ? 'URGENT' : 'NORMAL') as 'NORMAL' | 'URGENT',
+          createdAt: p.createdAt instanceof Date ? p.createdAt.toISOString() : new Date(p.createdAt).toISOString(),
+        }));
+
+        return [...platformItems, ...instituteItems].sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        );
+      } catch {
+        // Fallback to institute announcements if table unmigrated
+      }
+    }
+
+    return instituteItems;
   }
 
   async create(
@@ -66,18 +104,28 @@ export class BroadcastService {
     if (data.priority !== undefined && data.priority !== 'NORMAL' && data.priority !== 'URGENT') {
       throw new BadRequestException('priority must be NORMAL or URGENT.');
     }
+
     let batchName = 'All Batches';
+    let targetBatchId: string | null = null;
+    let recipientBatchIds: string[] = [];
+
     if (data.batchId) {
       const batch = await this.access.assertBatchAccess(user, data.batchId);
       batchName = batch.name;
+      targetBatchId = batch.id;
+      recipientBatchIds = [batch.id];
     } else if (!isManagement(user.role)) {
       throw new ForbiddenException('Only the owner can broadcast to the whole institute. Pick a batch.');
+    } else {
+      // Management (Tuition Owner / Institute Admin) can broadcast to the entire coaching institute
+      batchName = 'All Batches';
+      targetBatchId = null;
     }
 
     const created = await db.announcement.create({
       data: {
         instituteId: user.instituteId,
-        batchId: data.batchId ?? null,
+        batchId: targetBatchId,
         authorId: user.id,
         title,
         content,
@@ -85,28 +133,28 @@ export class BroadcastService {
       },
     });
 
-    // Recipients come from the database (never the client): ACTIVE students of the batch / institute.
-    const recipients = data.batchId
+    // Recipients come from the database: ACTIVE students of the targeted batch(es) / institute.
+    const recipients = recipientBatchIds.length > 0
       ? (
           await db.enrollment.findMany({
-            where: { batchId: data.batchId, instituteId: user.instituteId, status: 'ACTIVE' },
+            where: { batchId: { in: recipientBatchIds }, instituteId: user.instituteId, status: 'ACTIVE' },
             select: { studentId: true },
             take: MAX_RECIPIENTS,
           })
-        ).map((e) => e.studentId)
+        ).map((e: any) => e.studentId)
       : (
           await db.instituteMembership.findMany({
             where: { instituteId: user.instituteId, role: 'STUDENT', status: 'ACTIVE' },
             select: { userId: true },
             take: MAX_RECIPIENTS,
           })
-        ).map((m) => m.userId);
+        ).map((m: any) => m.userId);
     const unique = [...new Set(recipients)];
 
     let notifiedCount = 0;
     for (let i = 0; i < unique.length; i += CHUNK) {
       const res = await db.notification.createMany({
-        data: unique.slice(i, i + CHUNK).map((userId) => ({
+        data: unique.slice(i, i + CHUNK).map((userId: any) => ({
           instituteId: user.instituteId,
           userId,
           title: created.priority === 'URGENT' ? `Urgent: ${title}` : title,

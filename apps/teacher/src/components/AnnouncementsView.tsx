@@ -7,6 +7,7 @@ import type { BatchSummary, AnnouncementItem } from '@padhai-pilot/shared';
 interface AnnouncementsViewProps {
   batches: BatchSummary[];
   announcements: AnnouncementItem[];
+  isOwner?: boolean;
   onDeleteAnnouncement?: (id: string) => Promise<void>;
   onCreateAnnouncement: (data: {
     batchId?: string;
@@ -19,6 +20,7 @@ interface AnnouncementsViewProps {
 export function AnnouncementsView({
   batches,
   announcements,
+  isOwner,
   onCreateAnnouncement,
   onDeleteAnnouncement,
 }: AnnouncementsViewProps) {
@@ -191,7 +193,7 @@ export function AnnouncementsView({
                     className="w-full px-3 py-2 rounded-lg bg-paper-warm border border-border-paper text-stone-900 focus:outline-none focus:border-electric"
                   >
                     <option value="" className="bg-white">
-                      All Enrolled Batches
+                      {isOwner ? 'All Enrolled Batches (Whole Institute)' : 'All My Batches'}
                     </option>
                     {batches.map((b) => (
                       <option key={b.id} value={b.id} className="bg-white">

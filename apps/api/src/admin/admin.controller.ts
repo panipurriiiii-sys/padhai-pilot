@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Delete,
   Body,
   Param,
   Query,
@@ -183,6 +184,21 @@ export class AdminController {
       success: true,
       data,
       message: `Platform broadcast announcement created.`,
+    };
+  }
+
+  @Delete('announcements/:id')
+  async deleteAnnouncement(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    const data = await this.adminService.deleteAnnouncement(id, {
+      id: user.id,
+      email: user.email,
+    });
+    return {
+      success: true,
+      data,
     };
   }
 }

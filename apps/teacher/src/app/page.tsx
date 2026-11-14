@@ -8,10 +8,27 @@ import { Sidebar, NavTab } from '../components/Sidebar';
 import { DashboardView } from '../components/DashboardView';
 // Always-visible chrome — eagerly loaded
 import { LoadError } from '../components/LoadError';
-import { AuthModal } from '../components/AuthModal';
-import { AuthWelcomeScreen } from '../components/AuthWelcomeScreen';
-import { GetStartedView } from '../components/GetStartedView';
-import { NotificationDrawer } from '../components/NotificationDrawer';
+
+// Conditional chrome. None of these is on screen when a signed-in teacher lands on the portal,
+// so keeping them in the entry bundle made every page load pay for them: the welcome screen and
+// auth modal only render while signed out, onboarding only on a first visit, and the notification
+// drawer only once the bell is tapped.
+const AuthModal = dynamic(
+  () => import('../components/AuthModal').then((m) => ({ default: m.AuthModal })),
+  { ssr: false },
+);
+const AuthWelcomeScreen = dynamic(
+  () => import('../components/AuthWelcomeScreen').then((m) => ({ default: m.AuthWelcomeScreen })),
+  { ssr: false },
+);
+const GetStartedView = dynamic(
+  () => import('../components/GetStartedView').then((m) => ({ default: m.GetStartedView })),
+  { ssr: false },
+);
+const NotificationDrawer = dynamic(
+  () => import('../components/NotificationDrawer').then((m) => ({ default: m.NotificationDrawer })),
+  { ssr: false },
+);
 
 // Non-default views — lazy loaded to reduce initial JS bundle
 const BulkMarksEntryView = dynamic(
@@ -119,8 +136,7 @@ import type {
 import { Loader2, Menu, LayoutDashboard, NotebookPen, CalendarCheck, Users, Bell } from 'lucide-react';
 import { MotionProvider, ToastProvider, DashboardSkeleton, OfflineBanner, CommandPalette, type CommandItem } from '@padhai-pilot/ui';
 
-type ResourceKey = 'dashboard' | 'batches' | 'invitations' | 'assignments' | 'tests' | 'lessonPlans' | 'timetable' | 'announcements' | 'reports' | 'analytics';
-const ALL_RESOURCES: ResourceKey[] = ['dashboard', 'batches', 'invitations', 'assignments', 'tests', 'lessonPlans', 'timetable', 'announcements', 'reports', 'analytics'];
+type ResourceKey = 'dashboard' | 'batches' | 'roster' | 'invitations' | 'assignments' | 'tests' | 'lessonPlans' | 'timetable' | 'announcements' | 'reports' | 'analytics';
 /** Resources each tab cannot render without. A failure shows an error state with Retry, never empty data. */
 const TAB_RESOURCES: Partial<Record<NavTab, ResourceKey[]>> = {
   dashboard: ['dashboard'],
@@ -135,6 +151,18 @@ const TAB_RESOURCES: Partial<Record<NavTab, ResourceKey[]>> = {
   reports: ['reports'],
   studentFees: ['batches'],
 };
+/**
+ * Resources a tab enriches itself with but renders fine without: they are fetched after the tab
+ * has already painted, and their failure never blocks the view (the cards show their own notice).
+ * The Dashboard's charts come from /teacher/reports and /analytics/teacher, which are the two
+ * slowest teacher endpoints, so the page must never wait on them.
+ */
+const TAB_SECONDARY_RESOURCES: Partial<Record<NavTab, ResourceKey[]>> = {
+  dashboard: ['reports', 'analytics'],
+  attendance: ['reports'],
+};
+/** Tabs that render a student roster; the roster follows the selected batch, not the tab. */
+const TABS_NEEDING_ROSTER = new Set<NavTab>(['batches']);
 
 function TeacherApp() {
   const router = useRouter();
@@ -144,6 +172,8 @@ function TeacherApp() {
     const t = searchParams.get('tab') as NavTab | null;
     return t || 'dashboard';
   });
+  /** The tab present on first render, so the boot sequence fetches that tab, not the default. */
+  const initialTabRef = React.useRef<NavTab>(currentTab);
 
   // Sync state when user navigates back/forward
   useEffect(() => {
@@ -190,20 +220,30 @@ function TeacherApp() {
 
   const [loadErrors, setLoadErrors] = useState<Partial<Record<ResourceKey, string>>>({});
 
+  const selectedBatchRef = React.useRef('');
+  selectedBatchRef.current = selectedBatchId;
+
   const loadResource = useCallback(async (key: ResourceKey) => {
     try {
       switch (key) {
         case 'dashboard': setMetrics(await cached('teacher:dashboard', 3 * 60 * 1000, () => teacherApi.getDashboard())); break;
         case 'batches': {
+          // The roster used to be chained onto this request, which made every tab that needs
+          // batches pay two serial round trips. It is now its own resource, fetched only by the
+          // tabs that render a roster.
           const list = await cached('teacher:batches', 5 * 60 * 1000, () => teacherApi.getBatches());
           setBatches(list);
           setSelectedBatchId((cur) => (cur && list.some((b) => b.id === cur) ? cur : list[0]?.id ?? ''));
-          if (list.length > 0) {
-            const rosterRes = await cached(`teacher:roster:${list[0].id}`, 3 * 60 * 1000, () => teacherApi.getBatchRoster(list[0].id));
-            setStudents(rosterRes.students);
-          } else {
+          break;
+        }
+        case 'roster': {
+          const batchId = selectedBatchRef.current;
+          if (!batchId) {
             setStudents([]);
+            break;
           }
+          const rosterRes = await cached(`teacher:roster:${batchId}`, 3 * 60 * 1000, () => teacherApi.getBatchRoster(batchId));
+          setStudents(rosterRes.students);
           break;
         }
         case 'invitations': setInvitations(await cached('teacher:invitations', 5 * 60 * 1000, () => teacherApi.getInvitations())); break;
@@ -226,20 +266,33 @@ function TeacherApp() {
     }
   }, []);
 
-  const loadUserData = useCallback(async () => {
-    // Dashboard first — user sees useful content immediately
-    await loadResource('dashboard');
-    // Remaining resources load in background; UI shows each as it arrives
-    Promise.all(
-      ALL_RESOURCES.filter((k) => k !== 'dashboard').map((k) => loadResource(k)),
-    ).catch(() => undefined);
+  /**
+   * Loads what the given tab needs and nothing else.
+   *
+   * This used to fetch all ten teacher resources on sign-in regardless of the tab on screen,
+   * which cost ~12 requests and (measured on a 18-batch institute) ~320 KB before the first
+   * screen was usable — most of it for tabs the user had not opened. Blocking resources are
+   * awaited; secondary ones are fired after and never hold up the render.
+   */
+  const loadTab = useCallback(
+    async (tab: NavTab) => {
+      const blocking = TAB_RESOURCES[tab] ?? [];
+      await Promise.all(blocking.map((k) => loadResource(k)));
+      const secondary = TAB_SECONDARY_RESOURCES[tab] ?? [];
+      if (secondary.length > 0) {
+        Promise.all(secondary.map((k) => loadResource(k))).catch(() => undefined);
+      }
+    },
+    [loadResource],
+  );
+
+  const loadNotifications = useCallback(async () => {
     try {
-      const notifs = await teacherApi.getNotifications();
-      setNotifications(notifs);
+      setNotifications(await teacherApi.getNotifications());
     } catch {
-      // safe fallback
+      // The bell badge is not worth an error state.
     }
-  }, [loadResource]);
+  }, []);
 
   useEffect(() => {
     const onUnauthorized = () => {
@@ -250,7 +303,7 @@ function TeacherApp() {
     return () => window.removeEventListener('pp:unauthorized', onUnauthorized);
   }, []);
 
-  // Initialize teacher authentication and load core data
+  // Initialize teacher authentication and load the data the first tab needs.
   useEffect(() => {
     async function init() {
       setIsLoading(true);
@@ -262,11 +315,19 @@ function TeacherApp() {
         return;
       }
 
+      // Session verification and the first tab's data start together instead of in series.
+      // Every endpoint authorises the bearer token on its own, so a stale token simply makes
+      // these requests 401 — which `pp:unauthorized` already handles — while a valid one saves a
+      // full round trip (the dominant cost when the API lives on another continent).
+      const authPromise = cached('teacher:currentUser', 5 * 60 * 1000, () => teacherApi.getCurrentUser());
+      const dataPromise = loadTab(initialTabRef.current).catch(() => undefined);
+
       try {
-        const auth = await cached('teacher:currentUser', 5 * 60 * 1000, () => teacherApi.getCurrentUser());
+        const auth = await authPromise;
         if (auth && auth.user) {
           setUser(auth.user);
-          await loadUserData();
+          await dataPromise;
+          loadNotifications();
         } else {
           clearAuthToken();
           invalidate('teacher:currentUser');
@@ -285,7 +346,22 @@ function TeacherApp() {
     }
 
     init();
-  }, [loadUserData]);
+  }, [loadTab, loadNotifications]);
+
+  // Each tab fetches its own resources the first time it is opened. `cached` makes a return visit
+  // free, so switching tabs issues no request once a tab's data is in hand.
+  useEffect(() => {
+    if (!user) return;
+    loadTab(currentTab).catch(() => undefined);
+  }, [currentTab, user, loadTab]);
+
+  // The roster is fetched once a batch is actually selected, and refetched when the selection
+  // changes, so it never has to be chained onto the batches request.
+  useEffect(() => {
+    if (!user || !selectedBatchId) return;
+    if (!TABS_NEEDING_ROSTER.has(currentTab)) return;
+    loadResource('roster').catch(() => undefined);
+  }, [currentTab, selectedBatchId, user, loadResource]);
 
   const handleSelectBatch = async (batchId: string) => {
     setSelectedBatchId(batchId);
@@ -428,14 +504,12 @@ function TeacherApp() {
     }
     setUser(authenticatedUser);
     setShowAuthModal(false);
-    if (authenticatedUser.role === 'TUITION_OWNER') {
-      setCurrentTab('tuitionBranding');
-    } else {
-      setCurrentTab('dashboard');
-    }
+    const nextTab: NavTab = authenticatedUser.role === 'TUITION_OWNER' ? 'tuitionBranding' : 'dashboard';
+    setCurrentTab(nextTab);
     setIsLoading(true);
-    await loadUserData();
+    await loadTab(nextTab);
     setIsLoading(false);
+    loadNotifications();
   };
 
   const blockingErrors = (TAB_RESOURCES[currentTab] ?? []).filter((k) => loadErrors[k]);
@@ -661,6 +735,7 @@ function TeacherApp() {
             <AnnouncementsView
               batches={batches}
               announcements={announcements}
+              isOwner={user?.role === 'TUITION_OWNER' || user?.role === 'INSTITUTE_ADMIN'}
               onCreateAnnouncement={handleCreateAnnouncement}
               onDeleteAnnouncement={handleDeleteAnnouncement}
             />
@@ -779,7 +854,10 @@ function TeacherApp() {
         </button>
       </nav>
 
-      {/* Interactive Notification Drawer */}
+      {/* Interactive Notification Drawer. Mounted only while open: both this and the auth modal
+          already render null when closed, so gating the element keeps their chunks off the
+          initial load instead of fetching them for a drawer nobody opened. */}
+      {showNotifications && (
       <NotificationDrawer
         isOpen={showNotifications}
         onClose={() => setShowNotifications(false)}
@@ -802,13 +880,16 @@ function TeacherApp() {
         onEnablePush={subscribeToPush}
         isPushRegistering={isPushRegistering}
       />
+      )}
 
       {/* Authentication & Profile Modal */}
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        onAuthSuccess={handleAuthSuccess}
-      />
+      {showAuthModal && (
+        <AuthModal
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          onAuthSuccess={handleAuthSuccess}
+        />
+      )}
     </div>
   );
 }

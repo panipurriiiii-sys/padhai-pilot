@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { adminApi, type PlatformAnnouncementItem } from '../lib/api';
 import { DataList, Dialog, ErrorState, Field, LoadingBlock, PageHeader, Spin, StatusBadge, errMsg, fmtDate, useLoad, useToast } from '../components/ui';
 
@@ -35,6 +35,17 @@ export default function Announcements() {
       setErr(errMsg(e2));
     } finally {
       setBusy(false);
+    }
+  };
+
+  const deleteItem = async (id: string, title: string) => {
+    if (!window.confirm(`Delete announcement "${title}"?`)) return;
+    try {
+      await adminApi.deleteAnnouncement(id);
+      toast('Announcement deleted.');
+      reload();
+    } catch (e2) {
+      toast(errMsg(e2));
     }
   };
 
@@ -83,6 +94,19 @@ export default function Announcements() {
                   'Never'
                 );
               },
+            },
+            {
+              header: 'Actions',
+              cell: (a) => (
+                <button
+                  type="button"
+                  className="btn-danger !p-1.5"
+                  title="Delete announcement"
+                  onClick={() => deleteItem(a.id, a.title)}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              ),
             },
           ]}
         />

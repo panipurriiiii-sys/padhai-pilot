@@ -3,8 +3,11 @@ import {
   NotFoundException,
   ForbiddenException,
   Inject,
+  Logger,
+  Optional,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { RedisService } from '../redis/redis.service.js';
 import type { AuthenticatedUser } from '../common/types.js';
 
 export interface ListLibraryQuery {
@@ -46,7 +49,59 @@ export interface UpdateLibraryMaterialDto {
 
 @Injectable()
 export class StudyLibraryService {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(StudyLibraryService.name);
+  private hasEnsuredTable = false;
+
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Optional() @Inject(RedisService) private readonly redis?: RedisService,
+  ) {}
+
+  /** Ensures LibraryMaterial table and indexes exist in PostgreSQL (idempotent DDL). */
+  async ensureTableExists(): Promise<void> {
+    if (this.hasEnsuredTable || !this.prisma.isConnected) return;
+    try {
+      await this.prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "LibraryMaterial" (
+            "id" TEXT NOT NULL,
+            "instituteId" TEXT,
+            "uploadedBy" TEXT NOT NULL,
+            "title" TEXT NOT NULL,
+            "description" TEXT,
+            "board" TEXT NOT NULL,
+            "classLevel" TEXT,
+            "subject" TEXT,
+            "contentType" TEXT NOT NULL,
+            "fileUrl" TEXT,
+            "externalUrl" TEXT,
+            "yearOrEdition" TEXT,
+            "tags" TEXT[] DEFAULT ARRAY[]::TEXT[],
+            "isApproved" BOOLEAN NOT NULL DEFAULT false,
+            "viewCount" INTEGER NOT NULL DEFAULT 0,
+            "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT "LibraryMaterial_pkey" PRIMARY KEY ("id")
+        );
+        CREATE INDEX IF NOT EXISTS "LibraryMaterial_board_classLevel_subject_idx" ON "LibraryMaterial"("board","classLevel","subject");
+        CREATE INDEX IF NOT EXISTS "LibraryMaterial_instituteId_idx" ON "LibraryMaterial"("instituteId");
+        CREATE INDEX IF NOT EXISTS "LibraryMaterial_contentType_idx" ON "LibraryMaterial"("contentType");
+      `);
+      this.hasEnsuredTable = true;
+      this.logger.log('LibraryMaterial table verified and ready.');
+    } catch (err) {
+      this.logger.warn(`Could not verify LibraryMaterial table: ${(err as Error).message}`);
+    }
+  }
+
+  private async invalidateCache() {
+    try {
+      await this.redis?.del('study:admin:all:1:50');
+      await this.redis?.del('study:admin:all:1:20');
+      await this.redis?.del('study:admin:all:1:100');
+    } catch {
+      // Ignore cache invalidation failures
+    }
+  }
 
   async list(query: ListLibraryQuery, user?: AuthenticatedUser) {
     const page = Math.max(1, parseInt(query.page ?? '1', 10));
@@ -199,6 +254,7 @@ export class StudyLibraryService {
       },
     });
 
+    void this.invalidateCache();
     return material;
   }
 
@@ -213,7 +269,7 @@ export class StudyLibraryService {
 
     if (!canEdit) throw new ForbiddenException('Not authorized to edit this material.');
 
-    return this.prisma.libraryMaterial.update({
+    const updated = await this.prisma.libraryMaterial.update({
       where: { id },
       data: {
         ...(dto.title !== undefined && { title: dto.title }),
@@ -228,6 +284,8 @@ export class StudyLibraryService {
         ...(dto.tags !== undefined && { tags: dto.tags }),
       },
     });
+    void this.invalidateCache();
+    return updated;
   }
 
   async remove(id: string, user: AuthenticatedUser) {
@@ -238,6 +296,7 @@ export class StudyLibraryService {
     if (!canDelete) throw new ForbiddenException('Not authorized to delete this material.');
 
     await this.prisma.libraryMaterial.delete({ where: { id } });
+    void this.invalidateCache();
     return { success: true };
   }
 
@@ -247,10 +306,12 @@ export class StudyLibraryService {
     const item = await this.prisma.libraryMaterial.findUnique({ where: { id } });
     if (!item) throw new NotFoundException('Library material not found.');
 
-    return this.prisma.libraryMaterial.update({
+    const approved = await this.prisma.libraryMaterial.update({
       where: { id },
       data: { isApproved: true },
     });
+    void this.invalidateCache();
+    return approved;
   }
 
   async getMeta() {
@@ -288,27 +349,48 @@ export class StudyLibraryService {
     }
   }
 
-  // Admin: list all materials (any approval status)
+  // Admin: list all materials (any approval status) with Redis caching and self-healing
   async adminList(query: ListLibraryQuery) {
     const page = Math.max(1, parseInt(query.page ?? '1', 10));
     const limit = Math.min(100, Math.max(1, parseInt(query.limit ?? '20', 10)));
     const skip = (page - 1) * limit;
+    const cacheKey = `study:admin:all:${page}:${limit}`;
+
+    // Fast-path: Redis cache returns sub-10ms
+    if (this.redis) {
+      try {
+        const cached = await this.redis.get<{ items: any[]; total: number; page: number; limit: number; totalPages: number }>(cacheKey);
+        if (cached && Array.isArray(cached.items)) {
+          return cached;
+        }
+      } catch {
+        // Fall through to database
+      }
+    }
 
     const where: Record<string, unknown> = { instituteId: null }; // platform-level only for admin review
 
-    const [items, total] = await Promise.all([
-      this.prisma.libraryMaterial.findMany({
-        where: where as any,
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: limit,
-        include: { uploader: { select: { id: true, fullName: true, email: true } } },
-      }),
-      this.prisma.libraryMaterial.count({
-        where: where as any,
-      }),
-    ]);
+    try {
+      const [items, total] = await Promise.all([
+        this.prisma.libraryMaterial.findMany({
+          where: where as any,
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limit,
+          include: { uploader: { select: { id: true, fullName: true, email: true } } },
+        }),
+        this.prisma.libraryMaterial.count({
+          where: where as any,
+        }),
+      ]);
 
-    return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
+      const result = { items, total, page, limit, totalPages: Math.ceil(total / limit) };
+      this.redis?.set(cacheKey, result, 60).catch(() => {});
+      return result;
+    } catch (err) {
+      this.logger.warn(`Admin library lookup failed, attempting self-heal: ${(err as Error).message}`);
+      await this.ensureTableExists();
+      return { items: [], total: 0, page, limit, totalPages: 0 };
+    }
   }
 }

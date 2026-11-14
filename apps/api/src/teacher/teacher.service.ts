@@ -14,6 +14,13 @@ import { assertDb, optionalUrl, parseDate, toDateOnly } from '../common/db/db.js
 import type { AuthenticatedUser } from '../common/types.js';
 import { DOCUMENT_EXTENSIONS, validateMediaUrl } from '../common/security/media-url.js';
 
+/**
+ * Default ceiling for teacher list endpoints that previously had none, so a single large institute
+ * cannot produce an unbounded scan or response. Set well above any realistic institute's row
+ * count: these are not pagination, just a backstop.
+ */
+const LIST_LIMIT = 1000;
+
 @Injectable()
 export class TeacherService {
   private readonly access: AccessService;
@@ -381,6 +388,7 @@ export class TeacherService {
         _count: { select: { submissions: true } },
       },
       orderBy: { createdAt: 'desc' },
+      take: LIST_LIMIT,
     });
 
     return assignments.map((a) => ({
@@ -557,6 +565,7 @@ export class TeacherService {
         _count: { select: { attempts: true } },
       },
       orderBy: { createdAt: 'desc' },
+      take: LIST_LIMIT,
     });
 
     return tests.map((t) => ({
@@ -665,6 +674,10 @@ export class TeacherService {
         batch: { select: { name: true } },
       },
       orderBy: { weekNumber: 'asc' },
+      // Bounded so one large institute cannot turn this into an unbounded scan and response
+      // (docs/performance-and-cost.md: "every list endpoint needs a default limit"). The cap is
+      // far above any realistic institute's plan count, so no portal loses a row today.
+      take: LIST_LIMIT,
     });
 
     return plans.map((p) => ({

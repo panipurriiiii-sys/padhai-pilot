@@ -125,12 +125,30 @@ export function ErrorState({ error, onRetry }: { error: Error; onRetry?: () => v
   );
 }
 
-export function LoadingBlock({ rows = 3 }: { rows?: number }) {
+export function LoadingBlock({
+  rows = 3,
+  message = 'Loading platform records...',
+}: {
+  rows?: number;
+  message?: string;
+}) {
   return (
-    <div className="space-y-3" aria-busy="true" aria-label="Loading">
-      {Array.from({ length: rows }).map((_, i) => (
-        <div key={i} className="skeleton h-16" />
-      ))}
+    <div className="space-y-4" aria-busy="true" aria-label={message}>
+      <div className="flex items-center gap-2.5 text-xs text-ink-muted font-medium mb-1">
+        <Spin className="w-4 h-4 text-brand-primary" />
+        <span>{message}</span>
+      </div>
+      <div className="space-y-3">
+        {Array.from({ length: rows }).map((_, i) => (
+          <div key={i} className="skeleton h-16 w-full flex items-center justify-between px-5">
+            <div className="space-y-2 w-1/3">
+              <div className="h-3.5 bg-ink-primary/10 rounded w-3/4" />
+              <div className="h-2.5 bg-ink-muted/10 rounded w-1/2" />
+            </div>
+            <div className="h-6 w-16 bg-ink-primary/10 rounded-full" />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -139,8 +157,8 @@ export function Empty({ children }: { children: React.ReactNode }) {
   return <div className="empty-state py-10 text-center text-sm text-ink-muted font-primary">{children}</div>;
 }
 
-export function Spin() {
-  return <Loader2 className="w-3.5 h-3.5 animate-spin" />;
+export function Spin({ className = 'w-3.5 h-3.5' }: { className?: string } = {}) {
+  return <Loader2 className={`animate-spin ${className}`} />;
 }
 
 const BADGE: Record<string, string> = {

@@ -106,7 +106,7 @@ export default function Theme() {
       {overview.error ? (
         <ErrorState error={overview.error} onRetry={overview.reload} />
       ) : !overview.data ? (
-        <LoadingBlock />
+        <LoadingBlock message="Connecting to theme configuration engine..." />
       ) : (
         <>
           <p className="text-xs font-primary text-ink-muted mb-4">

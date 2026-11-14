@@ -341,6 +341,9 @@ class AdminApiClient {
   }) {
     return this.send<PlatformAnnouncementItem>('POST', '/admin/announcements', data);
   }
+  deleteAnnouncement(id: string) {
+    return this.send<{ success: boolean; message: string }>('DELETE', `/admin/announcements/${id}`);
+  }
 
   // Theme
   getAdminThemeOverview() {
