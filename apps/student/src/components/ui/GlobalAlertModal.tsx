@@ -54,18 +54,25 @@ export function GlobalAlertModal() {
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/70 backdrop-blur-md transition-opacity duration-200 animate-in fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md transition-opacity duration-200 animate-in fade-in"
     >
       {/* Backdrop overlay */}
       <div className="absolute inset-0" onClick={isConfirm ? undefined : handleCancel} />
 
-      {/* Luxury Modal Panel */}
-      <div className="relative w-full max-w-md bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl p-6 shadow-2xl z-10 flex flex-col items-center text-center animate-in zoom-in-95 duration-200">
+      {/* Luxury Modal Panel using Design System CSS Variables */}
+      <div
+        className="relative w-full max-w-md rounded-2xl p-6 shadow-2xl z-10 flex flex-col items-center text-center animate-in zoom-in-95 duration-200 border"
+        style={{
+          backgroundColor: 'var(--bg-paper)',
+          borderColor: 'var(--border-paper)',
+          boxShadow: '0 20px 40px -15px rgba(0, 0, 0, 0.4)',
+        }}
+      >
         {/* Close cross button */}
         <button
           type="button"
           onClick={handleCancel}
-          className="absolute top-4 right-4 p-1.5 text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
+          className="absolute top-4 right-4 p-1.5 rounded-lg transition-colors text-[var(--ink-muted)] hover:text-[var(--ink-primary)] hover:bg-[var(--bg-surface-subtle)]"
           aria-label="Close dialog"
         >
           <X className="w-4 h-4" />
@@ -79,13 +86,25 @@ export function GlobalAlertModal() {
         </div>
 
         {/* Playfair Display Title */}
-        <h3 className="font-serif text-xl font-bold text-stone-900 dark:text-stone-100 mb-2 tracking-tight">
+        <h3
+          className="text-xl font-bold mb-2 tracking-tight"
+          style={{
+            fontFamily: 'var(--font-display)',
+            color: 'var(--ink-primary)',
+          }}
+        >
           {activeAlert.title || cfg.defaultTitle}
         </h3>
 
         {/* Inter Body Text */}
         {Boolean(activeAlert.message) && (
-          <p className="text-sm leading-relaxed text-stone-600 dark:text-stone-300 font-sans mb-6 max-w-sm">
+          <p
+            className="text-sm leading-relaxed mb-6 max-w-sm"
+            style={{
+              fontFamily: 'var(--font-primary)',
+              color: 'var(--ink-secondary)',
+            }}
+          >
             {activeAlert.message}
           </p>
         )}
@@ -96,7 +115,12 @@ export function GlobalAlertModal() {
             <button
               type="button"
               onClick={handleCancel}
-              className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl border border-stone-300 dark:border-stone-700 text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
+              className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl border transition-colors"
+              style={{
+                borderColor: 'var(--border-paper)',
+                color: 'var(--ink-secondary)',
+                backgroundColor: 'var(--bg-surface-subtle)',
+              }}
             >
               {activeAlert.cancelText || 'Cancel'}
             </button>
@@ -108,7 +132,7 @@ export function GlobalAlertModal() {
             className={`flex-1 px-4 py-2.5 text-sm font-bold text-white rounded-xl shadow-md transition-all active:scale-[0.98] ${
               activeAlert.isDestructive
                 ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-600/20'
-                : 'bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-700 shadow-emerald-700/20'
+                : 'btn-primary'
             }`}
           >
             {activeAlert.confirmText || (isConfirm ? 'Confirm' : 'OK')}

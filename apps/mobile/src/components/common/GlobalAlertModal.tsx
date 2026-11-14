@@ -73,7 +73,7 @@ export const GlobalAlertModal: React.FC = () => {
       onRequestClose={handleCancel}
       statusBarTranslucent
     >
-      <View style={styles.overlay}>
+      <View style={[styles.overlay, { backgroundColor: colors.scrim || 'rgba(0,0,0,0.6)' }]}>
         <Pressable
           style={StyleSheet.absoluteFill}
           onPress={isConfirm ? undefined : handleCancel}
@@ -83,8 +83,8 @@ export const GlobalAlertModal: React.FC = () => {
           style={[
             styles.card,
             {
-              backgroundColor: isDark ? '#141E1C' : '#FFFFFF',
-              borderColor: isDark ? '#2D3748' : '#E2E8F0',
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
               transform: [{ scale: scaleAnim }],
               opacity: opacityAnim,
             },
@@ -137,12 +137,10 @@ export const GlobalAlertModal: React.FC = () => {
                   styles.button,
                   styles.cancelButton,
                   {
-                    borderColor: isDark ? '#374151' : '#CBD5E1',
+                    borderColor: colors.borderStrong,
                     backgroundColor: pressed
-                      ? isDark
-                        ? '#1F2937'
-                        : '#F1F5F9'
-                      : 'transparent',
+                      ? colors.surfaceElevated
+                      : colors.surfaceSubtle,
                   },
                 ]}
               >
@@ -167,10 +165,8 @@ export const GlobalAlertModal: React.FC = () => {
                 styles.confirmButton,
                 {
                   backgroundColor: activeAlert.isDestructive
-                    ? colors.danger
-                    : isDark
-                    ? '#0D9488'
-                    : '#0F766E',
+                    ? (colors.errorSolid || '#F43F5E')
+                    : colors.primary,
                   opacity: pressed ? 0.88 : 1,
                 },
               ]}
@@ -179,6 +175,7 @@ export const GlobalAlertModal: React.FC = () => {
                 style={[
                   styles.confirmButtonText,
                   {
+                    color: colors.primaryContrast || '#FFFFFF',
                     fontFamily: typography.fonts.ui,
                   },
                 ]}
@@ -196,7 +193,6 @@ export const GlobalAlertModal: React.FC = () => {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(5, 15, 14, 0.72)',
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 24,
@@ -261,7 +257,6 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   confirmButtonText: {
-    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
   },
