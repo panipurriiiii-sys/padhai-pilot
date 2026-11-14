@@ -15,3 +15,5 @@ export { DashboardSkeleton, TableSkeleton, CardGridSkeleton, OfflineBanner } fro
 export { Tilt3D } from './components/Tilt3D';
 export { LuxuryIcon } from './components/LuxuryIcon';
 export type { LuxuryIconProps, LuxuryTone, LuxurySize, LuxuryVariant } from './components/LuxuryIcon';
+export { CommandPalette } from './components/CommandPalette';
+export type { CommandItem, CommandPaletteProps } from './components/CommandPalette';

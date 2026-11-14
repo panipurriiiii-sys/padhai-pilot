@@ -60,6 +60,16 @@ export function BulkMarksEntryView({
   const [selectedBatchId, setSelectedBatchId] = useState<string>(
     initialBatchId || (batches.length > 0 ? batches[0].id : ''),
   );
+  const isDirtyRef = useRef(false);
+
+  // Synchronize batch selection with parent prop
+  useEffect(() => {
+    if (initialBatchId && initialBatchId !== selectedBatchId) {
+      setSelectedBatchId(initialBatchId);
+      isDirtyRef.current = false;
+    }
+  }, [initialBatchId]);
+
   const [assessmentList, setAssessmentList] = useState<ClassroomAssessment[]>([]);
   const [currentAssessmentId, setCurrentAssessmentId] = useState<string>('');
   const [assessmentTitle, setAssessmentTitle] = useState('');
@@ -98,8 +108,10 @@ export function BulkMarksEntryView({
   // Ref for keyboard navigation between obtained marks inputs
   const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
 
-  // Load assessments and students for selected batch
+  // Load assessments and students for selected batch safely without race conditions
   useEffect(() => {
+    let active = true;
+
     async function loadBatchData() {
       if (!selectedBatchId) return;
       setIsLoading(true);
@@ -109,6 +121,7 @@ export function BulkMarksEntryView({
           teacherApi.getBatchRoster(selectedBatchId),
         ]);
 
+        if (!active) return;
         setAssessmentList(assessments);
 
         if (assessments.length > 0) {
@@ -133,7 +146,9 @@ export function BulkMarksEntryView({
 
           // Load details
           const details = await teacherApi.getAssessmentDetails(first.id);
+          if (!active) return;
           setRoster(details.roster);
+          isDirtyRef.current = false;
         } else {
           // Initialize fresh roster from students
           const curB = batches.find((b) => b.id === selectedBatchId);
@@ -155,19 +170,25 @@ export function BulkMarksEntryView({
             isPublished: false,
             isEligible: true,
           }));
+          if (!active) return;
           setRoster(initialTable);
           setCurrentAssessmentId('');
           setAssessmentStatus('DRAFT');
+          isDirtyRef.current = false;
         }
       } catch (err) {
-        console.error('Failed to load batch assessment data:', err);
+        if (active) console.error('Failed to load batch assessment data:', err);
       } finally {
-        setIsLoading(false);
+        if (active) setIsLoading(false);
       }
     }
 
     loadBatchData();
-  }, [selectedBatchId]);
+
+    return () => {
+      active = false;
+    };
+  }, [selectedBatchId, batches]);
 
   // Handle switching assessment selection
   const handleSelectExistingAssessment = async (asmId: string) => {

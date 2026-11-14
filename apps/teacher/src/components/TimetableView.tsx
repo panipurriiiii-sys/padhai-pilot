@@ -38,6 +38,14 @@ export function TimetableView({ batches }: { batches: BatchSummary[] }) {
 
   // Timetable photo upload state
   const [photoBatchId, setPhotoBatchId] = useState(batches[0]?.id ?? '');
+
+  // Synchronize initial batch for photo schedule when batches load asynchronously
+  useEffect(() => {
+    if (!photoBatchId && batches.length > 0) {
+      setPhotoBatchId(batches[0].id);
+    }
+  }, [batches, photoBatchId]);
+
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [previewModalUrl, setPreviewModalUrl] = useState<string | null>(null);

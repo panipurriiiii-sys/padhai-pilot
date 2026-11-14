@@ -108,6 +108,8 @@ import {
   OfflineBanner,
   Pagination,
   usePagination,
+  CommandPalette,
+  type CommandItem,
 } from '@padhai-pilot/ui';
 import { StudentFeesPanel, StudentLeavesPanel } from '../components/StudentFinance';
 // FrozenAccountView and LibraryView are dynamically imported above
@@ -487,6 +489,21 @@ function StudentPortal() {
   }, [activeTab, student]);
 
   const blockingErrors = (TAB_RESOURCES[activeTab] ?? []).filter((k) => loadErrors[k]);
+
+  const commandItems: CommandItem[] = useMemo(() => [
+    { id: 'std-overview', title: 'Academic Overview', category: 'Navigation', tone: 'emerald', onSelect: () => setActiveTab('OVERVIEW'), keywords: ['home', 'dashboard'] },
+    { id: 'std-attendance', title: 'My Attendance Record', category: 'Navigation', tone: 'gold', onSelect: () => setActiveTab('ATTENDANCE'), keywords: ['present', 'absent', 'percentage'] },
+    { id: 'std-assignments', title: 'Homework & Assignments', category: 'Navigation', tone: 'sapphire', onSelect: () => setActiveTab('ASSIGNMENTS'), keywords: ['homework', 'due', 'submit'] },
+    { id: 'std-tests', title: 'Online CBT Tests & Quizzes', category: 'Navigation', tone: 'ruby', onSelect: () => setActiveTab('TESTS'), keywords: ['exam', 'test', 'quiz'] },
+    { id: 'std-results', title: 'Assessment Results & Scorecard', category: 'Navigation', tone: 'emerald', onSelect: () => setActiveTab('RESULTS'), keywords: ['marks', 'grades', 'ranks'] },
+    { id: 'std-fees', title: 'Fee Status & Receipts', category: 'Navigation', tone: 'gold', onSelect: () => setActiveTab('FEES'), keywords: ['dues', 'payments', 'invoice'] },
+    { id: 'std-materials', title: 'Study Notes & Materials', category: 'Navigation', tone: 'sapphire', onSelect: () => setActiveTab('MATERIALS'), keywords: ['pdf', 'notes', 'docs'] },
+    { id: 'std-library', title: 'Digital Resource Library', category: 'Navigation', tone: 'sapphire', onSelect: () => setActiveTab('LIBRARY'), keywords: ['ncert', 'books', 'pyq'] },
+    { id: 'std-timetable', title: 'Weekly Class Routine', category: 'Navigation', tone: 'slate', onSelect: () => setActiveTab('TIMETABLE'), keywords: ['schedule', 'lectures'] },
+    { id: 'std-queries', title: 'Ask Faculty a Doubt', category: 'Quick Action', tone: 'amethyst', onSelect: () => { setActiveTab('QUERIES'); setShowQueryModal(true); }, keywords: ['doubt', 'question', 'help'] },
+    { id: 'std-planner', title: 'Personal Study Planner', category: 'Navigation', tone: 'emerald', onSelect: () => setActiveTab('PLANNER'), keywords: ['tasks', 'todo', 'goals'] },
+    { id: 'std-leaves', title: 'Apply for Student Leave', category: 'Quick Action', tone: 'gold', onSelect: () => setActiveTab('LEAVES'), keywords: ['leave', 'sick', 'holiday'] },
+  ], [setActiveTab]);
 
   // Authentication Handlers
   const handleSignIn = async (e: React.FormEvent) => {
@@ -1115,6 +1132,7 @@ function StudentPortal() {
 
   return (
     <div className="min-h-screen bg-[var(--bg-desk)] text-[var(--ink-primary)] flex flex-col font-['Raleway']">
+      <CommandPalette items={commandItems} />
       <OfflineBanner />
       {/* TOP HEADER */}
       <header className="sticky top-0 z-40 bg-[var(--bg-paper)]/90 backdrop-blur-md border-b border-[var(--border-paper)]">

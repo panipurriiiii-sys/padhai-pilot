@@ -28,13 +28,13 @@ export const FeesScreen: React.FC = () => {
     >
       <QueryBoundary
         query={query}
-        isEmpty={(f) => f.fees.length === 0}
+        isEmpty={(f) => !f?.fees || f.fees.length === 0}
         emptyTitle="No fee records"
         emptyDescription="Your teacher has not set a fee for your batch yet."
       >
         {(f) => (
           <>
-            {f.overdueAmount > 0 ? (
+            {f?.overdueAmount && f.overdueAmount > 0 ? (
               <Card style={{ marginBottom: spacing.md, borderColor: colors.error }}>
                 <Subtitle color={colors.error}>{`Overdue: ${formatInr(f.overdueAmount)}`}</Subtitle>
                 <Caption>Please contact your teacher to clear the balance.</Caption>
@@ -43,20 +43,20 @@ export const FeesScreen: React.FC = () => {
             <View style={styles.grid}>
               <Card style={styles.kpi}>
                 <Caption>Total</Caption>
-                <StatValue>{formatInr(f.totalFees)}</StatValue>
+                <StatValue>{formatInr(f?.totalFees ?? 0)}</StatValue>
               </Card>
               <Card style={styles.kpi}>
                 <Caption>Paid</Caption>
-                <StatValue color={colors.success}>{formatInr(f.paidAmount)}</StatValue>
+                <StatValue color={colors.success}>{formatInr(f?.paidAmount ?? 0)}</StatValue>
               </Card>
               <Card style={styles.kpi}>
                 <Caption>Balance due</Caption>
-                <StatValue color={f.balanceDue > 0 ? colors.warning : colors.success}>{formatInr(f.balanceDue)}</StatValue>
+                <StatValue color={(f?.balanceDue ?? 0) > 0 ? colors.warning : colors.success}>{formatInr(f?.balanceDue ?? 0)}</StatValue>
               </Card>
             </View>
 
             <SectionTitle>Fees</SectionTitle>
-            {f.fees.map((fee) => (
+            {(f?.fees ?? []).map((fee) => (
               <Card key={fee.id} style={{ marginBottom: spacing.sm }}>
                 <View style={styles.row}>
                   <Subtitle style={{ flex: 1 }}>{fee.feeTitle}</Subtitle>
@@ -68,8 +68,8 @@ export const FeesScreen: React.FC = () => {
             ))}
 
             <SectionTitle>Receipts</SectionTitle>
-            {f.receipts.length === 0 ? <Caption>No payments recorded yet.</Caption> : null}
-            {f.receipts.map((r) => (
+            {(!f?.receipts || f.receipts.length === 0) ? <Caption>No payments recorded yet.</Caption> : null}
+            {(f?.receipts ?? []).map((r) => (
               <Card key={r.id} style={{ marginBottom: spacing.sm }}>
                 <View style={styles.row}>
                   <Subtitle style={{ flex: 1 }}>{r.receiptNumber}</Subtitle>

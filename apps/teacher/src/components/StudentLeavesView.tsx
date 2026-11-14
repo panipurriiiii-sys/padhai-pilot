@@ -5,6 +5,7 @@ import { CalendarOff, CheckCircle2 } from 'lucide-react';
 import type { StudentLeaveItem } from '@padhai-pilot/shared';
 import { teacherApi } from '../lib/api';
 import { LoadError } from './LoadError';
+import { Modal, Field } from './InvitationsView';
 
 const STYLE: Record<StudentLeaveItem['status'], string> = {
   PENDING: 'bg-amber-50 text-amber-800 border-amber-200',
@@ -20,6 +21,8 @@ export function StudentLeavesView() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<StudentLeaveItem | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -37,12 +40,10 @@ export function StudentLeavesView() {
     load();
   }, [load]);
 
-  const review = async (l: StudentLeaveItem, status: 'APPROVED' | 'REJECTED') => {
-    const remarks = status === 'REJECTED' ? window.prompt('Reason for rejecting (shown to the student):') ?? undefined : undefined;
-    if (status === 'REJECTED' && remarks === undefined) return;
+  const review = async (l: StudentLeaveItem, status: 'APPROVED' | 'REJECTED', customRemarks?: string) => {
     setBusy(l.id);
     try {
-      await teacherApi.reviewStudentLeave(l.id, { status, remarks: remarks?.trim() || undefined });
+      await teacherApi.reviewStudentLeave(l.id, { status, remarks: customRemarks?.trim() || undefined });
       await load();
       setNotice({ text: `Leave ${status.toLowerCase()}.` });
     } catch (e) {
@@ -53,19 +54,35 @@ export function StudentLeavesView() {
     }
   };
 
+  const handleConfirmReject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rejectTarget || !rejectReason.trim()) return;
+    const target = rejectTarget;
+    const reason = rejectReason;
+    setRejectTarget(null);
+    setRejectReason('');
+    await review(target, 'REJECTED', reason);
+  };
+
   const approveAll = async () => {
     const pending = items.filter((l) => l.status === 'PENDING');
     if (pending.length === 0) return;
     if (!window.confirm(`Approve all ${pending.length} pending student leave requests?`)) return;
     setBusy('ALL');
     try {
-      await Promise.all(
+      const results = await Promise.allSettled(
         pending.map((l) =>
           teacherApi.reviewStudentLeave(l.id, { status: 'APPROVED', remarks: 'Bulk approved' }),
         ),
       );
+      const succeeded = results.filter((r) => r.status === 'fulfilled').length;
+      const failed = results.filter((r) => r.status === 'rejected').length;
       await load();
-      setNotice({ text: `Approved all ${pending.length} leave requests successfully.` });
+      if (failed > 0) {
+        setNotice({ text: `Approved ${succeeded} requests; ${failed} failed.`, error: true });
+      } else {
+        setNotice({ text: `Approved all ${succeeded} leave requests successfully.` });
+      }
     } catch (e) {
       setNotice({ text: e instanceof Error ? e.message : 'Could not approve all requests.', error: true });
     } finally {
@@ -132,13 +149,61 @@ export function StudentLeavesView() {
                 {l.status === 'PENDING' && (
                   <>
                     <button type="button" disabled={busy !== null} className="btn-primary text-xs px-3 py-1.5" onClick={() => review(l, 'APPROVED')}>Approve</button>
-                    <button type="button" disabled={busy !== null} className="text-xs px-3 py-1.5 rounded-lg border border-rose-200 text-rose-700 hover:bg-rose-50" onClick={() => review(l, 'REJECTED')}>Reject</button>
+                    <button
+                      type="button"
+                      disabled={busy !== null}
+                      className="text-xs px-3 py-1.5 rounded-lg border border-rose-200 text-rose-700 hover:bg-rose-50"
+                      onClick={() => {
+                        setRejectTarget(l);
+                        setRejectReason('');
+                      }}
+                    >
+                      Reject
+                    </button>
                   </>
                 )}
               </div>
             </li>
           ))}
         </ul>
+      )}
+
+      {rejectTarget && (
+        <Modal
+          title={`Reject Leave: ${rejectTarget.studentName}`}
+          onClose={() => setRejectTarget(null)}
+        >
+          <form onSubmit={handleConfirmReject} className="space-y-4">
+            <p className="text-xs text-[var(--ink-secondary)]">
+              Specify the reason for rejection. This reason will be recorded in the audit trail and visible to the student.
+            </p>
+            <Field label="Rejection Reason" required>
+              <textarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="e.g. Incomplete test attendance requirements or unverified leave dates"
+                className="input-field text-xs min-h-[80px]"
+                required
+              />
+            </Field>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                className="btn-ghost text-xs px-4 py-2"
+                onClick={() => setRejectTarget(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={!rejectReason.trim()}
+                className="text-xs font-bold px-4 py-2 rounded-lg bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-50"
+              >
+                Confirm Rejection
+              </button>
+            </div>
+          </form>
+        </Modal>
       )}
     </div>
   );

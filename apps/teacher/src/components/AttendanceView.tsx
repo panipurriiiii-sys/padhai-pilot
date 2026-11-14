@@ -67,6 +67,17 @@ export function AttendanceView({
     new Date().toISOString().split('T')[0],
   );
   const [records, setRecords] = useState<AttendanceRecordState[]>([]);
+  const isDirtyRef = useRef(false);
+  const prevBatchDateRef = useRef<string>('');
+
+  // Synchronize with external selectedBatchId prop
+  useEffect(() => {
+    if (selectedBatchId && selectedBatchId !== currentBatchId) {
+      setCurrentBatchId(selectedBatchId);
+      isDirtyRef.current = false;
+    }
+  }, [selectedBatchId]);
+
   const [isRecorded, setIsRecorded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -90,11 +101,18 @@ export function AttendanceView({
   // Row input references for keyboard accessibility
   const rowRefs = useRef<Map<string, HTMLTableRowElement>>(new Map());
 
-  // Load session data
+  // Load session data safely
   useEffect(() => {
     if (!currentBatchId) return;
 
     let mounted = true;
+    const currentKey = `${currentBatchId}_${selectedDate}`;
+    const targetChanged = prevBatchDateRef.current !== currentKey;
+
+    if (!targetChanged && isDirtyRef.current) {
+      return;
+    }
+
     setIsLoading(true);
     setSaveSuccessMsg('');
 
@@ -112,9 +130,11 @@ export function AttendanceView({
             recentRate: r.recentRate ?? 0,
           })),
         );
+        prevBatchDateRef.current = currentKey;
+        isDirtyRef.current = false;
       })
       .catch((err) => {
-        console.error('Failed to load attendance session:', err);
+        if (mounted) console.error('Failed to load attendance session:', err);
       })
       .finally(() => {
         if (mounted) setIsLoading(false);
@@ -170,6 +190,7 @@ export function AttendanceView({
       return;
     }
 
+    isDirtyRef.current = true;
     setRecords((prev) =>
       prev.map((r) => (r.studentId === studentId ? { ...r, status: newStatus } : r)),
     );
@@ -179,6 +200,7 @@ export function AttendanceView({
   const confirmCorrection = () => {
     if (!correctionTarget || !correctionReason.trim()) return;
 
+    isDirtyRef.current = true;
     setRecords((prev) =>
       prev.map((r) =>
         r.studentId === correctionTarget.studentId
@@ -197,6 +219,7 @@ export function AttendanceView({
 
   // Bulk set status for all students in list
   const handleBulkSet = (status: AttendanceStatus) => {
+    isDirtyRef.current = true;
     setRecords((prev) => prev.map((r) => ({ ...r, status })));
   };
 
@@ -257,6 +280,7 @@ export function AttendanceView({
         })),
       });
       setSaveSuccessMsg('Attendance draft saved successfully to local register.');
+      isDirtyRef.current = false;
       setTimeout(() => setSaveSuccessMsg(''), 4000);
     } catch (err) {
       console.error('Save error:', err);
@@ -283,6 +307,7 @@ export function AttendanceView({
       });
       setIsRecorded(true);
       setShowFinalizeModal(false);
+      isDirtyRef.current = false;
       setSaveSuccessMsg('Session officially verified and sealed. Audit log updated.');
       setTimeout(() => setSaveSuccessMsg(''), 5000);
     } catch (err) {

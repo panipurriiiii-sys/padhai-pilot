@@ -74,6 +74,17 @@ export function DailyTeachingDiaryView({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successToast, setSuccessToast] = useState<string | null>(null);
 
+  // Sync initial batch when batches arrive asynchronously
+  useEffect(() => {
+    if (!formData.batchId && batches.length > 0) {
+      setFormData((prev) => ({
+        ...prev,
+        batchId: batches[0].id,
+        subject: prev.subject || batches[0].subject || '',
+      }));
+    }
+  }, [batches, formData.batchId]);
+
   useEffect(() => {
     loadData();
   }, [selectedBatchFilter]);

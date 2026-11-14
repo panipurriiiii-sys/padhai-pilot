@@ -13,7 +13,7 @@ async function bootstrap() {
   app.use(express.urlencoded({ limit: '35mb', extended: true }));
   app.use(cookieParser());
   app.enableCors(corsOptions);
-  app.useGlobalPipes(new ValidationPipe({ transform: true }));
+  app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
   app.setGlobalPrefix('api');
   const port = process.env.PORT ?? 3001;
   await app.listen(port);

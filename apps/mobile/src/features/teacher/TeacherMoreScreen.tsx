@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Alert, View, Text, StyleSheet, Image } from 'react-native';
 import { Screen, SectionTitle } from '../../components/common/Screen';
 import { QueryBoundary } from '../../components/common/QueryBoundary';
@@ -189,10 +189,17 @@ const Homework: React.FC = () => {
   const [due, setDue] = useState(todayIso());
   const [attachment, setAttachment] = useState('');
   const attachmentOk = attachment.trim() === '' || /^https:\/\/\S+$/i.test(attachment.trim());
+  const prevBatchIdRef = useRef(batchId);
   useEffect(() => {
     if (batchId) {
       const b = batches.data?.find((x) => x.id === batchId);
-      if (b?.subject && !subject) setSubject(b.subject);
+      const isBatchChanged = prevBatchIdRef.current !== batchId;
+      if (isBatchChanged) {
+        if (b?.subject) setSubject(b.subject);
+      } else if (b?.subject && !subject) {
+        setSubject(b.subject);
+      }
+      prevBatchIdRef.current = batchId;
     }
   }, [batchId, batches.data]);
   const ready = attachmentOk && !!batchId && title.trim() && subject.trim() && instructions.trim() && /^\d{4}-\d{2}-\d{2}$/.test(due);
@@ -308,10 +315,17 @@ const LessonPlans: React.FC = () => {
   const q = useLessonPlans();
   const { create, toggle } = useLessonPlanMutations();
 
+  const prevBatchIdRef = useRef(batchId);
   useEffect(() => {
     if (batchId) {
       const b = batches.data?.find((x) => x.id === batchId);
-      if (b?.subject && !subject) setSubject(b.subject);
+      const isBatchChanged = prevBatchIdRef.current !== batchId;
+      if (isBatchChanged) {
+        if (b?.subject) setSubject(b.subject);
+      } else if (b?.subject && !subject) {
+        setSubject(b.subject);
+      }
+      prevBatchIdRef.current = batchId;
     }
   }, [batchId, batches.data]);
   const valid = !!batchId && title.trim() && topic.trim() && subject.trim() && Number(weekNumber) > 0;
@@ -456,13 +470,23 @@ const Timetable: React.FC = () => {
     ? selectedBatch.schedule.replace('TIMETABLE_IMAGE:', '')
     : (selectedBatch?.schedule?.startsWith('http') ? selectedBatch.schedule : null);
 
+  const prevBatchIdRef = useRef(batchId);
   useEffect(() => {
     if (batchId) {
       const b = batches.data?.find((x) => x.id === batchId);
-      if (b?.subject && !subject) setSubject(b.subject);
-      if (b?.room && !room) setRoom(b.room);
+      const isBatchChanged = prevBatchIdRef.current !== batchId;
+      if (isBatchChanged) {
+        if (!editId) {
+          if (b?.subject) setSubject(b.subject);
+          if (b?.room) setRoom(b.room);
+        }
+      } else {
+        if (b?.subject && !subject) setSubject(b.subject);
+        if (b?.room && !room) setRoom(b.room);
+      }
+      prevBatchIdRef.current = batchId;
     }
-  }, [batchId, batches.data]);
+  }, [batchId, batches.data, editId]);
 
   const toggleDay = (d: WeekDay) => {
     setSelectedDays((prev) => (prev.includes(d) ? (prev.length > 1 ? prev.filter((x) => x !== d) : prev) : [...prev, d]));
@@ -562,7 +586,18 @@ const Timetable: React.FC = () => {
 
   return (
     <>
-      <BatchPicker value={batchId} onChange={setBatchId} />
+      <BatchPicker
+        value={batchId}
+        onChange={(id) => {
+          setEditId(null);
+          setBatchId(id);
+          const b = batches.data?.find((x) => x.id === id);
+          if (b?.subject) setSubject(b.subject);
+          else setSubject('');
+          if (b?.room) setRoom(b.room);
+          else setRoom('');
+        }}
+      />
 
       {batchId ? (
         <Card style={{ marginBottom: 16 }}>

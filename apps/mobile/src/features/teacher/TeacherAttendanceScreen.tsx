@@ -88,7 +88,7 @@ export const TeacherAttendanceScreen: React.FC = () => {
       ) : (
         <QueryBoundary
           query={roster}
-          isEmpty={(r) => r.students.length === 0}
+          isEmpty={(r) => !r?.students || r.students.length === 0}
           emptyTitle="No students in this batch"
           emptyDescription="Students appear here after they join with an invitation code."
         >
@@ -98,9 +98,9 @@ export const TeacherAttendanceScreen: React.FC = () => {
                 <Button title="All present" variant="subtle" size="sm" onPress={() => setAll('PRESENT')} />
                 <Button title="All absent" variant="secondary" size="sm" onPress={() => setAll('ABSENT')} />
               </View>
-              <SectionHeader title={`Roster · ${r.students.length}`} icon="users" />
+              <SectionHeader title={`Roster · ${r?.students?.length ?? 0}`} icon="users" />
               <Text style={{ fontFamily: typography.fonts.data, fontSize: 11, color: colors.textMuted, marginBottom: 10 }}>{summary}</Text>
-              {r.students.map((s) => {
+              {(r?.students ?? []).map((s) => {
                 const status = marks[s.id] ?? 'PRESENT';
                 return (
                   <Card key={s.id} style={{ marginBottom: 8, padding: 12 }}>

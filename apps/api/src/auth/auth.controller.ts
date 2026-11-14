@@ -15,6 +15,7 @@ import {
 import type { Response, Request } from 'express';
 import { AuthService } from './auth.service.js';
 import { AuthGuard } from '../common/guards/auth.guard.js';
+import { RateLimitGuard, RateLimit } from '../common/guards/rate-limit.guard.js';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import type { AuthenticatedUser } from '../common/types.js';
 import { authCookieOptions, isDemoMode } from '../common/security/runtime.js';
@@ -35,6 +36,8 @@ export class AuthController {
   }
 
   @Post('login')
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ points: 20, durationSeconds: 60, keyPrefix: 'rl:login' })
   @HttpCode(HttpStatus.OK)
   async login(
     @Body() body: { email?: string; password?: string },
@@ -83,12 +86,16 @@ export class AuthController {
   }
 
   @Post('forgot-password')
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ points: 5, durationSeconds: 60, keyPrefix: 'rl:forgot' })
   @HttpCode(HttpStatus.OK)
   async forgotPassword(@Body('email') email: string) {
     return this.authService.requestPasswordReset(email);
   }
 
   @Post('reset-password')
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ points: 5, durationSeconds: 60, keyPrefix: 'rl:reset' })
   @HttpCode(HttpStatus.OK)
   async resetPassword(
     @Body('token') token: string,

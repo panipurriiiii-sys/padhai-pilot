@@ -262,14 +262,14 @@ export const TeacherClassesScreen: React.FC = () => {
         ) : (
           <QueryBoundary
             query={roster}
-            isEmpty={(r) => r.students.length === 0}
+            isEmpty={(r) => !r?.students || r.students.length === 0}
             emptyTitle="No students yet"
             emptyDescription="Share an enrolment code so students can join this batch."
           >
             {(r) => (
               <>
-                <Caption style={{ marginBottom: spacing.sm }}>{`${r.students.length} students`}</Caption>
-                {r.students.map(renderStudent)}
+                <Caption style={{ marginBottom: spacing.sm }}>{`${r?.students?.length ?? 0} students`}</Caption>
+                {(r?.students ?? []).map(renderStudent)}
               </>
             )}
           </QueryBoundary>

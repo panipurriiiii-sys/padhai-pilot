@@ -117,7 +117,7 @@ import type {
   InAppNotification,
 } from '@padhai-pilot/shared';
 import { Loader2, Menu, LayoutDashboard, NotebookPen, CalendarCheck, Users, Bell } from 'lucide-react';
-import { MotionProvider, ToastProvider, DashboardSkeleton, OfflineBanner } from '@padhai-pilot/ui';
+import { MotionProvider, ToastProvider, DashboardSkeleton, OfflineBanner, CommandPalette, type CommandItem } from '@padhai-pilot/ui';
 
 type ResourceKey = 'dashboard' | 'batches' | 'invitations' | 'assignments' | 'tests' | 'lessonPlans' | 'timetable' | 'announcements' | 'reports' | 'analytics';
 const ALL_RESOURCES: ResourceKey[] = ['dashboard', 'batches', 'invitations', 'assignments', 'tests', 'lessonPlans', 'timetable', 'announcements', 'reports', 'analytics'];
@@ -440,6 +440,39 @@ function TeacherApp() {
 
   const blockingErrors = (TAB_RESOURCES[currentTab] ?? []).filter((k) => loadErrors[k]);
 
+  const commandItems: CommandItem[] = React.useMemo(() => {
+    const list: CommandItem[] = [
+      { id: 'nav-dashboard', title: 'Dashboard Overview', category: 'Navigation', tone: 'emerald', onSelect: () => setCurrentTab('dashboard'), keywords: ['home', 'stats', 'analytics'] },
+      { id: 'nav-attendance', title: 'Take Daily Attendance', category: 'Quick Action', tone: 'gold', onSelect: () => setCurrentTab('attendance'), keywords: ['present', 'absent', 'roll call'] },
+      { id: 'nav-bulkmarks', title: 'Bulk Marks Entry', category: 'Quick Action', tone: 'emerald', onSelect: () => setCurrentTab('bulkMarks'), keywords: ['grades', 'score', 'results'] },
+      { id: 'nav-batches', title: 'Manage Batches & Students', category: 'Navigation', tone: 'sapphire', onSelect: () => setCurrentTab('batches'), keywords: ['classes', 'students', 'roster'] },
+      { id: 'nav-fees', title: 'Fee Collection & Dues', category: 'Navigation', tone: 'gold', onSelect: () => setCurrentTab('studentFees'), keywords: ['payments', 'dues', 'receipts'] },
+      { id: 'nav-assignments', title: 'Homework & Assignments', category: 'Navigation', tone: 'sapphire', onSelect: () => setCurrentTab('assignments'), keywords: ['homework', 'submissions'] },
+      { id: 'nav-tests', title: 'CBT Assessments & Tests', category: 'Navigation', tone: 'ruby', onSelect: () => setCurrentTab('tests'), keywords: ['quiz', 'exam', 'cbt'] },
+      { id: 'nav-diary', title: 'Daily Teaching Diary', category: 'Navigation', tone: 'amethyst', onSelect: () => setCurrentTab('teachingDiary'), keywords: ['log', 'chapters', 'lesson'] },
+      { id: 'nav-timetable', title: 'Class Timetable', category: 'Navigation', tone: 'slate', onSelect: () => setCurrentTab('timetable'), keywords: ['schedule', 'routine'] },
+      { id: 'nav-reports', title: 'Analytics & Academic Reports', category: 'Navigation', tone: 'sapphire', onSelect: () => setCurrentTab('reports'), keywords: ['report card', 'pdf'] },
+      { id: 'nav-settings', title: 'Portal Settings', category: 'Navigation', tone: 'slate', onSelect: () => setCurrentTab('settings'), keywords: ['account', 'profile', 'password'] },
+    ];
+
+    for (const b of batches) {
+      list.push({
+        id: `batch-${b.id}`,
+        title: `Batch: ${b.name}`,
+        subtitle: `${b.subject} · Grade ${b.gradeLevel}`,
+        category: 'Batches',
+        tone: 'sapphire',
+        keywords: [b.name, b.subject, b.code, b.gradeLevel],
+        onSelect: () => {
+          setSelectedBatchId(b.id);
+          setCurrentTab('batches');
+        },
+      });
+    }
+
+    return list;
+  }, [batches, setCurrentTab]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen ak-desk-surface flex flex-col p-6 lg:p-10 max-w-7xl mx-auto w-full">
@@ -460,6 +493,7 @@ function TeacherApp() {
 
   return (
     <div className="min-h-screen ak-desk-surface flex flex-col lg:flex-row relative text-[var(--ink-primary)]">
+      <CommandPalette items={commandItems} />
       <OfflineBanner />
       {/* Mobile Top Header */}
       <div className="lg:hidden sticky top-0 z-40 bg-[var(--bg-paper)]/95 backdrop-blur-md border-b border-[var(--border-paper)] px-4 py-2.5 flex items-center justify-between w-full">

@@ -104,12 +104,12 @@ export const authService = {
   // Development-only convenience. The server answers 404 in production, and there is deliberately no
   // client-side fallback: a failed login must never produce a fabricated session.
   async loginDemoStudent(): Promise<MobileUserSession> {
-    if (!__DEV__) throw new Error('Demo access is not available.');
+    if (!__DEV__) throw new Error('Demo access is not available in production builds. Please sign in or register with your credentials.');
     return acceptSession(await apiClient.post<MobileUserSession>('/auth/demo-student', {}));
   },
 
   async loginDemoTeacher(): Promise<MobileUserSession> {
-    if (!__DEV__) throw new Error('Demo access is not available.');
+    if (!__DEV__) throw new Error('Demo access is not available in production builds. Please sign in or register with your credentials.');
     return acceptSession(await apiClient.post<MobileUserSession>('/auth/demo-teacher', {}));
   },
 

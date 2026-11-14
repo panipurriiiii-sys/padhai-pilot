@@ -28,7 +28,7 @@ const DiaryForm: React.FC = () => {
   React.useEffect(() => {
     if (batchId) {
       const b = batches.data?.find((x) => x.id === batchId);
-      if (b?.subject && !subject) setSubject(b.subject);
+      if (b?.subject) setSubject(b.subject);
     }
   }, [batchId, batches.data]);
 
@@ -126,7 +126,7 @@ const MaterialForm: React.FC = () => {
   React.useEffect(() => {
     if (batchId) {
       const b = batches.data?.find((x) => x.id === batchId);
-      if (b?.subject && !subject) setSubject(b.subject);
+      if (b?.subject) setSubject(b.subject);
     }
   }, [batchId, batches.data]);
   const linkOk = link.trim() === '' || /^https:\/\//i.test(link.trim());

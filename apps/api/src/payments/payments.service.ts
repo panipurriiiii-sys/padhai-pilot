@@ -233,6 +233,21 @@ export class PaymentsService {
       const orderId = payment?.order_id as string | undefined;
 
       if (feeRecordId && paymentId && this.prisma) {
+        // Atomic lock to guard against simultaneous duplicate webhook deliveries
+        const lockKey = `lock:rzp_wh:${paymentId}`;
+        if (this.redis) {
+          try {
+            const locked = await this.redis.get<string>(lockKey);
+            if (locked) {
+              this.logger.warn(`Duplicate in-flight webhook delivery for payment ${paymentId} suppressed.`);
+              return { status: 'duplicate_suppressed' };
+            }
+            await this.redis.set(lockKey, 'locked', 30);
+          } catch {
+            // Non-blocking fallback
+          }
+        }
+
         // Idempotent: skip if already recorded for this Razorpay paymentId (stored in `reference`)
         const existing = await this.prisma.feePayment.findFirst({
           where: { feeRecordId, reference: paymentId },

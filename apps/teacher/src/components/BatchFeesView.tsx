@@ -38,6 +38,14 @@ function addMonthsToDate(isoDate: string, monthsToAdd: number): string {
 /** Batch fees: set the fee, see each student's status (PENDING until paid), record manual payments, issue receipts, send reminders. */
 export function BatchFeesView({ batches }: { batches: BatchSummary[] }) {
   const [batchId, setBatchId] = useState(batches[0]?.id ?? '');
+
+  // Synchronize batch selection when batches load asynchronously
+  useEffect(() => {
+    if (!batchId && batches.length > 0) {
+      setBatchId(batches[0].id);
+    }
+  }, [batches, batchId]);
+
   const [fees, setFees] = useState<FeeLedgerItem[]>([]);
   const [summary, setSummary] = useState<BatchFeeSummary | null>(null);
   const [structures, setStructures] = useState<BatchFeeStructureItem[]>([]);
@@ -58,18 +66,23 @@ export function BatchFeesView({ batches }: { batches: BatchSummary[] }) {
 
   const load = useCallback(async () => {
     if (!batchId) return;
+    let active = true;
     setIsLoading(true);
     setLoadError(null);
     try {
       const [f, s, st] = await Promise.all([teacherApi.listBatchFees(batchId), teacherApi.getBatchFeeSummary(batchId), teacherApi.listFeeStructures(batchId)]);
+      if (!active) return;
       setFees(f);
       setSummary(s);
       setStructures(st);
     } catch (e) {
-      setLoadError(e instanceof Error ? e.message : 'Could not load fees.');
+      if (active) setLoadError(e instanceof Error ? e.message : 'Could not load fees.');
     } finally {
-      setIsLoading(false);
+      if (active) setIsLoading(false);
     }
+    return () => {
+      active = false;
+    };
   }, [batchId]);
 
   useEffect(() => {
@@ -150,11 +163,22 @@ export function BatchFeesView({ batches }: { batches: BatchSummary[] }) {
   const submitPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!payFor) return;
+
+    const numAmount = Number(pay.amount);
+    if (Number.isNaN(numAmount) || numAmount <= 0) {
+      setFormError('Please enter a valid payment amount greater than zero.');
+      return;
+    }
+    if (numAmount > payFor.balanceDue) {
+      setFormError(`Payment amount cannot exceed the balance due of Rs ${payFor.balanceDue.toLocaleString('en-IN')}.`);
+      return;
+    }
+
     setBusy(true);
     setFormError(null);
     try {
       const p = await teacherApi.recordFeePayment(payFor.id, {
-        amount: Number(pay.amount),
+        amount: numAmount,
         paidOn: pay.paidOn,
         mode: pay.mode,
         reference: pay.reference.trim() || undefined,
