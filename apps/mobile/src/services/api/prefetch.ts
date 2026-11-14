@@ -57,6 +57,11 @@ export async function prefetchAppData(queryClient: QueryClient, role?: string): 
             queryFn: () => studentService.getDiary(),
             staleTime: 10 * 60 * 1000,
           }),
+          queryClient.prefetchQuery({
+            queryKey: studentKeys.analytics,
+            queryFn: studentService.getAnalytics,
+            staleTime: 15 * 60 * 1000,
+          }),
         ]);
       }, 1200);
     }

@@ -6,17 +6,19 @@ import { InstituteHeader } from '../../../components/common/InstituteHeader';
 import { Card } from '../../../components/common/Card';
 import { Badge } from '../../../components/common/Badge';
 import { EmptyPaper, KpiCard, QuickActionsBar, SectionHeader, TimeBlock } from '../../../components/common/Paper';
-import { useDashboardData } from '../../../hooks/useStudentData';
+import { useDashboardData, useStudentAnalytics } from '../../../hooks/useStudentData';
 import { useNavigationStore } from '../../../store/useNavigationStore';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { useTheme } from '../../../theme/ThemeContext';
 import { formatDate, formatInr } from '../../../lib/format';
+import { StudentInsights } from '../../student/StudentInsights';
 
 export const DashboardScreen: React.FC = () => {
   const { colors, typography } = useTheme();
   const { setTab } = useNavigationStore();
   const session = useAuthStore((s) => s.session);
   const query = useDashboardData();
+  const analyticsQuery = useStudentAnalytics();
   const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
 
   return (
@@ -24,8 +26,11 @@ export const DashboardScreen: React.FC = () => {
       eyebrow={session?.user?.instituteName ?? 'Student Portal'}
       title={session?.user?.fullName || session?.user?.name || 'Student'}
       subtitle={today}
-      refreshing={query.isRefetching}
-      onRefresh={() => query.refetch()}
+      refreshing={query.isRefetching || analyticsQuery.isRefetching}
+      onRefresh={() => {
+        void query.refetch();
+        void analyticsQuery.refetch();
+      }}
     >
       <InstituteHeader />
       <QuickActionsBar
@@ -115,6 +120,14 @@ export const DashboardScreen: React.FC = () => {
                 </Card>
               ))
             )}
+
+            <SectionHeader
+              title="Academic Performance"
+              icon="trending-up"
+              action="All Results"
+              onAction={() => setTab('student_results')}
+            />
+            <StudentInsights hideAttendance />
 
             <SectionHeader title="Homework & Submissions" icon="file-text" action="View All" onAction={() => setTab('student_academics')} />
             {d.upcomingAssignments.length === 0 ? (

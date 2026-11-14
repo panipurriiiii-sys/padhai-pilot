@@ -11,8 +11,12 @@ import { formatDate } from '../../lib/format';
 
 const STATUS_VALUE = { PRESENT: 100, LATE: 70, EXCUSED: 50, ABSENT: 0 } as const;
 
+interface StudentInsightsProps {
+  hideAttendance?: boolean;
+}
+
 /** Charts from GET /analytics/student. Null rates render as empty states, never as 0%. */
-export const StudentInsights: React.FC = () => {
+export const StudentInsights: React.FC<StudentInsightsProps> = ({ hideAttendance = false }) => {
   const { spacing, colors } = useTheme();
   const q = useStudentAnalytics();
   return (
@@ -26,15 +30,19 @@ export const StudentInsights: React.FC = () => {
         const c = colors.charts;
         return (
           <View style={{ gap: spacing.md }}>
-            <SectionHeader title="Attendance" icon="calendar-check" />
-            <Card>
-              <StatValue>{a.attendanceRate != null ? `${Math.round(a.attendanceRate)}%` : '—'}</StatValue>
-              <Caption>{a.attendanceRate != null ? 'Overall attendance rate' : 'No attendance recorded yet'}</Caption>
-              <View style={{ marginTop: spacing.sm }}>
-                <LineChart data={attPoints} emptyMessage="Your recent sessions will chart here." />
-              </View>
-              {att.length ? <Caption style={{ marginTop: 4 }}>Present 100 · Late 70 · Excused 50 · Absent 0 (per session)</Caption> : null}
-            </Card>
+            {!hideAttendance && (
+              <>
+                <SectionHeader title="Attendance" icon="calendar-check" />
+                <Card>
+                  <StatValue>{a.attendanceRate != null ? `${Math.round(a.attendanceRate)}%` : '—'}</StatValue>
+                  <Caption>{a.attendanceRate != null ? 'Overall attendance rate' : 'No attendance recorded yet'}</Caption>
+                  <View style={{ marginTop: spacing.sm }}>
+                    <LineChart data={attPoints} emptyMessage="Your recent sessions will chart here." />
+                  </View>
+                  {att.length ? <Caption style={{ marginTop: 4 }}>Present 100 · Late 70 · Excused 50 · Absent 0 (per session)</Caption> : null}
+                </Card>
+              </>
+            )}
 
             <SectionHeader title="Subject marks" icon="layers" />
             <Card>

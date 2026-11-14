@@ -146,7 +146,7 @@ const ALL_RESOURCES = ['dashboard', 'results', 'notifications', 'materials', 'at
 
 /** Resources each tab cannot render without. */
 const TAB_RESOURCES: Record<string, string[]> = {
-  OVERVIEW: ['dashboard'],
+  OVERVIEW: ['dashboard', 'analytics'],
   DIARY: ['diary'],
   MATERIALS: ['materials'],
   TIMETABLE: ['timetable'],
@@ -520,7 +520,7 @@ function StudentPortal() {
   };
 
   // Ultra-optimized initial load: only load Overview essentials on boot
-  const INITIAL_RESOURCES = ['dashboard', 'notifications'] as const;
+  const INITIAL_RESOURCES = ['dashboard', 'notifications', 'analytics'] as const;
 
   const loadInitialStudentData = async () => {
     setIsLoading(true);
@@ -605,7 +605,9 @@ function StudentPortal() {
     }
   }, [activeTab, student]);
 
-  const blockingErrors = (TAB_RESOURCES[activeTab] ?? []).filter((k) => loadErrors[k]);
+  const blockingErrors = (TAB_RESOURCES[activeTab] ?? []).filter(
+    (k) => k !== 'analytics' && loadErrors[k],
+  );
 
   const commandItems: CommandItem[] = useMemo(() => [
     { id: 'std-overview', title: 'Academic Overview', category: 'Navigation', tone: 'emerald', onSelect: () => setActiveTab('OVERVIEW'), keywords: ['home', 'dashboard'] },

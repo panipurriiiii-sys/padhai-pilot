@@ -45,6 +45,23 @@ export class AnalyticsService {
     const studentId = user.id;
     const instituteId = user.instituteId;
 
+    if (!instituteId) {
+      return {
+        studentId,
+        attendanceRate: null,
+        attendanceTrend: [],
+        subjectPerformance: [],
+        examScoreTrend: [],
+        homeworkSummary: {
+          totalAssigned: 0,
+          submitted: 0,
+          graded: 0,
+          pending: 0,
+          completionRatePercentage: null,
+        },
+      };
+    }
+
     // Attendance
     const records = await this.db.attendanceRecord.findMany({
       where: {
