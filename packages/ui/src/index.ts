@@ -12,6 +12,8 @@ export { Skeleton, LoadingRegion, Spinner, ProgressBar, StatusBadge, EmptyState,
 export { Pagination, usePagination } from './components/Pagination';
 export type { PaginationProps } from './components/Pagination';
 export { DashboardSkeleton, TableSkeleton, CardGridSkeleton, OfflineBanner } from './components/Skeletons';
+export { LuxuryLoader } from './components/LuxuryLoader';
+export type { LuxuryLoaderProps } from './components/LuxuryLoader';
 export { Tilt3D } from './components/Tilt3D';
 export { LuxuryIcon } from './components/LuxuryIcon';
 export type { LuxuryIconProps, LuxuryTone, LuxurySize, LuxuryVariant } from './components/LuxuryIcon';

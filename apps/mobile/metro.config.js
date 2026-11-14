@@ -1,4 +1,5 @@
 const path = require('path');
+const fs = require('fs');
 const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
 
 /**
@@ -14,13 +15,43 @@ const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
 const projectRoot = __dirname;
 const workspaceRoot = path.resolve(projectRoot, '../..');
 
+const extraWatch = [
+  workspaceRoot,
+  'A:\\padhai-pilot',
+  path.resolve(workspaceRoot, 'packages/shared'),
+  path.resolve(workspaceRoot, 'packages/ui'),
+  path.resolve(workspaceRoot, 'packages/assets'),
+  'A:\\padhai-pilot\\packages\\shared',
+  'A:\\padhai-pilot\\packages\\ui',
+  'A:\\padhai-pilot\\packages\\assets',
+  ...(process.env.METRO_EXTRA_WATCH ? [process.env.METRO_EXTRA_WATCH] : []),
+].filter((dir, idx, arr) => {
+  try {
+    return fs.existsSync(dir) && arr.indexOf(dir) === idx;
+  } catch {
+    return false;
+  }
+});
+
 const config = {
-  watchFolders: [workspaceRoot, ...(process.env.METRO_EXTRA_WATCH ? [process.env.METRO_EXTRA_WATCH] : [])], // set when building from a subst drive (Windows long paths)
+  watchFolders: extraWatch,
   resolver: {
     nodeModulesPaths: [
       path.resolve(projectRoot, 'node_modules'),
       path.resolve(workspaceRoot, 'node_modules'),
-    ],
+      'A:\\padhai-pilot\\node_modules',
+    ].filter((dir) => {
+      try {
+        return fs.existsSync(dir);
+      } catch {
+        return false;
+      }
+    }),
+    extraNodeModules: {
+      '@padhai-pilot/shared': path.resolve(workspaceRoot, 'packages/shared'),
+      '@padhai-pilot/ui': path.resolve(workspaceRoot, 'packages/ui'),
+      '@padhai-pilot/assets': path.resolve(workspaceRoot, 'packages/assets'),
+    },
     unstable_enableSymlinks: true,
   },
 };

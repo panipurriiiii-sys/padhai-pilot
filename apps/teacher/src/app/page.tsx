@@ -117,7 +117,7 @@ import type {
   InAppNotification,
 } from '@padhai-pilot/shared';
 import { Loader2, Menu, LayoutDashboard, NotebookPen, CalendarCheck, Users, Bell } from 'lucide-react';
-import { MotionProvider, ToastProvider, DashboardSkeleton, OfflineBanner, CommandPalette, type CommandItem } from '@padhai-pilot/ui';
+import { MotionProvider, ToastProvider, DashboardSkeleton, LuxuryLoader, OfflineBanner, CommandPalette, type CommandItem } from '@padhai-pilot/ui';
 
 type ResourceKey = 'dashboard' | 'batches' | 'invitations' | 'assignments' | 'tests' | 'lessonPlans' | 'timetable' | 'announcements' | 'reports' | 'analytics';
 const ALL_RESOURCES: ResourceKey[] = ['dashboard', 'batches', 'invitations', 'assignments', 'tests', 'lessonPlans', 'timetable', 'announcements', 'reports', 'analytics'];
@@ -475,9 +475,11 @@ function TeacherApp() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen ak-desk-surface flex flex-col p-6 lg:p-10 max-w-7xl mx-auto w-full">
-        <DashboardSkeleton cards={4} />
-      </div>
+      <LuxuryLoader
+        title="PadhaiPilot"
+        subtitle="Faculty Workspace"
+        statusMessage="Connecting academic records & schedule..."
+      />
     );
   }
 
