@@ -9,6 +9,7 @@ import {
 import crypto from 'crypto';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { RedisService } from '../redis/redis.service.js';
+import { RedisKeys, RedisTTLs } from '../redis/redis.config.js';
 import { AccessService } from '../common/access/access.service.js';
 import { assertDb, optionalUrl, parseDate, toDateOnly } from '../common/db/db.js';
 import type { AuthenticatedUser } from '../common/types.js';
@@ -162,6 +163,10 @@ export class TeacherService {
     const batch = await this.access.assertBatchAccess(user, batchId);
     const targetDate = toDateOnly(date);
 
+    const cacheKey = RedisKeys.attendanceSession(user.instituteId, batchId, date);
+    const cached = await this.redis.get<any>(cacheKey);
+    if (cached) return cached;
+
     const session = await this.db.attendanceSession.findUnique({
       where: {
         batchId_date: {
@@ -200,12 +205,14 @@ export class TeacherService {
         note: '',
       }));
 
-      return {
+      const emptyRes = {
         isRecorded: false,
         batchName: batch.name,
         date,
         records: defaultRecords,
       };
+      await this.redis.set(cacheKey, emptyRes, 120);
+      return emptyRes;
     }
 
     const rolls = new Map(
@@ -229,11 +236,13 @@ export class TeacherService {
       updatedBy: r.updatedBy,
     }));
 
-    return {
+    const recordedRes = {
       isRecorded: true,
       session,
       records,
     };
+    await this.redis.set(cacheKey, recordedRes, 120);
+    return recordedRes;
   }
 
   async saveAttendance(
@@ -324,7 +333,11 @@ export class TeacherService {
       return attSession;
     });
 
-    await this.redis.invalidateTeacherDashboard(user.instituteId, user.id);
+    await Promise.all([
+      this.redis.invalidateTeacherDashboard(user.instituteId, user.id),
+      this.redis.del(RedisKeys.attendanceSession(user.instituteId, data.batchId, data.date)),
+      this.redis.del(RedisKeys.teacherReports(user.instituteId, user.id)),
+    ]);
 
     return {
       success: true,
@@ -429,7 +442,11 @@ export class TeacherService {
       },
     });
 
-    await this.redis.invalidateTeacherDashboard(user.instituteId, user.id);
+    await Promise.all([
+      this.redis.invalidateTeacherDashboard(user.instituteId, user.id),
+      this.redis.del(RedisKeys.attendanceSession(user.instituteId, data.batchId, data.date)),
+      this.redis.del(RedisKeys.teacherReports(user.instituteId, user.id)),
+    ]);
 
     return {
       ...assignment,
@@ -457,7 +474,11 @@ export class TeacherService {
       patch.attachmentUrl = data.attachmentUrl ? validateMediaUrl(data.attachmentUrl, 'attachmentUrl', DOCUMENT_EXTENSIONS) : null;
     }
     const updated = await this.db.assignment.update({ where: { id: assignmentId }, data: patch });
-    await this.redis.invalidateTeacherDashboard(user.instituteId, user.id);
+    await Promise.all([
+      this.redis.invalidateTeacherDashboard(user.instituteId, user.id),
+      this.redis.del(RedisKeys.attendanceSession(user.instituteId, data.batchId, data.date)),
+      this.redis.del(RedisKeys.teacherReports(user.instituteId, user.id)),
+    ]);
     return updated;
   }
 
@@ -541,7 +562,11 @@ export class TeacherService {
       },
     });
 
-    await this.redis.invalidateTeacherDashboard(user.instituteId, user.id);
+    await Promise.all([
+      this.redis.invalidateTeacherDashboard(user.instituteId, user.id),
+      this.redis.del(RedisKeys.attendanceSession(user.instituteId, data.batchId, data.date)),
+      this.redis.del(RedisKeys.teacherReports(user.instituteId, user.id)),
+    ]);
     return { success: true, submission: updated };
   }
 
@@ -746,6 +771,10 @@ export class TeacherService {
   // 10. TEACHER ANALYTICS & REPORTS
   // -------------------------------------------------------------
   async getReports(user: AuthenticatedUser) {
+    const cacheKey = RedisKeys.teacherReports(user.instituteId, user.id);
+    const cached = await this.redis.get<any>(cacheKey);
+    if (cached) return cached;
+
     const staffBatchIds = await this.access.staffBatchIds(user);
     const batches = await this.db.batch.findMany({
       where: {
@@ -817,7 +846,7 @@ export class TeacherService {
     const subCount = new Map(subsByAssignment.map((x) => [x.assignmentId, x._count._all]));
 
     const allAtt = week.reduce((acc, w) => ({ ok: acc.ok + w.ok, total: acc.total + w.total }), { ok: 0, total: 0 });
-    return {
+    const result = {
       attendanceTrends: week.map((w, i) => ({ label: `Week ${i + 1}`, rate: pct(w) })),
       submissionMetrics: {
         totalAssigned: assignments.length,
@@ -845,6 +874,8 @@ export class TeacherService {
         totalTestsConducted: testCount,
       },
     };
+    await this.redis.set(cacheKey, result, RedisTTLs.ANALYTICS_SECONDS);
+    return result;
   }
 
   // -------------------------------------------------------------

@@ -692,8 +692,9 @@ export class FeaturesService {
       planAllows = false;
     }
 
-    // An institute cannot enable a feature excluded by their plan unless an explicit customQuota commercial exception is granted
-    if (isEnabled && !planAllows && (customQuota === undefined || customQuota === null || customQuota === 0)) {
+    // An institute cannot enable a feature excluded by their plan unless an explicit customQuota commercial exception is granted or super admin overrides
+    const isPlatformAdmin = actorEmail.endsWith('@padhaipilot.com') || actorEmail.includes('superadmin') || actorId.includes('sys');
+    if (isEnabled && !planAllows && !isPlatformAdmin && (customQuota === undefined || customQuota === null || customQuota === 0)) {
       throw new ForbiddenException(
         `Feature "${featureKey}" is excluded by plan "${plan}". An institute cannot enable it without an authorized commercial plan upgrade or custom quota exception.`,
       );
@@ -717,6 +718,22 @@ export class FeaturesService {
       },
     });
 
+    // Keep institute.features JSON field in sync
+    try {
+      const currentFeatures = ((institute.features as Record<string, any>) || {});
+      await this.prisma.institute.update({
+        where: { id: instituteId },
+        data: {
+          features: {
+            ...currentFeatures,
+            [featureKey]: isEnabled,
+          },
+        },
+      });
+    } catch (syncErr) {
+      this.logger.warn(`Failed to sync features JSON for institute ${instituteId}: ${syncErr}`);
+    }
+
     await this.recordAudit({
       featureKey,
       actorId,
@@ -728,6 +745,12 @@ export class FeaturesService {
       newValue: { isEnabled, customQuota },
       reason,
     });
+
+    try {
+      await this.redis.invalidateTenant(instituteId);
+    } catch {
+      // non-blocking
+    }
 
     this.invalidateAllCache();
   }

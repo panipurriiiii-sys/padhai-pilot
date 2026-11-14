@@ -5,7 +5,10 @@ import { LOGO_EXTENSIONS, validateMediaUrl } from '../common/security/media-url.
 import type { AuthenticatedUser } from '../common/types.js';
 import type { InstituteLetterhead } from '@padhai-pilot/shared';
 import { calculateGradeAndPercentage } from '@padhai-pilot/shared';
-import { renderDocument, type DocSpec } from './pdf-layout.js';
+// `pdf-layout` pulls in `pdf-lib`, which is the single heaviest import in the API (~660 ms).
+// The API runs as one serverless function, so importing it here would add that to EVERY cold
+// start, while only the document routes ever render a PDF. Loaded on first render instead.
+import type { DocSpec } from './pdf-layout.js';
 import {
   attendanceBatchSpec,
   attendanceStudentSpec,
@@ -73,7 +76,10 @@ export class DocumentsService {
   }
 
   private async render(user: AuthenticatedUser, spec: DocSpec): Promise<Uint8Array> {
-    const brand = await this.brand(user.instituteId);
+    const [{ renderDocument }, brand] = await Promise.all([
+      import('./pdf-layout.js'),
+      this.brand(user.instituteId),
+    ]);
     const logo = await fetchLogoBytes(brand.logoUrl);
     return (await renderDocument(spec, brand, logo)).bytes;
   }

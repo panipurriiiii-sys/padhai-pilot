@@ -7,7 +7,10 @@ import {
   Optional,
   Inject,
 } from '@nestjs/common';
-import Razorpay from 'razorpay';
+// `razorpay` is loaded on first use, not at module load. The API is a single serverless function,
+// so a module-scope import was paid on every cold start (~290 ms) even though only the payment
+// routes need it.
+import type Razorpay from 'razorpay';
 import crypto from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { RedisService } from '../redis/redis.service.js';
@@ -57,7 +60,7 @@ export class PaymentsService {
     @Optional() @Inject(RedisService) private readonly redis?: RedisService,
   ) {}
 
-  private getRazorpay(): Razorpay {
+  private async getRazorpay(): Promise<Razorpay> {
     const key_id = process.env.RAZORPAY_KEY_ID;
     const key_secret = process.env.RAZORPAY_KEY_SECRET;
 
@@ -66,7 +69,8 @@ export class PaymentsService {
     }
 
     if (!this.razorpayInstance) {
-      this.razorpayInstance = new Razorpay({
+      const { default: RazorpayCtor } = await import('razorpay');
+      this.razorpayInstance = new RazorpayCtor({
         key_id,
         key_secret,
       });
@@ -93,7 +97,7 @@ export class PaymentsService {
       throw new BadRequestException('Minimum order amount must be at least 100 paise (₹1.00).');
     }
 
-    const rzp = this.getRazorpay();
+    const rzp = await this.getRazorpay();
 
     try {
       const generatedReceipt = receipt || `rcpt_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
@@ -162,7 +166,7 @@ export class PaymentsService {
     // Derive plan from Razorpay order notes (never trust client body for plan/instituteId).
     let upgradedPlan: string | undefined;
     try {
-      const rzp = this.getRazorpay();
+      const rzp = await this.getRazorpay();
       const order = await rzp.orders.fetch(order_id);
       const notes = (order as any).notes as Record<string, string> | undefined;
       const targetPlan = notes?.plan;

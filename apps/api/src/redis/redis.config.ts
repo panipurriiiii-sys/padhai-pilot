@@ -99,6 +99,26 @@ export const RedisKeys = {
     return `${REDIS_KEY_VERSION}:tenant:${instituteId}:teacher:${teacherId}:analytics`;
   },
 
+  teacherReports(instituteId: string, teacherId: string): string {
+    return `${REDIS_KEY_VERSION}:tenant:${instituteId}:teacher:${teacherId}:reports`;
+  },
+
+  tuitionMaterials(instituteId: string, teacherId: string, batchId = 'all'): string {
+    return `${REDIS_KEY_VERSION}:tenant:${instituteId}:teacher:${teacherId}:materials:${batchId}`;
+  },
+
+  studentLeaves(instituteId: string, teacherId: string, status = 'all', batchId = 'all'): string {
+    return `${REDIS_KEY_VERSION}:tenant:${instituteId}:leaves:${teacherId}:${status}:${batchId}`;
+  },
+
+  attendanceSession(instituteId: string, batchId: string, date: string): string {
+    return `${REDIS_KEY_VERSION}:tenant:${instituteId}:batch:${batchId}:attendance:${date}`;
+  },
+
+  assessments(instituteId: string, teacherId: string, batchId = 'all'): string {
+    return `${REDIS_KEY_VERSION}:tenant:${instituteId}:teacher:${teacherId}:assessments:${batchId}`;
+  },
+
   studentAnalytics(instituteId: string, studentId: string): string {
     return `${REDIS_KEY_VERSION}:tenant:${instituteId}:student:${studentId}:analytics`;
   },

@@ -355,8 +355,12 @@ export function InstituteDetail({ id }: { id: string }) {
             <button
               type="button"
               className="btn-primary"
-              disabled={busy || reason.trim().length < 3}
-              onClick={() => override && run(() => adminApi.updateInstituteFeature({ instituteId: id, featureKey: override.key, isEnabled: override.enabled, reason: reason.trim() }), 'Override saved.', closeAll)}
+              disabled={busy}
+              onClick={() => {
+                if (!override) return;
+                const finalReason = reason.trim() || (override.enabled ? `Enabled for ${i.name} by Super Admin override` : `Disabled for ${i.name} by Super Admin override`);
+                run(() => adminApi.updateInstituteFeature({ instituteId: id, featureKey: override.key, isEnabled: override.enabled, reason: finalReason }), 'Override saved.', closeAll);
+              }}
             >
               {busy && <Spin />} Save override
             </button>
@@ -364,7 +368,9 @@ export function InstituteDetail({ id }: { id: string }) {
         }
       >
         {err && <div className="notice is-danger" role="alert">{err}</div>}
-        <Field label="Reason (audit log)"><textarea className="input-paper w-full" rows={3} value={reason} onChange={(e) => setReason(e.target.value)} /></Field>
+        <Field label="Reason (audit log)" hint="Optional — defaults to an automatic audit note if left blank.">
+          <textarea className="input-paper w-full" rows={3} placeholder="e.g. Disabled by Super Admin request" value={reason} onChange={(e) => setReason(e.target.value)} />
+        </Field>
       </Dialog>
     </>
   );

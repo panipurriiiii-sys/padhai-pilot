@@ -1,7 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import * as webPushModule from 'web-push';
-
-const webPush: any = (webPushModule as any).default || webPushModule;
 import {
   DEFAULT_VAPID_PUBLIC_KEY,
   DEFAULT_VAPID_PRIVATE_KEY,
@@ -25,22 +22,31 @@ export interface WebPushPayload {
 @Injectable()
 export class WebPushService {
   private readonly logger = new Logger(WebPushService.name);
-  private initialized = false;
+  private webPush: any = null;
 
-  constructor() {
-    this.initVapid();
-  }
-
-  private initVapid(): void {
+  /**
+   * Loads `web-push` and configures VAPID on first send.
+   *
+   * The API is a single serverless function, so a module-scope import of `web-push` was paid on
+   * every cold start (~110 ms) even though only push dispatch needs it. VAPID keys are constants,
+   * so configuring them here instead of in the constructor costs nothing and keeps the library
+   * off the boot path. Returns null when the library cannot be configured.
+   */
+  private async getWebPush(): Promise<any | null> {
+    if (this.webPush) return this.webPush;
     try {
+      const mod = await import('web-push');
+      const webPush: any = (mod as any).default || mod;
       webPush.setVapidDetails(
         DEFAULT_VAPID_SUBJECT,
         DEFAULT_VAPID_PUBLIC_KEY,
         DEFAULT_VAPID_PRIVATE_KEY,
       );
-      this.initialized = true;
+      this.webPush = webPush;
+      return webPush;
     } catch (err) {
       this.logger.warn(`Failed to configure VAPID keys for Web Push: ${err instanceof Error ? err.message : String(err)}`);
+      return null;
     }
   }
 
@@ -52,8 +58,9 @@ export class WebPushService {
     subscription: { endpoint: string; p256dh: string; auth: string },
     payload: WebPushPayload,
   ): Promise<{ success: boolean; expired?: boolean }> {
-    if (!this.initialized) {
-      this.initVapid();
+    const webPush = await this.getWebPush();
+    if (!webPush) {
+      return { success: false, expired: false };
     }
 
     const pushSubscription = {

@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { OctagonAlert, RotateCcw } from 'lucide-react';
-import type { FeatureDefinition } from '@padhai-pilot/shared';
+import { OctagonAlert, RotateCcw, Building2, SlidersHorizontal, CheckCircle2, XCircle } from 'lucide-react';
+import type { FeatureDefinition, FeatureKey } from '@padhai-pilot/shared';
 import { adminApi, type FeatureFlagState } from '../lib/api';
 import {
   DataList,
@@ -33,6 +33,33 @@ export default function Features() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  // Institute / Class overrides state
+  const institutes = useLoad(() => adminApi.getInstitutes());
+  const [selectedInstId, setSelectedInstId] = useState<string>('');
+  const effectiveFeats = useLoad(
+    () => (selectedInstId ? adminApi.getEffectiveFeatures(selectedInstId) : Promise.resolve(null)),
+    [selectedInstId],
+  );
+  const [instOverride, setInstOverride] = useState<{ key: FeatureKey; enabled: boolean; name: string } | null>(null);
+  const [instReason, setInstReason] = useState('');
+  const [instBusy, setInstBusy] = useState(false);
+  const [instErr, setInstErr] = useState<string | null>(null);
+
+  const selectedInst = useMemo(
+    () => (institutes.data ?? []).find((i) => i.id === selectedInstId),
+    [institutes.data, selectedInstId],
+  );
+
+  const regMap = useMemo(
+    () => new Map((registry.data ?? []).map((r) => [r.key, r])),
+    [registry.data],
+  );
+
+  const evaluated = useMemo(
+    () => (effectiveFeats.data ? Object.values(effectiveFeats.data.evaluatedFeatures) : []),
+    [effectiveFeats.data],
+  );
+
   const flags = useMemo(() => new Map((state.data?.flags ?? []).map((f) => [f.key, f])), [state.data]);
   const stateOf = (k: string): 'ON' | 'OFF' | 'KILLED' => {
     const f: FeatureFlagState | undefined = flags.get(k as FeatureFlagState['key']);
@@ -48,6 +75,12 @@ export default function Features() {
     setErr(null);
   };
 
+  const closeInstOverride = () => {
+    setInstOverride(null);
+    setInstReason('');
+    setInstErr(null);
+  };
+
   const confirm = async () => {
     if (!action) return;
     setBusy(true);
@@ -61,10 +94,40 @@ export default function Features() {
       close();
       state.reload();
       audit.reload();
+      if (selectedInstId) effectiveFeats.reload();
     } catch (e) {
       setErr(errMsg(e));
     } finally {
       setBusy(false);
+    }
+  };
+
+  const confirmInstOverride = async () => {
+    if (!instOverride || !selectedInstId) return;
+    setInstBusy(true);
+    setInstErr(null);
+    try {
+      const finalReason =
+        instReason.trim() ||
+        (instOverride.enabled
+          ? `Enabled for ${selectedInst?.name || 'institute'} by Super Admin override`
+          : `Disabled for ${selectedInst?.name || 'institute'} by Super Admin override`);
+
+      await adminApi.updateInstituteFeature({
+        instituteId: selectedInstId,
+        featureKey: instOverride.key,
+        isEnabled: instOverride.enabled,
+        reason: finalReason,
+      });
+
+      toast(`Feature "${instOverride.name}" updated for ${selectedInst?.name || 'institute'}.`);
+      closeInstOverride();
+      effectiveFeats.reload();
+      audit.reload();
+    } catch (e) {
+      setInstErr(errMsg(e));
+    } finally {
+      setInstBusy(false);
     }
   };
 
@@ -125,6 +188,124 @@ export default function Features() {
         />
       )}
 
+      {/* Institute / Class Specific Overrides */}
+      <section className="paper-card p-5 mt-8 border border-paper-line bg-paper-card">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div>
+            <h2 className="font-display font-bold text-lg flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-accent-brass" />
+              Institute & Class Feature Overrides
+            </h2>
+            <p className="text-xs text-ink-muted font-primary">
+              Override feature access for a specific institute or class. Super Admin overrides take immediate precedence over plan defaults.
+            </p>
+          </div>
+          <div className="w-full sm:w-80">
+            <select
+              className="select-paper w-full font-primary text-sm"
+              value={selectedInstId}
+              onChange={(e) => setSelectedInstId(e.target.value)}
+              aria-label="Select institute to override features"
+            >
+              <option value="">-- Select an Institute / Class --</option>
+              {(institutes.data ?? []).map((inst) => (
+                <option key={inst.id} value={inst.id}>
+                  {inst.name} ({inst.code}) — {inst.plan}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {!selectedInstId ? (
+          <div className="p-6 text-center text-sm text-ink-muted bg-paper-subtle rounded-xl border border-dashed border-paper-line">
+            Select an institute or coaching class from the dropdown above to view and toggle its specific features.
+          </div>
+        ) : effectiveFeats.error ? (
+          <ErrorState error={effectiveFeats.error} onRetry={effectiveFeats.reload} />
+        ) : effectiveFeats.loading && !effectiveFeats.data ? (
+          <LoadingBlock rows={3} />
+        ) : (
+          <div>
+            {selectedInst && (
+              <div className="flex flex-wrap items-center gap-3 p-3 mb-4 bg-paper-subtle rounded-xl border border-paper-line text-xs font-primary">
+                <div>
+                  <span className="text-ink-muted">Institute:</span> <strong>{selectedInst.name}</strong>
+                </div>
+                <div>
+                  <span className="text-ink-muted">Subdomain:</span> <code className="font-data">{selectedInst.subdomain}</code>
+                </div>
+                <div>
+                  <span className="text-ink-muted">Plan:</span> <StatusBadge value={selectedInst.plan} />
+                </div>
+                <div>
+                  <span className="text-ink-muted">Status:</span> <StatusBadge value={selectedInst.status} />
+                </div>
+              </div>
+            )}
+
+            <DataList
+              rows={evaluated}
+              rowKey={(f) => f.featureKey}
+              cols={[
+                {
+                  header: 'Feature',
+                  primary: true,
+                  cell: (f) => {
+                    const def = regMap.get(f.featureKey);
+                    return (
+                      <span>
+                        <span className="font-bold font-primary">{def?.name || f.featureKey}</span>
+                        <span className="block text-[11px] text-ink-muted font-data">{f.featureKey}</span>
+                      </span>
+                    );
+                  },
+                },
+                {
+                  header: 'Effective State',
+                  cell: (f) => (
+                    <StatusBadge
+                      value={f.isAvailable ? 'ACTIVE' : f.status === 'INSTITUTE_DISABLED' ? 'SUSPENDED' : 'PLAN_RESTRICTED'}
+                      label={f.isAvailable ? 'Active' : f.status === 'INSTITUTE_DISABLED' ? 'Disabled by Admin' : 'Plan Restricted'}
+                    />
+                  ),
+                },
+                {
+                  header: 'Status & Reason',
+                  cell: (f) => (
+                    <span className="text-xs font-primary text-ink-muted">
+                      {f.reason ?? f.status}
+                    </span>
+                  ),
+                },
+                {
+                  header: 'Action',
+                  cell: (f) => {
+                    const def = regMap.get(f.featureKey);
+                    const name = def?.name || f.featureKey;
+                    return (
+                      <button
+                        type="button"
+                        className={f.isAvailable ? 'btn-danger !text-xs !py-1' : 'btn-primary !text-xs !py-1'}
+                        onClick={() =>
+                          setInstOverride({
+                            key: f.featureKey,
+                            enabled: !f.isAvailable,
+                            name,
+                          })
+                        }
+                      >
+                        {f.isAvailable ? 'Turn Off for this Class' : 'Turn On for this Class'}
+                      </button>
+                    );
+                  },
+                },
+              ]}
+            />
+          </div>
+        )}
+      </section>
+
       <section className="mt-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
           <h2 className="font-display font-bold text-lg">Feature change history</h2>
@@ -175,6 +356,42 @@ export default function Features() {
         {action?.kind === 'kill' && (
           <Field label="Type CONFIRM_KILL to proceed"><input className="input-paper w-full font-data" value={code} onChange={(e) => setCode(e.target.value)} autoComplete="off" /></Field>
         )}
+      </Dialog>
+
+      {/* Institute Feature Override Modal */}
+      <Dialog
+        open={!!instOverride}
+        title={`${instOverride?.enabled ? 'Enable' : 'Disable'} ${instOverride?.name ?? ''} for ${selectedInst?.name ?? 'Institute'}`}
+        onClose={() => !instBusy && closeInstOverride()}
+        footer={
+          <>
+            <button type="button" className="btn-secondary" disabled={instBusy} onClick={closeInstOverride}>Cancel</button>
+            <button
+              type="button"
+              className={instOverride?.enabled ? 'btn-primary' : 'btn-danger'}
+              disabled={instBusy}
+              onClick={confirmInstOverride}
+            >
+              {instBusy && <Spin />} {instOverride?.enabled ? 'Confirm Enable' : 'Confirm Disable'}
+            </button>
+          </>
+        }
+      >
+        <div className="text-xs text-ink-muted mb-3 font-primary">
+          {instOverride?.enabled
+            ? `This will override plan limits and force-enable "${instOverride.name}" specifically for ${selectedInst?.name}.`
+            : `This will immediately block and disable "${instOverride?.name}" for ${selectedInst?.name}, revoking access for all teachers and students in this institute.`}
+        </div>
+        {instErr && <div className="notice is-danger" role="alert">{instErr}</div>}
+        <Field label="Reason (audit log)" hint="Optional — defaults to an automatic audit entry if left blank.">
+          <textarea
+            className="input-paper w-full font-primary text-sm"
+            rows={3}
+            placeholder="e.g. Disabled by Super Admin request"
+            value={instReason}
+            onChange={(e) => setInstReason(e.target.value)}
+          />
+        </Field>
       </Dialog>
     </>
   );
