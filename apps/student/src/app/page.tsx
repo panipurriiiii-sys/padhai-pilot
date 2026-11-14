@@ -103,7 +103,6 @@ import {
   MotionProvider,
   ToastProvider,
   DashboardSkeleton,
-  LuxuryLoader,
   TableSkeleton,
   CardGridSkeleton,
   OfflineBanner,
@@ -972,11 +971,9 @@ function StudentPortal() {
   // --------------------------------------------------------------------------
   if (isLoading && !student) {
     return (
-      <LuxuryLoader
-        title="PadhaiPilot"
-        subtitle="Student Vault"
-        statusMessage="Synchronizing enrolled curriculum & records..."
-      />
+      <div className="min-h-screen bg-[var(--bg-desk)] flex flex-col p-4 sm:p-6 lg:p-10 max-w-7xl mx-auto w-full">
+        <DashboardSkeleton cards={4} />
+      </div>
     );
   }
 
@@ -1363,12 +1360,7 @@ function StudentPortal() {
       {/* MAIN CONTENT AREA */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-6 pb-24 md:pb-8">
         {isLoading ? (
-          <LuxuryLoader
-            fullScreen={false}
-            title="PadhaiPilot"
-            subtitle="Student Vault"
-            statusMessage="Loading academic stream & timetable..."
-          />
+          <DashboardSkeleton cards={4} />
         ) : blockingErrors.length > 0 ? (
           <div className="py-16 flex justify-center" role="alert">
             <ErrorState

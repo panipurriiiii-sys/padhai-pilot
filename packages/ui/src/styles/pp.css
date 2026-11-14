@@ -304,62 +304,6 @@
 .pp-tilt { perspective: 1100px; }
 .pp-tilt-inner { transform-style: preserve-3d; transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1); will-change: transform; }
 
-/* ---------- Luxury Loading Animation System ---------- */
-@keyframes pp-orbit-cw {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-@keyframes pp-orbit-ccw {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(-360deg); }
-}
-
-@keyframes pp-pulse-glow {
-  0%, 100% { opacity: 0.35; transform: scale(0.96); }
-  50% { opacity: 0.85; transform: scale(1.08); }
-}
-
-@keyframes pp-beam-glide {
-  0% { transform: translateX(-120%); }
-  50% { transform: translateX(120%); }
-  100% { transform: translateX(-120%); }
-}
-
-@keyframes pp-float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-6px); }
-}
-
-@keyframes pp-shimmer-sweep {
-  0% { transform: translateX(-150%) skewX(-20deg); }
-  50%, 100% { transform: translateX(200%) skewX(-20deg); }
-}
-
-.pp-loader-orbit-outer {
-  animation: pp-orbit-cw 14s linear infinite;
-}
-
-.pp-loader-orbit-inner {
-  animation: pp-orbit-ccw 9s linear infinite;
-}
-
-.pp-loader-glow {
-  animation: pp-pulse-glow 3.5s ease-in-out infinite;
-}
-
-.pp-loader-beam {
-  animation: pp-beam-glide 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-}
-
-.pp-loader-float {
-  animation: pp-float 3.5s ease-in-out infinite;
-}
-
-.pp-loader-shimmer {
-  animation: pp-shimmer-sweep 2.8s ease-in-out infinite;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .pp-skeleton { animation: none; background-image: none; }
   .pp-dot-live::after { animation: none; }
@@ -367,12 +311,4 @@
   .pp-card-interactive:hover { transform: none; }
   .pp-btn-spinner { animation-duration: 2.4s; }
   .pp-tilt-inner { transition: none; transform: none !important; }
-  .pp-loader-orbit-outer,
-  .pp-loader-orbit-inner,
-  .pp-loader-glow,
-  .pp-loader-beam,
-  .pp-loader-float,
-  .pp-loader-shimmer {
-    animation: none !important;
-  }
 }
