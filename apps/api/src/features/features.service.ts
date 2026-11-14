@@ -229,48 +229,51 @@ export class FeaturesService {
     const currentPlan = (institute.plan as SubscriptionPlan) || 'STARTER';
 
     // ----------------------------------------------------------------------
-    // STEP 2: Subscription Plan Entitlements (PlanEntitlement)
+    // STEP 2 & 3: Institute Configuration Overrides & Plan Entitlements
     // ----------------------------------------------------------------------
-    // If no custom plan entitlement row exists in DB, fall back to Canonical Registry default
+    // An explicit InstituteFeatureConfig override takes precedence over plan defaults
     let isIncludedInPlan = true;
     let planQuotaLimit: number | null = null;
 
-    if (planEntitlement) {
-      isIncludedInPlan = planEntitlement.isIncluded;
-      planQuotaLimit = planEntitlement.quotaLimit;
-    } else if (def.defaultQuotaByPlan) {
-      const defaultQuota = def.defaultQuotaByPlan[currentPlan];
-      if (defaultQuota === 0) {
-        isIncludedInPlan = false;
-      } else {
-        planQuotaLimit = defaultQuota ?? null;
+    if (instituteConfig) {
+      if (!instituteConfig.isEnabled) {
+        const res: FeatureEvaluationResult = {
+          featureKey,
+          isAvailable: false,
+          status: 'INSTITUTE_DISABLED',
+          reason: "Feature has been disabled for this class / institute by Super Admin override.",
+          evaluatedAt,
+        };
+        return res;
       }
-    }
+      // Explicitly enabled by institute override
+      isIncludedInPlan = true;
+      planQuotaLimit = instituteConfig.customQuota ?? null;
+    } else {
+      // Fall back to Subscription Plan Entitlement (or registry default)
+      if (planEntitlement) {
+        isIncludedInPlan = planEntitlement.isIncluded;
+        planQuotaLimit = planEntitlement.quotaLimit;
+      } else if (def.defaultQuotaByPlan) {
+        const defaultQuota = def.defaultQuotaByPlan[currentPlan];
+        if (defaultQuota === 0) {
+          isIncludedInPlan = false;
+        } else {
+          planQuotaLimit = defaultQuota ?? null;
+        }
+      }
 
-    if (!isIncludedInPlan) {
-      const res: FeatureEvaluationResult = {
-        featureKey,
-        isAvailable: false,
-        status: 'PLAN_RESTRICTED',
-        reason: `Feature is not included in the "${currentPlan}" plan. Please upgrade your subscription.`,
-        requiredPlan: this.getRecommendedPlanForFeature(featureKey),
-        evaluatedAt,
-      };
-      return res;
-    }
-
-    // ----------------------------------------------------------------------
-    // STEP 3: Institute Configuration Overrides (InstituteFeatureConfig)
-    // ----------------------------------------------------------------------
-    if (instituteConfig && !instituteConfig.isEnabled) {
-      const res: FeatureEvaluationResult = {
-        featureKey,
-        isAvailable: false,
-        status: 'INSTITUTE_DISABLED',
-        reason: 'Feature has been disabled in this institute\'s settings.',
-        evaluatedAt,
-      };
-      return res;
+      if (!isIncludedInPlan) {
+        const res: FeatureEvaluationResult = {
+          featureKey,
+          isAvailable: false,
+          status: 'PLAN_RESTRICTED',
+          reason: `Feature is not included in the "${currentPlan}" plan. Please upgrade your subscription.`,
+          requiredPlan: this.getRecommendedPlanForFeature(featureKey),
+          evaluatedAt,
+        };
+        return res;
+      }
     }
 
     // Effective quota (Institute customQuota overrides planQuotaLimit if granted)

@@ -560,12 +560,17 @@ function StudentPortal() {
       return () => window.removeEventListener("pp:unauthorized", onUnauthorized);
     }
 
-    // Always verify stored token with server on refresh
+    // Verify the stored token and fetch the Overview essentials at the same time rather than one
+    // after the other. Every endpoint authorises the bearer token itself, so a stale token just
+    // makes these 401 (handled by `pp:unauthorized`) while a valid one saves a full round trip —
+    // the dominant cost when the API is on another continent.
+    const warmup = loadInitialStudentData().catch(() => undefined);
+
     cached('student:currentUser', 5 * 60 * 1000, () => studentApi.getCurrentUser())
       .then((auth) => {
         if (auth && auth.user) {
           setStudent(auth.user);
-          return loadInitialStudentData();
+          return warmup;
         } else {
           clearAuthToken();
           invalidate('student:currentUser');
